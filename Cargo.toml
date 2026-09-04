@@ -1,0 +1,41 @@
+[package]
+name = "miragex"
+version = "4.0.0"
+edition = "2021"
+authors = ["Mirage Security Team"]
+description = "High-Performance Post-Quantum (PQC) Decoupled Encryption Engine & WRAITH v4 Container"
+
+[dependencies]
+# Post-Quantum Cryptography & Core Primitives
+ml-kem = "0.2"
+aes-gcm = "0.10.3"
+argon2 = { version = "0.5.3", default-features = false, features = ["alloc", "rand"] }
+hkdf = "0.12.4"
+sha2 = "0.10.8"
+sha3 = "0.10.8"
+rand = "0.8.5"
+getrandom = { version = "0.2.15", features = ["js"] }
+zeroize = { version = "1.8.1", features = ["derive"] }
+subtle = "2.6.1"
+thiserror = "1.0"
+
+# File Dialogs & Native Utilities
+rfd = "0.15"
+
+# Serialization & CLI utilities
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+hex = "0.4.3"
+
+# Tauri (Desktop GUI Framework)
+tauri = { version = "2.0.0", features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

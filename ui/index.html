@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MirageX // Motor Criptográfico Post-Cuántica</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top HUD Header -->
+    <header class="hud-header">
+      <div class="brand">
+        <div class="brand-logo">
+          <img src="logo.png" alt="MirageX Logo" class="brand-img">
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">MIRAGE<span class="highlight">X</span></div>
+          <div class="brand-subtitle">MOTOR CRIPTOGRÁFICO POST-CUÁNTICO // FORMATO WRAITH v4</div>
+        </div>
+      </div>
+      <div class="hud-status">
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          <span class="status-label">ALGORITMO: MIRAGEX (NIST FIPS 203)</span>
+        </div>
+        <div class="status-chip">ZERO-SERVER // IPC NATIVO</div>
+      </div>
+    </header>
+
+    <!-- Navigation Bar -->
+    <nav class="hud-nav">
+      <button class="nav-tab active" data-tab="encrypt">
+        <span class="nav-icon">🛡️</span>
+        <span class="nav-text">CIFRAR (.wraith)</span>
+      </button>
+      <button class="nav-tab" data-tab="decrypt">
+        <span class="nav-icon">🔓</span>
+        <span class="nav-text">DESCIFRAR</span>
+      </button>
+      <button class="nav-tab" data-tab="inspect">
+        <span class="nav-icon">🔍</span>
+        <span class="nav-text">INSPECTOR</span>
+      </button>
+      <button class="nav-tab" data-tab="benchmark">
+        <span class="nav-icon">⚡</span>
+        <span class="nav-text">BENCHMARK</span>
+      </button>
+      <button class="nav-tab" data-tab="shred">
+        <span class="nav-icon">🌪️</span>
+        <span class="nav-text">TRITURADOR</span>
+      </button>
+    </nav>
+
+    <!-- Main Workspace -->
+    <main class="hud-workspace">
+      <!-- 1. ENCRYPT PANEL -->
+      <section id="tab-encrypt" class="tab-content active">
+        <div class="panel-grid">
+          <div class="panel-card main-panel">
+            <div class="card-header">
+              <h3>ORIGEN DE DATOS & ARCHIVO</h3>
+              <span class="badge purple">LOCAL / SSD / USB</span>
+            </div>
+            
+            <div class="dropzone" id="encrypt-dropzone">
+              <div class="dropzone-icon">📥</div>
+              <div class="dropzone-title" id="encrypt-file-title">Arrastra tu archivo aquí</div>
+              <div class="dropzone-sub" id="encrypt-file-sub">o haz clic para abrir el selector nativo de macOS</div>
+            </div>
+
+            <div class="selected-file-info" id="encrypt-file-meta" style="display:none;">
+              <div class="meta-row">
+                <span class="meta-key">Archivo:</span>
+                <span class="meta-val" id="meta-encrypt-name">-</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Ruta Absoluta:</span>
+                <span class="meta-val" id="meta-encrypt-path">-</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Tamaño:</span>
+                <span class="meta-val" id="meta-encrypt-size">-</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="encrypt-password">CONTRASEÑA MAESTRA DE PROTECCIÓN</label>
+              <div class="input-with-action">
+                <input type="password" id="encrypt-password" placeholder="Introduce una contraseña para el envelope MirageX..." autocomplete="off">
+                <button type="button" class="btn-secondary" id="btn-gen-pass">🎲 Generar</button>
+                <button type="button" class="btn-icon" id="btn-toggle-encrypt-pass">👁️</button>
+              </div>
+              <div class="password-meter">
+                <div class="meter-bar" id="pass-meter-bar"></div>
+              </div>
+              <div class="meter-label" id="pass-meter-text">Entropía: Esperando entrada...</div>
+            </div>
+          </div>
+
+          <div class="panel-card side-panel">
+            <div class="card-header">
+              <h3>SUITE DEL ALGORITMO MIRAGEX</h3>
+              <span class="badge purple">HÍBRIDO PQC</span>
+            </div>
+
+            <div class="form-group">
+              <label>MODO DE SEGURIDAD MIRAGEX</label>
+              <div class="radio-group">
+                <label class="radio-card active">
+                  <input type="radio" name="pqc-suite" value="1" checked>
+                  <div class="radio-info">
+                    <span class="radio-title">MirageX Standard</span>
+                    <span class="radio-desc">ML-KEM-768 (NIST Nivel 3) + Argon2id + AES-256-GCM</span>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="pqc-suite" value="2">
+                  <div class="radio-info">
+                    <span class="radio-title">MirageX Ultra</span>
+                    <span class="radio-desc">ML-KEM-1024 (NIST Nivel 5) + Argon2id + AES-256-GCM</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="chunk-size-select">STREAMING CHUNK SIZE</label>
+              <select id="chunk-size-select" class="hud-select">
+                <option value="4">4 MiB (Archivos pequeños)</option>
+                <option value="16" selected>16 MiB (Estándar Óptimo WRAITH v4)</option>
+                <option value="64">64 MiB (Archivos masivos >10 GB)</option>
+              </select>
+            </div>
+
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="shred-source-chk">
+                <span class="checkbox-custom"></span>
+                <span>Destruir archivo original tras cifrar (3 pasadas CSPRNG)</span>
+              </label>
+            </div>
+
+            <button class="btn-primary" id="btn-start-encrypt">
+              🔒 INICIAR CIFRADO MIRAGEX
+            </button>
+          </div>
+        </div>
+
+        <!-- Telemetry Card -->
+        <div class="telemetry-card" id="encrypt-telemetry" style="display:none;">
+          <div class="telemetry-header">
+            <h4>TELEMETRÍA CRIPTOGRÁFICA MIRAGEX</h4>
+            <span class="telemetry-speed" id="encrypt-speed">0.00 MB/s</span>
+          </div>
+          <div class="progress-container">
+            <div class="progress-fill" id="encrypt-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="telemetry-stats">
+            <span id="encrypt-stats-chunks">Chunk: 0 / 0</span>
+            <span id="encrypt-stats-bytes">0 / 0 MB</span>
+            <span id="encrypt-stats-time">Tiempo: 0s</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. DECRYPT PANEL -->
+      <section id="tab-decrypt" class="tab-content">
+        <div class="panel-grid">
+          <div class="panel-card main-panel">
+            <div class="card-header">
+              <h3>CONTENEDOR WRAITH (.wraith)</h3>
+              <span class="badge purple">MIRAGEX ENVELOPE</span>
+            </div>
+
+            <div class="dropzone" id="decrypt-dropzone">
+              <div class="dropzone-icon">📦</div>
+              <div class="dropzone-title" id="decrypt-file-title">Arrastra tu archivo .wraith aquí</div>
+              <div class="dropzone-sub">o haz clic para examinar el disco</div>
+            </div>
+
+            <div class="selected-file-info" id="decrypt-file-meta" style="display:none;">
+              <div class="meta-row">
+                <span class="meta-key">Contenedor:</span>
+                <span class="meta-val" id="meta-decrypt-name">-</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Ruta:</span>
+                <span class="meta-val" id="meta-decrypt-path">-</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="decrypt-password">CONTRASEÑA DE AUTENTICACIÓN</label>
+              <div class="input-with-action">
+                <input type="password" id="decrypt-password" placeholder="Contraseña de desencapsulado..." autocomplete="off">
+                <button type="button" class="btn-icon" id="btn-toggle-decrypt-pass">👁️</button>
+              </div>
+            </div>
+
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="shred-container-chk">
+                <span class="checkbox-custom"></span>
+                <span>Triturar contenedor .wraith tras restauración exitosa</span>
+              </label>
+            </div>
+
+            <button class="btn-primary" id="btn-start-decrypt">
+              🔓 DESENCAPSULAR & VERIFICAR CON MIRAGEX
+            </button>
+          </div>
+
+          <div class="panel-card side-panel">
+            <div class="card-header">
+              <h3>RESULTADO DE AUTENTICIDAD</h3>
+              <span class="badge green">AEAD + SHA-256</span>
+            </div>
+            
+            <div class="decryption-result-box" id="decrypt-result-box">
+              <div class="empty-state">
+                <div class="empty-icon">🛡️</div>
+                <p>Esperando autenticación de contenedor para verificar integridad.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. INSPECT PANEL -->
+      <section id="tab-inspect" class="tab-content">
+        <div class="panel-card full-width">
+          <div class="card-header">
+            <h3>INSPECCIÓN ESTRUCTURAL DE CABECERAS WRAITH (CERO CONOCIMIENTO)</h3>
+            <span class="badge purple">NON-DESTRUCTIVE</span>
+          </div>
+
+          <div class="dropzone" id="inspect-dropzone">
+            <div class="dropzone-icon">🔬</div>
+            <div class="dropzone-title" id="inspect-file-title">Arrastra un archivo .wraith para inspección inmediata</div>
+            <div class="dropzone-sub">Lee los metadatos de suite y UUID sin requerir la contraseña ni descifrar el contenido</div>
+          </div>
+
+          <div class="inspection-results" id="inspection-results" style="display:none;">
+            <div class="hud-grid-metrics">
+              <div class="metric-card">
+                <span class="metric-title">FORMATO CONTENEDOR</span>
+                <span class="metric-value" id="insp-magic">WRAITH v4</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">SUITE ALGORITMO</span>
+                <span class="metric-value purple-text" id="insp-suite">MirageX Standard</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">CHUNK SIZE</span>
+                <span class="metric-value" id="insp-chunk-size">16.0 MiB</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">PQC CIPHERTEXT</span>
+                <span class="metric-value" id="insp-pqc-size">1,088 Bytes</span>
+              </div>
+            </div>
+
+            <div class="code-terminal">
+              <div class="terminal-bar">
+                <span class="term-dot red"></span>
+                <span class="term-dot yellow"></span>
+                <span class="term-dot green"></span>
+                <span class="term-title">HEADER DUMP // ZERO-KNOWLEDGE VIEW</span>
+              </div>
+              <pre id="insp-raw-json">{}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. BENCHMARK PANEL -->
+      <section id="tab-benchmark" class="tab-content">
+        <div class="panel-card full-width">
+          <div class="card-header">
+            <h3>BENCHMARK DE RENDIMIENTO DEL ALGORITMO MIRAGEX</h3>
+            <button class="btn-secondary" id="btn-run-bench">⚡ Ejecutar Test de Estrés</button>
+          </div>
+
+          <p class="section-desc" style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;">
+            Evalúa la velocidad de encapsulación post-cuántica (FIPS 203), derivación de claves Argon2id y tasa de transferencia por aceleración de hardware AES-256-GCM.
+          </p>
+
+          <div class="hud-grid-metrics" id="bench-metrics">
+            <div class="metric-card">
+              <span class="metric-title">MIRAGEX STANDARD (768)</span>
+              <span class="metric-value purple-text" id="bench-768">-- ops/s</span>
+              <span class="metric-sub">NIST Nivel 3</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-title">MIRAGEX ULTRA (1024)</span>
+              <span class="metric-value purple-text" id="bench-1024">-- ops/s</span>
+              <span class="metric-sub">NIST Nivel 5</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-title">ARGON2ID (64MB / 3 ITER)</span>
+              <span class="metric-value yellow-text" id="bench-argon">-- ms</span>
+              <span class="metric-sub">Resistencia GPU/ASIC</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-title">AES-256-GCM THROUGHPUT</span>
+              <span class="metric-value green-text" id="bench-aes">-- MB/s</span>
+              <span class="metric-sub">Aceleración por Hardware</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. SHREDDER PANEL -->
+      <section id="tab-shred" class="tab-content">
+        <div class="panel-card full-width">
+          <div class="card-header">
+            <h3>TRITURADOR CRIPTOGRÁFICO CSPRNG (SECURE WIPE)</h3>
+            <span class="badge red-badge">DESTRUCTIVO / IRREVERSIBLE</span>
+          </div>
+
+          <div class="dropzone" id="shred-dropzone">
+            <div class="dropzone-icon">☢️</div>
+            <div class="dropzone-title" id="shred-file-title">Arrastra o selecciona cualquier archivo sensible para destrucción permanente</div>
+            <div class="dropzone-sub">Sobreescritura multi-paso con CSPRNG + Patrones complementarios + Truncamiento forense</div>
+          </div>
+
+          <div class="form-group" style="margin-top: 20px;">
+            <label for="shred-passes-select">NÚMERO DE PASADAS DE SOBREESCRITURA</label>
+            <select id="shred-passes-select" class="hud-select">
+              <option value="3" selected>3 Pasadas (CSPRNG + Patrón 0x55 + Ceros - Rápido y Seguro)</option>
+              <option value="7">7 Pasadas (Estándar DoD 5220.22-M)</option>
+              <option value="12">12 Pasadas (Paranoia Nivel Máximo)</option>
+            </select>
+          </div>
+
+          <button class="btn-danger" id="btn-execute-shred">
+            🌪️ DESTRUIR PERMANENTEMENTE EL ARCHIVO
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Global Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
