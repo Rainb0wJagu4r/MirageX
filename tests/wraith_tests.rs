@@ -40,6 +40,8 @@ fn test_wraith_v4_768_streaming_roundtrip() {
     assert_eq!(inspection.magic, "WRAITH");
     assert_eq!(inspection.version, 4);
     assert_eq!(inspection.suite_id, PqcSuite::MlKem768.as_u8());
+    assert_eq!(inspection.is_pqc, true);
+    assert_eq!(inspection.legacy_project_mirage, false);
 
     // Decrypt container
     let mut decrypted_payload = Vec::new();
@@ -210,17 +212,18 @@ fn test_storage_local_shredding() {
 }
 
 #[test]
-fn test_inspect_legacy_project_mirage_container() {
-    // Simulate legacy Project Mirage v1 C4 container: "MIRAGE\x01\x03" + 16 bytes salt
-    let mut legacy_data = Vec::new();
-    legacy_data.extend_from_slice(b"MIRAGE\x01\x03");
-    legacy_data.extend_from_slice(&[0xaa; 16]); // 16B salt
-    legacy_data.extend_from_slice(&[0x00; 100]); // payload
+fn test_inspect_legacy_project_mirage_mirg_v2() {
+    // Legacy Project Mirage v2 MIRG header: "MIRG" + [version 2, mode 0x11, flags 0x01, block_count 1, kdf 1, cipher 1, 0, 0]
+    let mut mirg_data = Vec::new();
+    mirg_data.extend_from_slice(b"MIRG");
+    mirg_data.extend_from_slice(&[2, 0x11, 0x01, 1, 1, 1, 0, 0]); // 8 bytes
+    mirg_data.extend_from_slice(&[0xaa; 32]); // 32 bytes salt
+    mirg_data.extend_from_slice(&[0x00; 100]); // ciphertext
 
-    let inspection = inspect_container(Cursor::new(&legacy_data)).expect("Legacy inspection should succeed");
-    assert_eq!(inspection.magic, "MIRAGE");
-    assert_eq!(inspection.version, 1);
+    let inspection = inspect_container(Cursor::new(&mirg_data)).expect("MIRG inspection should succeed");
+    assert_eq!(inspection.magic, "MIRG");
+    assert_eq!(inspection.version, 2);
     assert_eq!(inspection.legacy_project_mirage, true);
     assert_eq!(inspection.is_pqc, false);
-    assert!(inspection.suite_name.contains("Mirage-C4"));
+    assert!(inspection.suite_name.contains("Mirage C4"));
 }
