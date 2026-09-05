@@ -40,7 +40,7 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     mut reader: R,
     mut writer: W,
     password: &[u8],
-    options: DecryptOptions,
+    _options: DecryptOptions,
     mut progress_callback: F,
 ) -> Result<Manifest, WraithError> {
     let start_time = Instant::now();
@@ -74,19 +74,19 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     let mut wrapped_decaps_key = vec![0u8; wrapped_len - NONCE_SIZE];
     reader.read_exact(&mut wrapped_decaps_key)?;
 
-    // 3. Derive Password Key via Argon2id (Zeroizing wrapper)
+    // 3. Derive Password Key via Argon2id using parameters embedded in container header
     let password_key = derive_password_key(
         password,
         &header.salt,
-        options.argon2_m_cost,
-        options.argon2_t_cost,
-        options.argon2_p_cost,
+        header.argon2_m_cost,
+        header.argon2_t_cost,
+        header.argon2_p_cost,
     )?;
 
     // 4. Derive PQC Wrap Key
     let pqc_wrap_key = derive_pqc_wrap_key(&*password_key, &header.salt, &header.uuid)?;
 
-    // 5. Decrypt PQC Decapsulation Key (Authenticated against full 64-byte Header)
+    // 5. Decrypt PQC Decapsulation Key (Authenticated against full 80-byte Header)
     // Fails immediately if password is wrong OR if any byte in the header was altered
     let decaps_key_bytes = decrypt_aes_gcm(
         &*pqc_wrap_key,

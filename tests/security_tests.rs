@@ -132,13 +132,13 @@ fn test_allocation_bomb_pqc_ciphertext_rejected() {
         |_| {},
     ).expect("Encryption should succeed");
 
-    // Container header is 64 bytes. Offset 64 is pqc_ct_len (4 bytes).
+    // Container header is 80 bytes. Offset 80 is pqc_ct_len (4 bytes).
     // Corrupt pqc_ct_len to 0xFFFFFFFF (~4 GB allocation bomb)
     let mut bomb = container.clone();
-    bomb[64] = 0xFF;
-    bomb[65] = 0xFF;
-    bomb[66] = 0xFF;
-    bomb[67] = 0xFF;
+    bomb[80] = 0xFF;
+    bomb[81] = 0xFF;
+    bomb[82] = 0xFF;
+    bomb[83] = 0xFF;
 
     let mut out = Vec::new();
     let res = decrypt_stream(
@@ -179,9 +179,9 @@ fn test_allocation_bomb_wrapped_key_rejected() {
         |_| {},
     ).expect("Encryption should succeed");
 
-    // Offset after header (64B) + pqc_ct_len (4B) + ciphertext (1088B for ML-KEM-768) = 1156.
-    // At offset 1156 is wrapped_len (4 bytes).
-    let wrapped_len_offset = 64 + 4 + 1088;
+    // Offset after header (80B) + pqc_ct_len (4B) + ciphertext (1088B for ML-KEM-768) = 1172.
+    // At offset 1172 is wrapped_len (4 bytes).
+    let wrapped_len_offset = 80 + 4 + 1088;
     let mut bomb = container.clone();
     bomb[wrapped_len_offset] = 0xFF;
     bomb[wrapped_len_offset + 1] = 0xFF;
@@ -228,13 +228,13 @@ fn test_non_canonical_is_final_rejected() {
     ).expect("Encryption should succeed");
 
     // Find chunk is_final position:
-    // Header (64) + PQC Envelope (4 + 1088 + 4 + 12 + wrapped_key_len) + chunk_index (8)
+    // Header (80) + PQC Envelope (4 + 1088 + 4 + 12 + wrapped_key_len) + chunk_index (8)
     // In ML-KEM-768 wrapped decaps key is 2400 + 16 (tag) = 2416 bytes.
     // PQC envelope total = 4 + 1088 + 4 + 12 + 2416 = 3524.
-    // Chunk start = 64 + 3524 = 3588.
-    // Chunk index is 8 bytes (3588..3596).
-    // is_final byte is at offset 3596.
-    let is_final_offset = 64 + 4 + 1088 + 4 + 12 + 2400 + 16 + 8;
+    // Chunk start = 80 + 3524 = 3604.
+    // Chunk index is 8 bytes (3604..3612).
+    // is_final byte is at offset 3612.
+    let is_final_offset = 80 + 4 + 1088 + 4 + 12 + 2400 + 16 + 8;
     assert_eq!(container[is_final_offset], 1, "Original chunk must be is_final=1");
 
     let mut non_canonical = container.clone();
@@ -297,5 +297,43 @@ fn test_trailing_garbage_after_manifest_rejected() {
     );
 
     assert!(res.is_err(), "Parser must reject containers with unauthenticated trailing bytes");
+}
+
+#[test]
+fn test_argon2_header_kdf_parameters_preservation() {
+    let payload = b"Testing Argon2id parameter persistence in WRAITH v4 header";
+    let password = b"DynamicKdfParamsPass123!";
+
+    // Encrypt with custom Argon2 parameters (e.g. 2048 KiB, 2 iterations, 2 threads)
+    let options = EncryptOptions {
+        suite: PqcSuite::MlKem768,
+        argon2_m_cost: 2048,
+        argon2_t_cost: 2,
+        argon2_p_cost: 2,
+        ..Default::default()
+    };
+
+    let mut container = Vec::new();
+    encrypt_stream(
+        Cursor::new(payload),
+        &mut container,
+        password,
+        payload.len() as u64,
+        options,
+        |_| {},
+    ).expect("Encryption with custom KDF params must succeed");
+
+    // Decrypt passing default DecryptOptions (which differ completely from the encryption params)
+    let mut out = Vec::new();
+    let manifest = decrypt_stream(
+        Cursor::new(&container),
+        &mut out,
+        password,
+        DecryptOptions::default(),
+        |_| {},
+    ).expect("Decryption must seamlessly use KDF parameters stored in container header");
+
+    assert_eq!(out, payload);
+    assert_eq!(manifest.original_size, payload.len() as u64);
 }
 

@@ -5,7 +5,14 @@ use serde::{Deserialize, Serialize};
 use crate::crypto::PqcSuite;
 use crate::wraith::{WraithError, CURRENT_VERSION, MAGIC_BYTES};
 
-pub const HEADER_SIZE: usize = 64;
+pub const HEADER_SIZE: usize = 80;
+
+pub const MIN_ARGON2_M_COST: u32 = 8; // 8 KiB minimum
+pub const MAX_ARGON2_M_COST: u32 = 2 * 1024 * 1024; // 2 GiB maximum (in KiB)
+pub const MIN_ARGON2_T_COST: u32 = 1;
+pub const MAX_ARGON2_T_COST: u32 = 1000;
+pub const MIN_ARGON2_P_COST: u32 = 1;
+pub const MAX_ARGON2_P_COST: u32 = 64;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WraithHeader {
@@ -14,11 +21,21 @@ pub struct WraithHeader {
     pub salt: [u8; 32],
     pub uuid: [u8; 16],
     pub chunk_size: u32,
+    pub argon2_m_cost: u32,
+    pub argon2_t_cost: u32,
+    pub argon2_p_cost: u32,
     pub flags: u32,
 }
 
 impl WraithHeader {
-    pub fn new<R: RngCore + CryptoRng>(suite: PqcSuite, chunk_size: u32, rng: &mut R) -> Self {
+    pub fn new<R: RngCore + CryptoRng>(
+        suite: PqcSuite,
+        chunk_size: u32,
+        argon2_m_cost: u32,
+        argon2_t_cost: u32,
+        argon2_p_cost: u32,
+        rng: &mut R,
+    ) -> Self {
         let mut salt = [0u8; 32];
         let mut uuid = [0u8; 16];
         rng.fill_bytes(&mut salt);
@@ -30,6 +47,9 @@ impl WraithHeader {
             salt,
             uuid,
             chunk_size,
+            argon2_m_cost,
+            argon2_t_cost,
+            argon2_p_cost,
             flags: 0,
         }
     }
@@ -42,7 +62,11 @@ impl WraithHeader {
         buf[8..40].copy_from_slice(&self.salt);
         buf[40..56].copy_from_slice(&self.uuid);
         buf[56..60].copy_from_slice(&self.chunk_size.to_be_bytes());
-        buf[60..64].copy_from_slice(&self.flags.to_be_bytes());
+        buf[60..64].copy_from_slice(&self.argon2_m_cost.to_be_bytes());
+        buf[64..68].copy_from_slice(&self.argon2_t_cost.to_be_bytes());
+        buf[68..72].copy_from_slice(&self.argon2_p_cost.to_be_bytes());
+        buf[72..76].copy_from_slice(&self.flags.to_be_bytes());
+        // 76..80 reserved (0x00)
         buf
     }
 
@@ -78,7 +102,17 @@ impl WraithHeader {
         uuid.copy_from_slice(&buf[40..56]);
 
         let chunk_size = u32::from_be_bytes(buf[56..60].try_into().unwrap());
-        let flags = u32::from_be_bytes(buf[60..64].try_into().unwrap());
+        let argon2_m_cost = u32::from_be_bytes(buf[60..64].try_into().unwrap());
+        let argon2_t_cost = u32::from_be_bytes(buf[64..68].try_into().unwrap());
+        let argon2_p_cost = u32::from_be_bytes(buf[68..72].try_into().unwrap());
+        let flags = u32::from_be_bytes(buf[72..76].try_into().unwrap());
+
+        if !(MIN_ARGON2_M_COST..=MAX_ARGON2_M_COST).contains(&argon2_m_cost)
+            || !(MIN_ARGON2_T_COST..=MAX_ARGON2_T_COST).contains(&argon2_t_cost)
+            || !(MIN_ARGON2_P_COST..=MAX_ARGON2_P_COST).contains(&argon2_p_cost)
+        {
+            return Err(WraithError::InvalidContainer);
+        }
 
         Ok(Self {
             version,
@@ -86,6 +120,9 @@ impl WraithHeader {
             salt,
             uuid,
             chunk_size,
+            argon2_m_cost,
+            argon2_t_cost,
+            argon2_p_cost,
             flags,
         })
     }

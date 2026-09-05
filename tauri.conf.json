@@ -23,10 +23,12 @@
       "capabilities": [
         {
           "identifier": "main-capability",
-          "description": "MirageX capability",
+          "description": "MirageX least-privilege capability",
           "windows": ["main"],
           "permissions": [
-            "core:default"
+            "core:event:default",
+            "core:window:default",
+            "core:app:default"
           ]
         }
       ]
