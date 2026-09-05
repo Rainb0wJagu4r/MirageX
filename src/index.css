@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-void: #06060f;
+  --color-panel: #0c0c1d;
+  --color-purple-neon: #a855f7;
+  --color-purple-deep: #6d28d9;
+  --color-green-neon: #10b981;
+  --color-yellow-neon: #fbbf24;
+  --color-red-neon: #ef4444;
+  --color-cyan-neon: #22d3ee;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #06060f;
+  color: #e2e8f0;
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #a855f7;
+  color: white;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0c0c1d;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #7c3aed, #a855f7);
+  border-radius: 8px;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(168, 85, 247, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.scanline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.12) 3px,
+    transparent 4px
+  );
+}
+
+.glow-purple {
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.35), 0 0 64px rgba(109, 40, 217, 0.2);
+}
+.glow-green {
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.3);
+}
+.glow-red {
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.3);
+}
+
+.text-glow {
+  text-shadow: 0 0 24px rgba(168, 85, 247, 0.6);
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes dash-flow {
+  to { stroke-dashoffset: -24; }
+}
+.animate-dash {
+  stroke-dasharray: 6 6;
+  animation: dash-flow 1.2s linear infinite;
+}
+
+@keyframes blink-caret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.animate-caret {
+  animation: blink-caret 1s step-end infinite;
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise-in {
+  animation: rise-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.code-block {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
