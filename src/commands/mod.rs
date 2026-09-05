@@ -257,7 +257,11 @@ pub fn encrypt_file_cmd(
             _ => crate::storage::ShredMode::Hdd,
         };
         let passes = shred_passes.unwrap_or(3);
-        let _ = storage.shred_file_with_mode(in_p, passes, mode);
+        // Surface failures loudly: the user explicitly requested secure deletion
+        // (AUDIT.md L5)
+        storage.shred_file_with_mode(in_p, passes, mode).map_err(|e| {
+            format!("Encryption succeeded, but failed to securely shred the source file: {}", e)
+        })?;
     }
 
     let chunks_count = if chunk_size > 0 {
@@ -365,7 +369,11 @@ pub fn decrypt_file_cmd(
             _ => crate::storage::ShredMode::Hdd,
         };
         let passes = shred_passes.unwrap_or(3);
-        let _ = storage.shred_file_with_mode(in_p, passes, mode);
+        // Surface failures loudly: the user explicitly requested secure deletion
+        // (AUDIT.md L5)
+        storage.shred_file_with_mode(in_p, passes, mode).map_err(|e| {
+            format!("Decryption succeeded, but failed to securely shred the container: {}", e)
+        })?;
     }
 
     Ok(DecryptionResult {

@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 use std::time::Instant;
 use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::crypto::{
     aead::{encrypt_aes_gcm, generate_chunk_nonce, generate_nonce, NONCE_SIZE},
@@ -91,12 +91,13 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     // 5. Wrap PQC Decapsulation Key with pqc_wrap_key via AES-256-GCM
     // Authentication Binding: We bind the ENTIRE 80-byte Header as AAD to seal version, suite, salt, uuid, chunk size, and KDF params
     let wrap_nonce = generate_nonce(&mut rng);
-    let wrapped_decaps_key = encrypt_aes_gcm(
+    // Zeroizing: wrapped (encrypted) decapsulation key material (AUDIT.md M2)
+    let wrapped_decaps_key = Zeroizing::new(encrypt_aes_gcm(
         &*pqc_wrap_key,
         &wrap_nonce,
         &*pqc_res.decapsulation_key_bytes,
         &header_bytes,
-    )?;
+    )?);
 
     // 6. Write PQC Envelope Block
     // [pqc_ct_len (4B)] || [pqc_ct] || [wrapped_len (4B)] || [wrap_nonce (12B)] || [wrapped_key_with_tag]

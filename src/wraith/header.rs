@@ -8,11 +8,15 @@ use crate::wraith::{WraithError, CURRENT_VERSION, MAGIC_BYTES};
 pub const HEADER_SIZE: usize = 80;
 
 pub const MIN_ARGON2_M_COST: u32 = 8; // 8 KiB minimum
-pub const MAX_ARGON2_M_COST: u32 = 2 * 1024 * 1024; // 2 GiB maximum (in KiB)
+// Security hardening (AUDIT.md M1): bounds cap the work factor an unauthenticated,
+// attacker-crafted header can force on the decrypting machine (Argon2 runs BEFORE
+// any authenticated check). Worst case is now ~1 GiB RAM x 10 iterations, bounded
+// to a few seconds instead of hours.
+pub const MAX_ARGON2_M_COST: u32 = 1024 * 1024; // 1 GiB maximum (in KiB)
 pub const MIN_ARGON2_T_COST: u32 = 1;
-pub const MAX_ARGON2_T_COST: u32 = 1000;
+pub const MAX_ARGON2_T_COST: u32 = 10;
 pub const MIN_ARGON2_P_COST: u32 = 1;
-pub const MAX_ARGON2_P_COST: u32 = 64;
+pub const MAX_ARGON2_P_COST: u32 = 8;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WraithHeader {

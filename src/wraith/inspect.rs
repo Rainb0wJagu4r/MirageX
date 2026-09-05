@@ -50,7 +50,8 @@ pub fn inspect_container<R: Read>(mut reader: R) -> Result<ContainerInspection, 
         let header = WraithHeader::read_from(&mut cursor)?;
 
         let mut u32_buf = [0u8; 4];
-        reader.read_exact(&mut u32_buf).unwrap_or_default();
+        // Propagate EOF/truncation instead of silently defaulting (AUDIT.md L4)
+        reader.read_exact(&mut u32_buf).map_err(|_| WraithError::UnexpectedEof)?;
         let pqc_ct_len = u32::from_be_bytes(u32_buf) as usize;
 
         Ok(ContainerInspection {
@@ -91,7 +92,7 @@ pub fn inspect_container<R: Read>(mut reader: R) -> Result<ContainerInspection, 
 
         // Read first 32 bytes of block metadata (salt)
         let mut salt_buf = [0u8; 32];
-        let _ = reader.read_exact(&mut salt_buf);
+        reader.read_exact(&mut salt_buf).map_err(|_| WraithError::UnexpectedEof)?;
 
         let is_c4 = cipher_id == 1;
         let is_duress = mode == 0x12;
@@ -142,7 +143,7 @@ pub fn inspect_container<R: Read>(mut reader: R) -> Result<ContainerInspection, 
         let legacy_mode = rest_magic[3];
 
         let mut salt_buf = [0u8; 16];
-        let _ = reader.read_exact(&mut salt_buf);
+        reader.read_exact(&mut salt_buf).map_err(|_| WraithError::UnexpectedEof)?;
 
         Ok(ContainerInspection {
             magic: "MIRAGE".into(),

@@ -21,6 +21,9 @@ thiserror = "1.0"
 # File Dialogs & Native Utilities
 rfd = "0.15"
 
+# OS-level hardening (RLIMIT_CORE guard)
+libc = "0.2"
+
 # Serialization & CLI utilities
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 use std::time::Instant;
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::crypto::{
     aead::{decrypt_aes_gcm, NONCE_SIZE, TAG_SIZE},
@@ -71,7 +71,9 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     let mut wrap_nonce = [0u8; NONCE_SIZE];
     reader.read_exact(&mut wrap_nonce)?;
 
-    let mut wrapped_decaps_key = vec![0u8; wrapped_len - NONCE_SIZE];
+    // Zeroizing: the wrapped key is (encrypted) secret key material
+    let mut wrapped_decaps_key = Zeroizing::new(Vec::with_capacity(wrapped_len - NONCE_SIZE));
+    wrapped_decaps_key.resize(wrapped_len - NONCE_SIZE, 0);
     reader.read_exact(&mut wrapped_decaps_key)?;
 
     // 3. Derive Password Key via Argon2id using parameters embedded in container header
@@ -88,12 +90,16 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
 
     // 5. Decrypt PQC Decapsulation Key (Authenticated against full 80-byte Header)
     // Fails immediately if password is wrong OR if any byte in the header was altered
-    let decaps_key_bytes = decrypt_aes_gcm(
-        &*pqc_wrap_key,
-        &wrap_nonce,
-        &wrapped_decaps_key,
-        &header_bytes,
-    ).map_err(|_| WraithError::ManifestAuthFailed)?;
+    // Zeroizing: this is the plaintext ML-KEM decapsulation key (AUDIT.md M2)
+    let decaps_key_bytes = Zeroizing::new(
+        decrypt_aes_gcm(
+            &*pqc_wrap_key,
+            &wrap_nonce,
+            &wrapped_decaps_key,
+            &header_bytes,
+        )
+        .map_err(|_| WraithError::ManifestAuthFailed)?,
+    );
 
     // 6. Decapsulate PQC Shared Secret (ML-KEM NIST FIPS 203)
     let pqc_shared_secret = pqc_decapsulate(header.suite, &decaps_key_bytes, &pqc_ct)?;
