@@ -119,6 +119,8 @@ fn handle_encrypt(args: &mut [String]) {
     let mut suite_id = Some(1u8); // Default 768
     let mut chunk_size_mb = Some(16u32);
     let mut shred = false;
+    let mut shred_mode = None;
+    let mut shred_passes = None;
     let mut from_stdin = false;
 
     let mut i = 1;
@@ -148,6 +150,18 @@ fn handle_encrypt(args: &mut [String]) {
                 }
             }
             "--shred" => shred = true,
+            "--shred-mode" => {
+                if i + 1 < args.len() {
+                    shred_mode = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
+            "--shred-passes" => {
+                if i + 1 < args.len() {
+                    shred_passes = args[i + 1].parse().ok();
+                    i += 1;
+                }
+            }
             _ => {}
         }
         i += 1;
@@ -160,7 +174,7 @@ fn handle_encrypt(args: &mut [String]) {
     }
 
     println!("🔒 Encrypting '{}' using MirageX (WRAITH v4)...", input_path);
-    match encrypt_file_cmd(input_path, output_path, password, suite_id, chunk_size_mb, shred) {
+    match encrypt_file_cmd(input_path, output_path, password, suite_id, chunk_size_mb, shred, shred_mode, shred_passes) {
         Ok(res) => {
             println!("✅ Encryption successful!");
             println!("   Output:         {}", res.output_path);
@@ -186,6 +200,8 @@ fn handle_decrypt(args: &mut [String]) {
     let input_path = args[0].clone();
     let mut output_path = None;
     let mut shred = false;
+    let mut shred_mode = None;
+    let mut shred_passes = None;
     let mut from_stdin = false;
 
     let mut i = 1;
@@ -199,6 +215,18 @@ fn handle_decrypt(args: &mut [String]) {
                 }
             }
             "--shred" => shred = true,
+            "--shred-mode" => {
+                if i + 1 < args.len() {
+                    shred_mode = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
+            "--shred-passes" => {
+                if i + 1 < args.len() {
+                    shred_passes = args[i + 1].parse().ok();
+                    i += 1;
+                }
+            }
             _ => {}
         }
         i += 1;
@@ -211,7 +239,7 @@ fn handle_decrypt(args: &mut [String]) {
     }
 
     println!("🔓 Decrypting and verifying WRAITH container '{}'...", input_path);
-    match decrypt_file_cmd(input_path, output_path, password, shred) {
+    match decrypt_file_cmd(input_path, output_path, password, shred, shred_mode, shred_passes) {
         Ok(res) => {
             println!("✅ Decryption & Authenticity Verified!");
             println!("   Restored File: {}", res.output_path);

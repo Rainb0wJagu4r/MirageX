@@ -137,8 +137,27 @@
               <label class="checkbox-label">
                 <input type="checkbox" id="shred-source-chk">
                 <span class="checkbox-custom"></span>
-                <span>Destruir archivo original tras cifrar (3 pasadas CSPRNG)</span>
+                <span>Borrado seguro del archivo original tras cifrar</span>
               </label>
+            </div>
+
+            <div id="encrypt-shred-options" style="display: none; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border-color); border-radius: 6px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">TIPO DE DISCO</label>
+                  <select id="encrypt-shred-media" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
+                    <option value="ssd" selected>⚡ SSD/NVMe (FTL Wear-Leveling)</option>
+                    <option value="hdd">💾 HDD (Magnético DoD 5220.22-M)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">PASADAS</label>
+                  <select id="encrypt-shred-passes" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
+                    <option value="3" selected>3 Pasadas</option>
+                    <option value="7">7 Pasadas</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <button class="btn-primary" id="btn-start-encrypt">
@@ -202,8 +221,27 @@
               <label class="checkbox-label">
                 <input type="checkbox" id="shred-container-chk">
                 <span class="checkbox-custom"></span>
-                <span>Triturar contenedor .wraith tras restauración exitosa</span>
+                <span>Borrado seguro del contenedor .wraith tras restauración</span>
               </label>
+            </div>
+
+            <div id="decrypt-shred-options" style="display: none; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border-color); border-radius: 6px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">TIPO DE DISCO</label>
+                  <select id="decrypt-shred-media" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
+                    <option value="ssd" selected>⚡ SSD/NVMe (FTL Wear-Leveling)</option>
+                    <option value="hdd">💾 HDD (Magnético DoD 5220.22-M)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">PASADAS</label>
+                  <select id="decrypt-shred-passes" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
+                    <option value="3" selected>3 Pasadas</option>
+                    <option value="7">7 Pasadas</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <button class="btn-primary" id="btn-start-decrypt">
