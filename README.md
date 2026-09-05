@@ -8,7 +8,6 @@
 [![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org/)
 [![NIST FIPS 203](https://img.shields.io/badge/PQC-ML--KEM--768%20%2F%201024-purple.svg)](https://csrc.nist.gov/pubs/fips/203/final)
 [![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
-[![Security Hardened](https://img.shields.io/badge/Security-Audited%20%26%20Hardened-brightgreen.svg)](SECURITY_AUDIT.md)
 [![Tauri 2.0](https://img.shields.io/badge/Tauri-v2.0-blue.svg)](https://tauri.app/)
 [![Zero Dependencies](https://img.shields.io/badge/Supply%20Chain-Zero%20NPM%20Deps-brightgreen.svg)]()
 
@@ -22,7 +21,6 @@
 > **Project Origin & Active Development Status**
 > - 🇲🇽 **Born in Mexico:** This project is proud to be born in Mexico.
 > - **In Active Development:** Software is under active research and implementation.
-> - **Security Audited & Hardened:** Read our full [Security Audit & Hardening Report](SECURITY_AUDIT.md).
 > - **NIST SP 800-22 Statistical Audit:** The entropy and pseudorandomness of **MirageX Ultra (ML-KEM-1024 / Level 5 PQC)** WRAITH v4 envelopes have been audited across random binary, structured text, and all-zeroes payloads. All tests passed with zero correlation: [PROJECT-MIRAGE-NIST-Analyze-results](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results).
 > - **Open to Audits:** We welcome open cryptographic audits and code reviews to help us continue learning, developing, and contributing to post-quantum cybersecurity.
 
@@ -143,28 +141,6 @@ cargo run --release
 ```bash
 ./target/release/miragex bench
 ```
-
-<div align="center">
-
----
-
-## 🛡️ Security Audit & Hardening Matrix
-
-<p align="center">
-All vulnerabilities identified in the independent security audit have been fully remediated and verified.<br/>
-See <a href="SECURITY_AUDIT.md">SECURITY_AUDIT.md</a> for detailed analysis and proofs.
-</p>
-
-</div>
-
-| Severity | Vulnerability | Remediation | Status |
-| :--- | :--- | :--- | :---: |
-| 🔴 **CRITICAL** | **DOM XSS in WebView** | Replaced all `innerHTML` with safe DOM node creation (`textContent`) + Strict CSP (`default-src 'self'`). | **PASSED** |
-| 🔴 **CRITICAL** | **Path Traversal on Decryption** | Implemented `sanitize_filename()` stripping separators, control bytes, and directory traversal sequences. | **PASSED** |
-| 🟠 **HIGH** | **RAM Exhaustion on Large Files** | Refactored decryption to stream directly into atomic disk temporary files (`.miragex_dec_*.tmp`). | **PASSED** |
-| 🟡 **MEDIUM** | **Binary Header Authentication** | Bound 64-byte container header as AAD in AES-256-GCM key unwrapping. | **PASSED** |
-| 🟡 **MEDIUM** | **Memory Hygiene (Zeroize)** | Wrapped all intermediate keys, KEM secrets, KDF material, and buffers in `zeroize::Zeroizing`. | **PASSED** |
-| 🟢 **LOW** | **Constant-Time Verification** | Manifest SHA-256 hash verified using `subtle::ConstantTimeEq` against timing attacks. | **PASSED** |
 
 <div align="center">
 
