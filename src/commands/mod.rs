@@ -341,7 +341,11 @@ pub fn inspect_container_cmd(input_path: String) -> Result<ContainerInspection, 
 }
 
 #[tauri::command]
-pub fn shred_file_cmd(input_path: String, passes: Option<u8>) -> Result<String, String> {
+pub fn shred_file_cmd(
+    input_path: String,
+    passes: Option<u8>,
+    mode: Option<String>,
+) -> Result<String, String> {
     let in_p = Path::new(&input_path);
     if !in_p.exists() {
         return Err(format!("Target file not found: {}", input_path));
@@ -349,9 +353,22 @@ pub fn shred_file_cmd(input_path: String, passes: Option<u8>) -> Result<String, 
 
     let storage = LocalStorageAdapter::new();
     let num_passes = passes.unwrap_or(3);
-    storage.shred_file(in_p, num_passes).map_err(|e| e.to_string())?;
+    let shred_mode = match mode.as_deref() {
+        Some("ssd") | Some("SSD") | Some("nvme") | Some("NVMe") => crate::storage::ShredMode::Ssd,
+        _ => crate::storage::ShredMode::Hdd,
+    };
 
-    Ok(format!("Successfully shredded and deleted '{}' with {} passes", input_path, num_passes))
+    storage.shred_file_with_mode(in_p, num_passes, shred_mode).map_err(|e| e.to_string())?;
+
+    let mode_desc = match shred_mode {
+        crate::storage::ShredMode::Ssd => "SSD/NVMe Wear-Leveling Mitigation",
+        crate::storage::ShredMode::Hdd => "HDD Physical Magnetic Multi-Pass",
+    };
+
+    Ok(format!(
+        "Successfully wiped and deleted '{}' ({} with {} passes)",
+        input_path, mode_desc, num_passes
+    ))
 }
 
 #[tauri::command]

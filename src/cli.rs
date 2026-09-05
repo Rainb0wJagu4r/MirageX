@@ -59,7 +59,7 @@ USAGE:
     miragex encrypt <file> [options]
     miragex decrypt <file.wraith> [options]
     miragex inspect <file.wraith>
-    miragex shred <file> [--passes <N>]
+    miragex shred <file> [--passes <N>] [--mode <hdd|ssd>]
     miragex bench
 
 OPTIONS:
@@ -69,6 +69,8 @@ OPTIONS:
     --pqc <768|1024>           PQC Suite (default: 768)
     --chunk-size <MB>          Streaming chunk size in MB (default: 16)
     --shred                    Securely wipe source file after operation
+    --mode <hdd|ssd>           Shredding mode (default: hdd; ssd includes wear-leveling mitigation)
+    --passes <N>               Overwrite passes (default: 3)
     -h, --help                 Show this help screen
 "#);
 }
@@ -256,17 +258,21 @@ fn handle_shred(args: &[String]) {
 
     let input_path = args[0].clone();
     let mut passes = 3u8;
+    let mut mode = None;
 
     let mut i = 1;
     while i < args.len() {
         if args[i] == "--passes" && i + 1 < args.len() {
             passes = args[i + 1].parse().unwrap_or(3);
             i += 1;
+        } else if args[i] == "--mode" && i + 1 < args.len() {
+            mode = Some(args[i + 1].clone());
+            i += 1;
         }
         i += 1;
     }
 
-    match shred_file_cmd(input_path, Some(passes)) {
+    match shred_file_cmd(input_path, Some(passes), mode) {
         Ok(msg) => println!("🌪️ {}", msg),
         Err(e) => {
             eprintln!("❌ Shredding failed: {}", e);
