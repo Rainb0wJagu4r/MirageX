@@ -36,6 +36,10 @@ Este documento detalla exhaustivamente todos los hallazgos de seguridad identifi
 | **MX-10** | Verificación de alcance en comando shred | Baja | 2.5 | 🟢 **100% Corregido** | Validación backend `in_p.is_file()` para impedir destrucción accidental de directorios/dispositivos. |
 | **MX-11** | Transparencia de biblioteca FIPS 203 ML-KEM | Info | 0.0 | 🟢 **Documentado** | Divulgación en `README.md`, notas de lanzamiento y `THREAT_MODEL.md`. |
 | **MX-12** | Trade-off de liberación de texto plano en streaming | Info | 0.0 | 🟢 **Documentado** | Documentado en `THREAT_MODEL.md` (modelo idéntico a `age`/`gpg`, protegido por temporales atómicos). |
+| **MX-13** | Ajuste y honestidad en afirmaciones de lanzamiento (Ronda 2) | Media | 4.0 | 🟢 **100% Corregido** | Términos absolutos moderados en `RELEASE_NOTES.md`, aclarando evaluación estadística NIST SP 800-22 vs certificación. |
+| **MX-14** | Fijación exacta de dependencia PQC `ml-kem = "=0.2.3"` (Ronda 2) | Baja | 2.0 | 🟢 **100% Corregido** | Dependencia fijada a versión exacta para evitar cambios silenciosos upstream. |
+| **MX-15** | Hardening de CI/CD y anclaje por commit SHA (Ronda 2) | Baja | 2.5 | 🟢 **100% Corregido** | Acciones de GitHub ancladas a commit SHA inmutable + ejecución de tests en release. |
+| **MX-16** | Limpieza de constantes muertas en backend (Ronda 2) | Info | 0.0 | 🟢 **100% Corregido** | Eliminado `MAX_ALLOWED_CHUNK_SIZE` redundante, unificando en `wraith::MAX_CHUNK_SIZE`. |
 
 <br/>
 
