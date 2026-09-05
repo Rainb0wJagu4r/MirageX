@@ -147,6 +147,8 @@ pub fn encrypt_file_cmd(
     suite_id: Option<u8>,
     chunk_size_mb: Option<u32>,
     shred_source: bool,
+    shred_mode: Option<String>,
+    shred_passes: Option<u8>,
 ) -> Result<EncryptionResult, String> {
     let in_p = Path::new(&input_path);
     if !in_p.exists() {
@@ -233,7 +235,12 @@ pub fn encrypt_file_cmd(
     let out_meta = storage.stat(&out_p).map_err(|e| e.to_string())?;
 
     if shred_source {
-        let _ = storage.shred_file(in_p, 3);
+        let mode = match shred_mode.as_deref() {
+            Some("ssd") | Some("SSD") | Some("nvme") | Some("NVMe") => crate::storage::ShredMode::Ssd,
+            _ => crate::storage::ShredMode::Hdd,
+        };
+        let passes = shred_passes.unwrap_or(3);
+        let _ = storage.shred_file_with_mode(in_p, passes, mode);
     }
 
     let chunks_count = if chunk_size > 0 {
@@ -260,6 +267,8 @@ pub fn decrypt_file_cmd(
     output_path: Option<String>,
     mut password: String,
     shred_source: bool,
+    shred_mode: Option<String>,
+    shred_passes: Option<u8>,
 ) -> Result<DecryptionResult, String> {
     let in_p = Path::new(&input_path);
     if !in_p.exists() {
@@ -315,7 +324,12 @@ pub fn decrypt_file_cmd(
 
     if shred_source {
         let storage = LocalStorageAdapter::new();
-        let _ = storage.shred_file(in_p, 3);
+        let mode = match shred_mode.as_deref() {
+            Some("ssd") | Some("SSD") | Some("nvme") | Some("NVMe") => crate::storage::ShredMode::Ssd,
+            _ => crate::storage::ShredMode::Hdd,
+        };
+        let passes = shred_passes.unwrap_or(3);
+        let _ = storage.shred_file_with_mode(in_p, passes, mode);
     }
 
     Ok(DecryptionResult {

@@ -246,6 +246,23 @@ function evaluatePasswordEntropy(pwd) {
 
 // 5. Action Handlers (XSS-Safe DOM Manipulation)
 function setupActions() {
+  // Shred Options toggles
+  const shredSourceChk = document.getElementById('shred-source-chk');
+  const encryptShredOpts = document.getElementById('encrypt-shred-options');
+  if (shredSourceChk && encryptShredOpts) {
+    shredSourceChk.addEventListener('change', () => {
+      encryptShredOpts.style.display = shredSourceChk.checked ? 'block' : 'none';
+    });
+  }
+
+  const shredContainerChk = document.getElementById('shred-container-chk');
+  const decryptShredOpts = document.getElementById('decrypt-shred-options');
+  if (shredContainerChk && decryptShredOpts) {
+    shredContainerChk.addEventListener('change', () => {
+      decryptShredOpts.style.display = shredContainerChk.checked ? 'block' : 'none';
+    });
+  }
+
   // Encrypt Button
   document.getElementById('btn-start-encrypt').addEventListener('click', async () => {
     if (!selectedEncryptPath) {
@@ -261,6 +278,8 @@ function setupActions() {
     const suiteId = parseInt(document.querySelector('input[name="pqc-suite"]:checked').value);
     const chunkSizeMb = parseInt(document.getElementById('chunk-size-select').value);
     const shredSource = document.getElementById('shred-source-chk').checked;
+    const shredMode = document.getElementById('encrypt-shred-media').value;
+    const shredPasses = parseInt(document.getElementById('encrypt-shred-passes').value);
 
     const telemetryCard = document.getElementById('encrypt-telemetry');
     const progressFill = document.getElementById('encrypt-progress-fill');
@@ -275,6 +294,8 @@ function setupActions() {
         suiteId: suiteId,
         chunkSizeMb: chunkSizeMb,
         shredSource: shredSource,
+        shredMode: shredSource ? shredMode : null,
+        shredPasses: shredSource ? shredPasses : null,
       });
 
       progressFill.style.width = '100%';
@@ -299,6 +320,9 @@ function setupActions() {
     }
 
     const shredContainer = document.getElementById('shred-container-chk').checked;
+    const shredMode = document.getElementById('decrypt-shred-media').value;
+    const shredPasses = parseInt(document.getElementById('decrypt-shred-passes').value);
+
     const resultBox = document.getElementById('decrypt-result-box');
     resultBox.textContent = ''; // Clear securely
 
@@ -308,6 +332,8 @@ function setupActions() {
         outputPath: null,
         password: password,
         shredSource: shredContainer,
+        shredMode: shredContainer ? shredMode : null,
+        shredPasses: shredContainer ? shredPasses : null,
       });
 
       // Secure DOM Construction
