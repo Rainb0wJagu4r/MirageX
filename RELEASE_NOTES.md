@@ -3,18 +3,18 @@
 <img src="https://raw.githubusercontent.com/Rainb0wJagu4r/MirageX/main/assets/logo.png" alt="MirageX Logo" width="220" />
 
 # MirageX v4.0.1 — Post-Quantum Cryptographic Release
-### Official Multi-Platform Binaries & Security Certified Release
+### Official Multi-Platform Binaries & Security Hardened Release
 
 [![Release Version](https://img.shields.io/badge/Release-v4.0.1-brightgreen.svg)](https://github.com/Rainb0wJagu4r/MirageX/releases/tag/v4.0.1)
 [![NIST FIPS 203](https://img.shields.io/badge/PQC-ML--KEM--768%20%2F%201024-purple.svg)](https://csrc.nist.gov/pubs/fips/203/final)
-[![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
-[![Security Hardened](https://img.shields.io/badge/Security%20Audit-100%25%20Remediated-brightgreen.svg)]()
+[![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22%20Stats-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
+[![Security Hardened](https://img.shields.io/badge/Internal%20Audit-0%20Open%20Issues-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0%20%2F%20MIT-blue.svg)]()
 
 <br/>
 
 <p align="center">
-<strong>MirageX v4.0.1</strong> es el motor criptográfico desacoplado y formato de contenedor binario (<strong>WRAITH v4</strong>) de grado de producción, resistente a computación cuántica (<em>NIST FIPS 203 ML-KEM</em>), auditado estadísticamente con la suite <strong>NIST SP 800-22</strong> y 100% endurecido tras dos rigurosas rondas de auditoría de seguridad.
+<strong>MirageX v4.0.1</strong> es el motor criptográfico desacoplado y formato de contenedor binario (<strong>WRAITH v4</strong>), diseñado para mitigar riesgos de computación cuántica (<em>NIST FIPS 203 ML-KEM</em>), evaluado estadísticamente con la suite de aleatoriedad <strong>NIST SP 800-22</strong> y endurecido tras dos rondas de revisión y pruebas de seguridad interna.
 </p>
 
 <br/>
@@ -43,7 +43,7 @@
 **1. Criptografía Post-Cuántica (PQC)**<br/>
 Implementación estricta de **NIST FIPS 203**: **ML-KEM-768** (Nivel 3) y **ML-KEM-1024** (Nivel 5).<br/>
 Envelope híbrido: `Argon2id + ML-KEM Key Encapsulation -> HKDF-SHA512 -> AES-256-GCM DEK`.<br/>
-Protección integral frente a amenazas *Harvest Now, Decrypt Later* (HNDL).
+Mitigación arquitectónica frente a riesgos de interceptación *Harvest Now, Decrypt Later* (HNDL).
 
 <br/>
 
@@ -112,10 +112,10 @@ open MirageX.app
 
 ---
 
-## ⚛️ Certificación Estadística NIST SP 800-22
+## 📊 Evaluación Estadística de Aleatoriedad (NIST SP 800-22)
 
 <p align="center">
-Los contenedores <code>.wraith</code> v4 generados por <strong>MirageX Ultra (ML-KEM-1024 / Nivel 5)</strong> superaron con éxito la suite completa de pruebas estadísticas <strong>NIST SP 800-22</strong> con cero correlación y balance de bits óptimo (50.0%).
+Los datos cifrados en contenedores <code>.wraith</code> v4 generados por <strong>MirageX Ultra (ML-KEM-1024 / Nivel 5)</strong> superaron con éxito la batería de pruebas estadísticas de aleatoriedad <strong>NIST SP 800-22</strong> con distribución uniforme de bits y cero sesgos detectables.
 </p>
 
 ---

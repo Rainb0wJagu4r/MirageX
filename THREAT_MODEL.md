@@ -80,6 +80,15 @@ Like [`age`](https://github.com/FiloSottile/age) and [`gnupg`](https://gnupg.org
 - <strong>Solid State Drives (SSD / NVMe / Flash):</strong> Due to the Flash Translation Layer (FTL), wear-leveling, bad-block remapping, and over-provisioning, logical software overwrites are <em>best-effort mitigations</em>. MirageX applies high-entropy random data (defeating hardware deduplication/compression), truncates to 0 bytes, and scrambles directory metadata 3 times before unlinking.
 </p>
 
+---
+
+## 6. Supply Chain & Independent Audit Disclosure
+
+MirageX maintains strict transparency regarding its cryptographic foundations and audit readiness:
+1. **Classical Foundations:** Symmetric AEAD (`aes-gcm`), password KDF (`argon2`), key derivation (`hkdf`), and hash functions (`sha2`) use mature, battle-tested RustCrypto primitives.
+2. **Post-Quantum Primitive (`ml-kem` crate):** PQC encapsulation implements NIST FIPS 203 (ML-KEM-768/1024) via the official `ml-kem = "=0.2.3"` crate (RustCrypto). In accordance with RustCrypto's official notice (*"The implementation contained in this crate has never been independently audited"*), MirageX acknowledges this experimental upstream status. No active RustSec advisories exist.
+3. **Audit Status:** MirageX has completed rigorous internal white-box static code audits and automated test hardening (20 automated security tests). As outlined in §15 of the original design specification, formal external third-party cryptographic certification and extended continuous fuzzing remain on the active project roadmap before production claims of third-party accreditation.
+
 <br/>
 
 <div align="center">

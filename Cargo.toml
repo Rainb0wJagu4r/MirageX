@@ -7,13 +7,13 @@ description = "High-Performance Post-Quantum (PQC) Decoupled Encryption Engine &
 
 [dependencies]
 # Post-Quantum Cryptography & Core Primitives
-ml-kem = "0.2"
+ml-kem = "=0.2.3"
 aes-gcm = "0.10.3"
 argon2 = { version = "0.5.3", default-features = false, features = ["alloc", "rand"] }
 hkdf = "0.12.4"
 sha2 = "0.10.8"
 rand = "0.8.5"
-getrandom = { version = "0.2.15", features = ["js"] }
+getrandom = "0.2.15"
 zeroize = { version = "1.8.1", features = ["derive", "zeroize_derive"] }
 subtle = "2.6.1"
 thiserror = "1.0"

@@ -21,8 +21,6 @@ use crate::wraith::{
     DEFAULT_CHUNK_SIZE,
 };
 
-pub const MAX_ALLOWED_CHUNK_SIZE: u32 = 256 * 1024 * 1024; // 256 MiB max
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EncryptionResult {
     pub success: bool,
