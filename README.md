@@ -21,6 +21,7 @@
 > **Project Origin & Active Development Status**
 > - 🇲🇽 **Born in Mexico:** This project is proud to be born in Mexico.
 > - **In Active Development:** Software is under active research and implementation.
+> - **NIST FIPS 203 Cryptographic Library Notice:** Post-quantum encapsulation is powered by the RustCrypto `ml-kem` implementation (FIPS 203 standard). While mathematically compliant with NIST specifications, it has not undergone formal CMVP hardware module certification; community code reviews and third-party penetration tests are actively encouraged.
 > - **NIST SP 800-22 Statistical Audit:** The entropy and pseudorandomness of **MirageX Ultra (ML-KEM-1024 / Level 5 PQC)** WRAITH v4 envelopes have been audited across random binary, structured text, and all-zeroes payloads. All tests passed with zero correlation: [PROJECT-MIRAGE-NIST-Analyze-results](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results).
 > - **Open to Audits:** We welcome open cryptographic audits and code reviews to help us continue learning, developing, and contributing to post-quantum cybersecurity.
 
@@ -34,7 +35,7 @@
 
 **Post-Quantum Cryptography (PQC)**<br/>
 Official **NIST FIPS 203** standards: **ML-KEM-768** (Security Level 3) and **ML-KEM-1024** (Security Level 5).<br/>
-Hybrid quantum envelope architecture: `Argon2id + ML-KEM Key Encapsulation -> HKDF-SHA512 -> AES-256-GCM DEK`.<br/>
+Hybrid quantum envelope architecture: `Argon2id (Dynamic Header Parameters) + ML-KEM Key Encapsulation -> HKDF-SHA512 -> AES-256-GCM DEK`.<br/>
 Protects data against *Harvest Now, Decrypt Later* (HNDL) adversarial threats.
 
 <br/>
@@ -46,7 +47,8 @@ Files `.wraith` can reside in Local NVMe/SSD/HDD, external USB drives, air-gappe
 <br/>
 
 **Deterministic & Cross-Platform WRAITH v4 Format**<br/>
-Strict big-endian layout across **macOS, Windows, and Linux**.<br/>
+Strict big-endian 80-byte header with embedded KDF parameter versioning (`m_cost`, `t_cost`, `p_cost`).<br/>
+NIST SP 800-38D deterministic 96-bit chunk nonces (`4-byte session salt || 8-byte chunk index`) guaranteeing zero nonce collision under identical DEK.<br/>
 Streaming authenticated chunking (16 MiB default) with constant memory footprint (<25 MB RAM for >100 GB files).<br/>
 Sequential AAD binding: `UUID || ChunkIndex || IsFinal || PayloadLen` prevents chunk reordering, truncation, or bit-flip tampering.
 
@@ -54,7 +56,7 @@ Sequential AAD binding: `UUID || ChunkIndex || IsFinal || PayloadLen` prevents c
 
 **Dual Mode Interface**<br/>
 **Native Desktop GUI**: Tauri 2.0 with Electric Purple Cyber HUD, Drag & Drop, native file dialogs (`rfd`), and real-time streaming telemetry.<br/>
-**High-Throughput CLI**: Automated headless batch encryption, decryption, inspection, and multi-pass CSPRNG shredding.
+**High-Throughput CLI**: Automated headless batch encryption, decryption, inspection, and multi-pass CSPRNG shredding (DoD 5220.22-M for HDD & Wear-Leveling mitigation for SSD).
 
 <br/>
 

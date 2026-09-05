@@ -15,6 +15,15 @@ pub fn generate_nonce<R: RngCore + CryptoRng>(rng: &mut R) -> [u8; NONCE_SIZE] {
     nonce
 }
 
+/// Generates a deterministic 12-byte nonce according to NIST SP 800-38D (4-byte fixed salt/prefix + 8-byte big-endian counter).
+/// Guarantees zero nonce reuse or collision across chunks under the same DEK.
+pub fn generate_chunk_nonce(nonce_prefix: [u8; 4], chunk_index: u64) -> [u8; NONCE_SIZE] {
+    let mut nonce = [0u8; NONCE_SIZE];
+    nonce[0..4].copy_from_slice(&nonce_prefix);
+    nonce[4..12].copy_from_slice(&chunk_index.to_be_bytes());
+    nonce
+}
+
 /// Encrypts plaintext using AES-256-GCM with associated data (AAD).
 /// Returns ciphertext_with_tag (the 16-byte tag is appended).
 pub fn encrypt_aes_gcm(

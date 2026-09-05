@@ -1,11 +1,11 @@
 use std::io::{Read, Write};
 use std::time::Instant;
-use rand::rngs::OsRng;
+use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
 use zeroize::Zeroize;
 
 use crate::crypto::{
-    aead::{encrypt_aes_gcm, generate_nonce, NONCE_SIZE},
+    aead::{encrypt_aes_gcm, generate_chunk_nonce, generate_nonce, NONCE_SIZE},
     kdf::{derive_master_keys, derive_password_key, derive_pqc_wrap_key, DEFAULT_ARGON2_M_COST, DEFAULT_ARGON2_P_COST, DEFAULT_ARGON2_T_COST},
     kem::pqc_encapsulate,
     PqcSuite,
@@ -50,8 +50,15 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     let mut rng = OsRng;
     let start_time = Instant::now();
 
-    // 1. Generate Header & Serialize full 64-byte Header Block
-    let header = WraithHeader::new(options.suite, options.chunk_size, &mut rng);
+    // 1. Generate Header & Serialize full 80-byte Header Block (storing Argon2id KDF parameters)
+    let header = WraithHeader::new(
+        options.suite,
+        options.chunk_size,
+        options.argon2_m_cost,
+        options.argon2_t_cost,
+        options.argon2_p_cost,
+        &mut rng,
+    );
     let header_bytes = header.to_bytes();
     writer.write_all(&header_bytes)?;
 
@@ -62,9 +69,9 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     let password_key = derive_password_key(
         password,
         &header.salt,
-        options.argon2_m_cost,
-        options.argon2_t_cost,
-        options.argon2_p_cost,
+        header.argon2_m_cost,
+        header.argon2_t_cost,
+        header.argon2_p_cost,
     )?;
 
     // 4. Derive PQC Wrap Key and Master Keys via HKDF-SHA512
@@ -77,7 +84,7 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     )?;
 
     // 5. Wrap PQC Decapsulation Key with pqc_wrap_key via AES-256-GCM
-    // Authentication Binding: We bind the ENTIRE 64-byte Header as AAD to seal version, suite, salt, uuid, chunk size
+    // Authentication Binding: We bind the ENTIRE 80-byte Header as AAD to seal version, suite, salt, uuid, chunk size, and KDF params
     let wrap_nonce = generate_nonce(&mut rng);
     let wrapped_decaps_key = encrypt_aes_gcm(
         &*pqc_wrap_key,
@@ -105,12 +112,15 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
         (total_file_size + chunk_size as u64 - 1) / (chunk_size as u64)
     };
 
-    // 8. Stream Chunks with AEAD AES-256-GCM (Lookahead EOF to prevent TOCTOU truncation)
+    // 8. Stream Chunks with AEAD AES-256-GCM (Deterministic NIST SP 800-38D Nonces & Lookahead EOF)
     let mut chunk_buf = vec![0u8; chunk_size];
     let mut chunk_index = 0u64;
     let mut total_bytes_read = 0u64;
     let mut sha256_hasher = Sha256::new();
     let mut lookahead_byte: Option<u8> = None;
+
+    let mut chunk_nonce_prefix = [0u8; 4];
+    rng.fill_bytes(&mut chunk_nonce_prefix);
 
     loop {
         let mut n = 0;
@@ -153,7 +163,8 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
         aad.push(if is_final { 1 } else { 0 });
         aad.extend_from_slice(&(n as u32).to_be_bytes());
 
-        let chunk_nonce = generate_nonce(&mut rng);
+        // Deterministic NIST SP 800-38D chunk nonce: [Prefix (4B)] || [ChunkIndex (8B)]
+        let chunk_nonce = generate_chunk_nonce(chunk_nonce_prefix, chunk_index);
         let encrypted_chunk = encrypt_aes_gcm(&master_keys.dek, &chunk_nonce, &chunk_buf[..n], &aad)?;
 
         // Write Chunk: [chunk_index (8B)] || [is_final (1B)] || [payload_len (4B)] || [nonce (12B)] || [encrypted_payload_with_tag]

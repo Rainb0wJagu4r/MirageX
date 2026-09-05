@@ -14,6 +14,9 @@ pub struct ContainerInspection {
     pub uuid_hex: String,
     pub chunk_size_bytes: u32,
     pub chunk_size_mb: f32,
+    pub argon2_m_cost: u32,
+    pub argon2_t_cost: u32,
+    pub argon2_p_cost: u32,
     pub flags: u32,
     pub pqc_ciphertext_size: usize,
     pub is_pqc: bool,
@@ -35,10 +38,10 @@ pub fn inspect_container<R: Read>(mut reader: R) -> Result<ContainerInspection, 
             return Err(WraithError::InvalidMagic);
         }
 
-        let mut rest_buf = [0u8; 58]; // 64 - 6 = 58 bytes
+        let mut rest_buf = [0u8; 74]; // 80 - 6 = 74 bytes
         reader.read_exact(&mut rest_buf).map_err(|_| WraithError::UnexpectedEof)?;
 
-        let mut full_header_buf = [0u8; 64];
+        let mut full_header_buf = [0u8; 80];
         full_header_buf[..4].copy_from_slice(&initial_buf);
         full_header_buf[4..6].copy_from_slice(&rest_magic);
         full_header_buf[6..].copy_from_slice(&rest_buf);
@@ -60,11 +63,19 @@ pub fn inspect_container<R: Read>(mut reader: R) -> Result<ContainerInspection, 
             uuid_hex: hex::encode(header.uuid),
             chunk_size_bytes: header.chunk_size,
             chunk_size_mb: header.chunk_size as f32 / (1024.0 * 1024.0),
+            argon2_m_cost: header.argon2_m_cost,
+            argon2_t_cost: header.argon2_t_cost,
+            argon2_p_cost: header.argon2_p_cost,
             flags: header.flags,
             pqc_ciphertext_size: pqc_ct_len,
             is_pqc: true,
             legacy_project_mirage: false,
-            details: "Formato WRAITH v4 oficial con cifrado híbrido envelope NIST FIPS 203 ML-KEM + Argon2id + AES-256-GCM Streaming por bloques autenticados.".into(),
+            details: format!(
+                "Formato WRAITH v4 oficial con cifrado híbrido envelope NIST FIPS 203 ML-KEM + Argon2id (m={}MB, t={}, p={}) + AES-256-GCM Streaming por bloques autenticados.",
+                header.argon2_m_cost / 1024,
+                header.argon2_t_cost,
+                header.argon2_p_cost
+            ),
         })
     } else if &initial_buf == b"MIRG" {
         // Project Mirage Legacy (v2 - https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE)
@@ -108,6 +119,9 @@ pub fn inspect_container<R: Read>(mut reader: R) -> Result<ContainerInspection, 
             uuid_hex: "N/A (Legacy Monolithic Archive)".into(),
             chunk_size_bytes: 0,
             chunk_size_mb: 0.0,
+            argon2_m_cost: 0,
+            argon2_t_cost: 0,
+            argon2_p_cost: 0,
             flags: flags as u32,
             pqc_ciphertext_size: 0,
             is_pqc: false,
@@ -140,6 +154,9 @@ pub fn inspect_container<R: Read>(mut reader: R) -> Result<ContainerInspection, 
             uuid_hex: "N/A (Legacy v1 Archive)".into(),
             chunk_size_bytes: 0,
             chunk_size_mb: 0.0,
+            argon2_m_cost: 0,
+            argon2_t_cost: 0,
+            argon2_p_cost: 0,
             flags: 0,
             pqc_ciphertext_size: 0,
             is_pqc: false,
