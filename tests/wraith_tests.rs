@@ -195,18 +195,29 @@ fn test_wraith_v4_chunk_tamper_fails() {
 }
 
 #[test]
-fn test_storage_local_shredding() {
+fn test_storage_local_shredding_hdd_and_ssd() {
     let temp_dir = std::env::temp_dir().join("miragex_test_shred");
     let _ = std::fs::create_dir_all(&temp_dir);
-    let test_file = temp_dir.join("test_shred_secret.txt");
 
     let adapter = LocalStorageAdapter::new();
-    let secret_data = b"Wipe me completely with 3 CSPRNG passes!";
-    adapter.save_stream(&test_file, &mut Cursor::new(secret_data)).expect("Save should succeed");
-    assert!(adapter.exists(&test_file));
 
-    adapter.shred_file(&test_file, 3).expect("Shredding should succeed");
-    assert!(!adapter.exists(&test_file), "File must be completely removed after shredding");
+    // 1. Test HDD Mode (Magnetic multi-pass)
+    let test_file_hdd = temp_dir.join("test_shred_hdd.txt");
+    let secret_data_hdd = b"Wipe me completely with 3 HDD passes!";
+    adapter.save_stream(&test_file_hdd, &mut Cursor::new(secret_data_hdd)).expect("Save should succeed");
+    assert!(adapter.exists(&test_file_hdd));
+
+    adapter.shred_file_with_mode(&test_file_hdd, 3, miragex::storage::ShredMode::Hdd).expect("HDD shredding should succeed");
+    assert!(!adapter.exists(&test_file_hdd), "HDD file must be removed after shredding");
+
+    // 2. Test SSD Mode (Wear-leveling & FTL mitigation)
+    let test_file_ssd = temp_dir.join("test_shred_ssd.txt");
+    let secret_data_ssd = b"Wipe me completely with 3 SSD wear-leveling mitigation passes!";
+    adapter.save_stream(&test_file_ssd, &mut Cursor::new(secret_data_ssd)).expect("Save should succeed");
+    assert!(adapter.exists(&test_file_ssd));
+
+    adapter.shred_file_with_mode(&test_file_ssd, 3, miragex::storage::ShredMode::Ssd).expect("SSD shredding should succeed");
+    assert!(!adapter.exists(&test_file_ssd), "SSD file must be removed after shredding");
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }

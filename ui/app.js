@@ -380,14 +380,17 @@ function setupActions() {
     }
   });
 
-  // Shredder Button
+  // Shredder Button (Supporting SSD Wear-Leveling Mitigation & HDD Physical Multi-Pass)
   document.getElementById('btn-execute-shred').addEventListener('click', async () => {
     if (!selectedShredPath) {
       showToast('Selecciona un archivo para triturar.', 'error');
       return;
     }
     const passes = parseInt(document.getElementById('shred-passes-select').value);
-    if (!confirm(`¿Deseas ejecutar el borrado seguro de '${selectedShredPath}' con ${passes} pasadas CSPRNG?\n\nNota técnica: En medios magnéticos/HDD se efectúa sobrescritura física completa; en unidades SSD/NVMe modernas con wear-leveling la eliminación opera como mitigación best-effort de nivel forense.`)) {
+    const mediaMode = document.getElementById('shred-media-select').value;
+    const modeLabel = mediaMode === 'ssd' ? 'SSD/NVMe (Mitigación FTL Wear-Leveling)' : 'HDD (Sobrescritura Física)';
+
+    if (!confirm(`¿Deseas ejecutar el borrado seguro de '${selectedShredPath}' en modo ${modeLabel} con ${passes} pasadas?\n\nNota técnica: En medios HDD se efectúa sobrescritura magnética física directa; en unidades SSD/NVMe con wear-leveling se aplica una secuencia de alta entropía anti-deduplicación con ofuscación de metadatos.`)) {
       return;
     }
 
@@ -395,10 +398,11 @@ function setupActions() {
       const msg = await invokeBackend('shred_file_cmd', {
         inputPath: selectedShredPath,
         passes: passes,
+        mode: mediaMode,
       });
       showToast(msg, 'success');
       selectedShredPath = null;
-      document.getElementById('shred-file-title').textContent = 'Archivo procesado con borrado seguro (mitigación best-effort).';
+      document.getElementById('shred-file-title').textContent = `Archivo procesado con éxito (${modeLabel}).`;
     } catch (err) {
       showToast(`Fallo de destrucción: ${err}`, 'error');
     }

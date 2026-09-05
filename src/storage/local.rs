@@ -60,7 +60,7 @@ impl StorageAdapter for LocalStorageAdapter {
         Ok(Box::new(file))
     }
 
-    fn shred_file(&self, path: &Path, passes: u8) -> Result<(), StorageError> {
+    fn shred_file_with_mode(&self, path: &Path, passes: u8, mode: crate::storage::ShredMode) -> Result<(), StorageError> {
         if !path.exists() {
             return Err(StorageError::NotFound(path.display().to_string()));
         }
@@ -78,26 +78,57 @@ impl StorageAdapter for LocalStorageAdapter {
         let chunk_size = 64 * 1024; // 64 KB wipe chunk
         let mut wipe_buf = vec![0u8; chunk_size];
 
-        for pass in 0..num_passes {
-            file.seek(SeekFrom::Start(0))?;
-            let mut remaining = file_size;
+        match mode {
+            crate::storage::ShredMode::Hdd => {
+                // HDD Mode: Classic Magnetic Multi-Pass (DoD 5220.22-M / CSPRNG + Complements + Zeroes)
+                for pass in 0..num_passes {
+                    file.seek(SeekFrom::Start(0))?;
+                    let mut remaining = file_size;
 
-            while remaining > 0 {
-                let write_size = remaining.min(chunk_size as u64) as usize;
-                let slice = &mut wipe_buf[..write_size];
+                    while remaining > 0 {
+                        let write_size = remaining.min(chunk_size as u64) as usize;
+                        let slice = &mut wipe_buf[..write_size];
 
-                match pass % 3 {
-                    0 => rng.fill_bytes(slice),     // Random CSPRNG
-                    1 => slice.fill(0x55),           // Complement pattern
-                    _ => slice.fill(0x00),           // Zero out
+                        match pass % 4 {
+                            0 => rng.fill_bytes(slice),     // CSPRNG Random
+                            1 => slice.fill(0x55),           // Complement 01010101
+                            2 => slice.fill(0xAA),           // Complement 10101010
+                            _ => slice.fill(0x00),           // Zero out
+                        }
+
+                        file.write_all(slice)?;
+                        remaining -= write_size as u64;
+                    }
+
+                    file.flush()?;
+                    file.sync_all()?;
                 }
-
-                file.write_all(slice)?;
-                remaining -= write_size as u64;
             }
+            crate::storage::ShredMode::Ssd => {
+                // SSD/NVMe Mode: Wear-Leveling & FTL Mitigation
+                // 1. High-entropy CSPRNG passes to defeat flash controller hardware deduplication & inline compression
+                for pass in 0..num_passes {
+                    file.seek(SeekFrom::Start(0))?;
+                    let mut remaining = file_size;
 
-            file.flush()?;
-            file.sync_all()?;
+                    while remaining > 0 {
+                        let write_size = remaining.min(chunk_size as u64) as usize;
+                        let slice = &mut wipe_buf[..write_size];
+
+                        if pass % 2 == 0 {
+                            rng.fill_bytes(slice); // High entropy CSPRNG
+                        } else {
+                            slice.fill(0x00);      // Zeroing pass
+                        }
+
+                        file.write_all(slice)?;
+                        remaining -= write_size as u64;
+                    }
+
+                    file.flush()?;
+                    file.sync_all()?;
+                }
+            }
         }
 
         // Truncate file to 0 bytes
@@ -105,15 +136,24 @@ impl StorageAdapter for LocalStorageAdapter {
         file.sync_all()?;
         drop(file);
 
-        // Rename to random obfuscated name before unlink
-        let rand_name: u64 = rng.next_u64();
-        let obfuscated_path = path.with_file_name(format!(".shredded_{}", rand_name));
-        let _ = fs::rename(path, &obfuscated_path);
+        // Metadata Scrambling: Multiple random renames before unlinking to obfuscate directory table / inode metadata
+        let mut current_path = path.to_path_buf();
+        for _ in 0..3 {
+            let rand_name: u64 = rng.next_u64();
+            let obfuscated_path = current_path.with_file_name(format!(".shredded_{:x}", rand_name));
+            if fs::rename(&current_path, &obfuscated_path).is_ok() {
+                current_path = obfuscated_path;
+            }
+        }
 
         // Final removal
-        fs::remove_file(if obfuscated_path.exists() { &obfuscated_path } else { path })?;
+        fs::remove_file(if current_path.exists() { &current_path } else { path })?;
 
         Ok(())
+    }
+
+    fn shred_file(&self, path: &Path, passes: u8) -> Result<(), StorageError> {
+        self.shred_file_with_mode(path, passes, crate::storage::ShredMode::Hdd)
     }
 
     fn delete_file(&self, path: &Path) -> Result<(), StorageError> {

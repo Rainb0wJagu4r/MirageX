@@ -40,7 +40,7 @@ impl StorageAdapter for MemoryStorageAdapter {
         }
     }
 
-    fn shred_file(&self, path: &Path, _passes: u8) -> Result<(), StorageError> {
+    fn shred_file_with_mode(&self, path: &Path, _passes: u8, _mode: crate::storage::ShredMode) -> Result<(), StorageError> {
         let key = path.to_string_lossy().to_string();
         let mut lock = self.files.write().unwrap();
         if let Some(mut data) = lock.remove(&key) {
@@ -49,6 +49,10 @@ impl StorageAdapter for MemoryStorageAdapter {
         } else {
             Err(StorageError::NotFound(key))
         }
+    }
+
+    fn shred_file(&self, path: &Path, passes: u8) -> Result<(), StorageError> {
+        self.shred_file_with_mode(path, passes, crate::storage::ShredMode::Hdd)
     }
 
     fn delete_file(&self, path: &Path) -> Result<(), StorageError> {

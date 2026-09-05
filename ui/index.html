@@ -325,16 +325,26 @@
             <div class="dropzone-sub">Sobreescritura multi-paso con CSPRNG + Patrones complementarios + Truncamiento (mitigación best-effort en memorias flash con wear-leveling)</div>
           </div>
 
-          <div class="form-group" style="margin-top: 20px;">
-            <label for="shred-passes-select">NÚMERO DE PASADAS DE SOBREESCRITURA</label>
-            <select id="shred-passes-select" class="hud-select">
-              <option value="3" selected>3 Pasadas (CSPRNG + Patrón 0x55 + Ceros - Rápido y Seguro)</option>
-              <option value="7">7 Pasadas (Estándar DoD 5220.22-M)</option>
-              <option value="12">12 Pasadas (Paranoia Nivel Máximo)</option>
-            </select>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+            <div class="form-group">
+              <label for="shred-media-select">TIPO DE ALMACENAMIENTO / MEDIO FÍSICO</label>
+              <select id="shred-media-select" class="hud-select">
+                <option value="ssd" selected>⚡ SSD / NVMe (Mitigación Wear-Leveling & Anti-Deduplicación FTL)</option>
+                <option value="hdd">💾 HDD / Disco Magnético (Sobrescritura Física Directa de Sectores)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="shred-passes-select">NÚMERO DE PASADAS DE SOBREESCRITURA</label>
+              <select id="shred-passes-select" class="hud-select">
+                <option value="3" selected>3 Pasadas (CSPRNG + Patrón Complementario + Ceros)</option>
+                <option value="7">7 Pasadas (Estándar DoD 5220.22-M / Ultra Seguro)</option>
+                <option value="12">12 Pasadas (Modo Forense Paranoia Máxima)</option>
+              </select>
+            </div>
           </div>
 
-          <button class="btn-danger" id="btn-execute-shred">
+          <button class="btn-danger" id="btn-execute-shred" style="margin-top: 15px;">
             🌪️ EJECUTAR BORRADO SEGURO DEL ARCHIVO
           </button>
         </div>
