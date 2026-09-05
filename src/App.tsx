@@ -11,6 +11,7 @@ import { findings, strengths, scores, attackMatrix, deps, roadmap, type Severity
 
 // ---------- helpers ----------
 const sevMeta: Record<Severity, { label: string; color: string; bg: string; border: string; icon: any }> = {
+  alta: { label: "ALTA", color: "text-red-400", bg: "bg-red-400/10", border: "border-red-400/30", icon: Skull },
   media: { label: "MEDIA", color: "text-amber-300", bg: "bg-amber-400/10", border: "border-amber-400/30", icon: TriangleAlert },
   baja: { label: "BAJA", color: "text-cyan-300", bg: "bg-cyan-400/10", border: "border-cyan-400/30", icon: ShieldHalf },
   info: { label: "INFO", color: "text-slate-300", bg: "bg-slate-400/10", border: "border-slate-400/30", icon: Info },
