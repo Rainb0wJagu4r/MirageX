@@ -34,7 +34,7 @@ impl WraithHeader {
         }
     }
 
-    pub fn write_to<W: Write>(&self, writer: &mut W) -> Result<(), WraithError> {
+    pub fn to_bytes(&self) -> [u8; HEADER_SIZE] {
         let mut buf = [0u8; HEADER_SIZE];
         buf[0..6].copy_from_slice(MAGIC_BYTES);
         buf[6] = self.version;
@@ -43,7 +43,11 @@ impl WraithHeader {
         buf[40..56].copy_from_slice(&self.uuid);
         buf[56..60].copy_from_slice(&self.chunk_size.to_be_bytes());
         buf[60..64].copy_from_slice(&self.flags.to_be_bytes());
+        buf
+    }
 
+    pub fn write_to<W: Write>(&self, writer: &mut W) -> Result<(), WraithError> {
+        let buf = self.to_bytes();
         writer.write_all(&buf)?;
         Ok(())
     }

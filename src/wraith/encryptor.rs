@@ -2,6 +2,7 @@ use std::io::{Read, Write};
 use std::time::Instant;
 use rand::rngs::OsRng;
 use sha2::{Digest, Sha256};
+use zeroize::Zeroize;
 
 use crate::crypto::{
     aead::{encrypt_aes_gcm, generate_nonce, NONCE_SIZE},
@@ -49,14 +50,15 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     let mut rng = OsRng;
     let start_time = Instant::now();
 
-    // 1. Generate Header & UUID
+    // 1. Generate Header & Serialize full 64-byte Header Block
     let header = WraithHeader::new(options.suite, options.chunk_size, &mut rng);
-    header.write_to(&mut writer)?;
+    let header_bytes = header.to_bytes();
+    writer.write_all(&header_bytes)?;
 
     // 2. Perform PQC Encapsulation (NIST FIPS 203 ML-KEM)
     let pqc_res = pqc_encapsulate(options.suite, &mut rng)?;
 
-    // 3. Derive Password Key via Argon2id
+    // 3. Derive Password Key via Argon2id (Zeroizing wrapper)
     let password_key = derive_password_key(
         password,
         &header.salt,
@@ -66,21 +68,22 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     )?;
 
     // 4. Derive PQC Wrap Key and Master Keys via HKDF-SHA512
-    let pqc_wrap_key = derive_pqc_wrap_key(&password_key, &header.salt, &header.uuid)?;
+    let pqc_wrap_key = derive_pqc_wrap_key(&*password_key, &header.salt, &header.uuid)?;
     let master_keys = derive_master_keys(
-        &password_key,
-        &pqc_res.shared_secret,
+        &*password_key,
+        &*pqc_res.shared_secret,
         &header.uuid,
         &header.salt,
     )?;
 
     // 5. Wrap PQC Decapsulation Key with pqc_wrap_key via AES-256-GCM
+    // Authentication Binding: We bind the ENTIRE 64-byte Header as AAD to seal version, suite, salt, uuid, chunk size
     let wrap_nonce = generate_nonce(&mut rng);
     let wrapped_decaps_key = encrypt_aes_gcm(
-        &pqc_wrap_key,
+        &*pqc_wrap_key,
         &wrap_nonce,
-        &pqc_res.decapsulation_key_bytes,
-        &header.uuid,
+        &*pqc_res.decapsulation_key_bytes,
+        &header_bytes,
     )?;
 
     // 6. Write PQC Envelope Block
@@ -164,6 +167,9 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
             break;
         }
     }
+
+    // Clean chunk buffer memory
+    chunk_buf.zeroize();
 
     // 9. Write Encrypted Manifest Trailer (containing original filename, SHA-256 hash, and exact size)
     let final_hash: [u8; 32] = sha256_hasher.finalize().into();

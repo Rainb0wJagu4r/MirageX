@@ -1,5 +1,5 @@
-// MirageX Controller & IPC Bridge
-// Zero External Dependencies
+// MirageX Controller & Secure IPC Bridge
+// Zero External Dependencies // XSS-Hardened DOM
 
 // Helper to invoke Tauri IPC command
 async function invokeBackend(cmd, args = {}) {
@@ -128,7 +128,6 @@ function setupTauriNativeEvents() {
 
 // 3. Dropzones with Native Dialog Pickers
 function setupDropzones() {
-  // Encrypt Dropzone
   const encDropzone = document.getElementById('encrypt-dropzone');
   encDropzone.addEventListener('click', async () => {
     try {
@@ -146,7 +145,6 @@ function setupDropzones() {
     }
   });
 
-  // Decrypt Dropzone
   const decDropzone = document.getElementById('decrypt-dropzone');
   decDropzone.addEventListener('click', async () => {
     try {
@@ -163,7 +161,6 @@ function setupDropzones() {
     }
   });
 
-  // Inspect Dropzone
   const inspDropzone = document.getElementById('inspect-dropzone');
   inspDropzone.addEventListener('click', async () => {
     try {
@@ -177,7 +174,6 @@ function setupDropzones() {
     }
   });
 
-  // Shred Dropzone
   const shredDropzone = document.getElementById('shred-dropzone');
   shredDropzone.addEventListener('click', async () => {
     try {
@@ -248,7 +244,7 @@ function evaluatePasswordEntropy(pwd) {
   return { pct: 100, color: '#10b981', label: 'Criptográficamente Imbatible', bits };
 }
 
-// 5. Action Handlers
+// 5. Action Handlers (XSS-Safe DOM Manipulation)
 function setupActions() {
   // Encrypt Button
   document.getElementById('btn-start-encrypt').addEventListener('click', async () => {
@@ -290,7 +286,7 @@ function setupActions() {
     }
   });
 
-  // Decrypt Button
+  // Decrypt Button (XSS Safe - Zero innerHTML)
   document.getElementById('btn-start-decrypt').addEventListener('click', async () => {
     if (!selectedDecryptPath) {
       showToast('Por favor selecciona un contenedor .wraith.', 'error');
@@ -304,6 +300,7 @@ function setupActions() {
 
     const shredContainer = document.getElementById('shred-container-chk').checked;
     const resultBox = document.getElementById('decrypt-result-box');
+    resultBox.textContent = ''; // Clear securely
 
     try {
       const res = await invokeBackend('decrypt_file_cmd', {
@@ -313,23 +310,51 @@ function setupActions() {
         shredSource: shredContainer,
       });
 
-      resultBox.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono); font-size: 11px;">
-          <div style="color: var(--green); font-weight: bold; font-size: 13px;">✅ AUTENTICIDAD & INTEGRIDAD MIRAGEX VERIFICADAS</div>
-          <div><span style="color: var(--text-secondary);">Archivo Restaurado:</span> <span style="color: #fff;">${res.original_filename}</span></div>
-          <div><span style="color: var(--text-secondary);">Destino:</span> <span style="color: var(--purple-light);">${res.output_path}</span></div>
-          <div><span style="color: var(--text-secondary);">Tamaño:</span> <span style="color: #fff;">${formatBytes(res.restored_size)}</span></div>
-          <div><span style="color: var(--text-secondary);">Hash SHA-256:</span> <span style="color: var(--yellow); word-break: break-all;">${res.sha256_hex}</span></div>
-          <div><span style="color: var(--text-secondary);">Tiempo de cómputo:</span> <span style="color: #fff;">${res.elapsed_ms} ms</span></div>
-        </div>
-      `;
+      // Secure DOM Construction
+      const container = document.createElement('div');
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.gap = '10px';
+      container.style.fontFamily = 'var(--font-mono)';
+      container.style.fontSize = '11px';
+
+      const title = document.createElement('div');
+      title.style.color = 'var(--green)';
+      title.style.fontWeight = 'bold';
+      title.style.fontSize = '13px';
+      title.textContent = '✅ AUTENTICIDAD & INTEGRIDAD MIRAGEX VERIFICADAS';
+      container.appendChild(title);
+
+      const addRow = (label, value, valueColor = '#fff') => {
+        const row = document.createElement('div');
+        const lbl = document.createElement('span');
+        lbl.style.color = 'var(--text-secondary)';
+        lbl.textContent = `${label}: `;
+        const val = document.createElement('span');
+        val.style.color = valueColor;
+        val.style.wordBreak = 'break-all';
+        val.textContent = value;
+        row.appendChild(lbl);
+        row.appendChild(val);
+        container.appendChild(row);
+      };
+
+      addRow('Archivo Restaurado', res.original_filename);
+      addRow('Destino', res.output_path, 'var(--purple-light)');
+      addRow('Tamaño', formatBytes(res.restored_size));
+      addRow('Hash SHA-256', res.sha256_hex, 'var(--yellow)');
+      addRow('Tiempo de cómputo', `${res.elapsed_ms} ms`);
+
+      resultBox.appendChild(container);
       showToast('Contenedor restaurado con éxito.', 'success');
     } catch (err) {
-      resultBox.innerHTML = `
-        <div style="color: var(--red); font-family: var(--font-mono); font-size: 12px; text-align: center;">
-          ❌ Fallo de autenticación: Contraseña incorrecta o datos corruptos.
-        </div>
-      `;
+      const errDiv = document.createElement('div');
+      errDiv.style.color = 'var(--red)';
+      errDiv.style.fontFamily = 'var(--font-mono)';
+      errDiv.style.fontSize = '12px';
+      errDiv.style.textAlign = 'center';
+      errDiv.textContent = `❌ Fallo de autenticación: Contraseña incorrecta o datos corruptos (${err})`;
+      resultBox.appendChild(errDiv);
       showToast(`Error al descifrar: ${err}`, 'error');
     }
   });
@@ -380,22 +405,21 @@ function setupActions() {
   });
 }
 
-// 6. Inspection Logic
+// 6. Inspection Logic (XSS-Safe)
 async function runInspection(path) {
   const inspectionResults = document.getElementById('inspection-results');
   try {
     const info = await invokeBackend('inspect_container_cmd', { inputPath: path });
     document.getElementById('insp-magic').textContent = `${info.magic} v${info.version}`;
     document.getElementById('insp-suite').textContent = info.suite_name;
-    document.getElementById('insp-chunk-size').textContent = info.legacy_project_mirage ? 'Monolítico v1' : `${info.chunk_size_mb} MiB (${info.chunk_size_bytes} B)`;
-    document.getElementById('insp-pqc-size').textContent = info.is_pqc ? `${info.pqc_ciphertext_size} Bytes (ML-KEM)` : 'No (Criptografía Clásica)';
+    document.getElementById('insp-chunk-size').textContent = info.legacy_project_mirage ? 'Monolítico (Legacy)' : `${info.chunk_size_mb} MiB (${info.chunk_size_bytes} B)`;
+    document.getElementById('insp-pqc-size').textContent = info.is_pqc ? `${info.pqc_ciphertext_size} Bytes (ML-KEM)` : '0 Bytes (Criptografía Clásica)';
     
-    // Add generation banner if present
     document.getElementById('insp-raw-json').textContent = JSON.stringify(info, null, 2);
     inspectionResults.style.display = 'block';
 
     if (info.legacy_project_mirage) {
-      showToast('⚠️ Detectado contenedor de la versión anterior (Project Mirage v1).', 'info');
+      showToast('⚠️ Detectado contenedor de la versión anterior (Project Mirage v2/v1).', 'info');
     } else {
       showToast('✨ Contenedor MirageX v4 Post-Cuántico inspeccionado.', 'success');
     }
@@ -409,7 +433,7 @@ function showToast(msg, type = 'info') {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.textContent = msg;
+  toast.textContent = msg; // Text only, never innerHTML
   container.appendChild(toast);
   setTimeout(() => {
     toast.style.opacity = '0';

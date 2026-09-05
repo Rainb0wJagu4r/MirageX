@@ -1,6 +1,8 @@
 use std::io::{Read, Write};
 use std::time::Instant;
 use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
+use zeroize::Zeroize;
 
 use crate::crypto::{
     aead::{decrypt_aes_gcm, NONCE_SIZE, TAG_SIZE},
@@ -41,6 +43,7 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
 
     // 1. Read & Validate Header
     let header = WraithHeader::read_from(&mut reader)?;
+    let header_bytes = header.to_bytes();
 
     // 2. Read PQC Envelope
     let mut u32_buf = [0u8; 4];
@@ -62,7 +65,7 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     let mut wrapped_decaps_key = vec![0u8; wrapped_len - NONCE_SIZE];
     reader.read_exact(&mut wrapped_decaps_key)?;
 
-    // 3. Derive Password Key via Argon2id
+    // 3. Derive Password Key via Argon2id (Zeroizing wrapper)
     let password_key = derive_password_key(
         password,
         &header.salt,
@@ -72,14 +75,15 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     )?;
 
     // 4. Derive PQC Wrap Key
-    let pqc_wrap_key = derive_pqc_wrap_key(&password_key, &header.salt, &header.uuid)?;
+    let pqc_wrap_key = derive_pqc_wrap_key(&*password_key, &header.salt, &header.uuid)?;
 
-    // 5. Decrypt PQC Decapsulation Key (Fails immediately if password is wrong)
+    // 5. Decrypt PQC Decapsulation Key (Authenticated against full 64-byte Header)
+    // Fails immediately if password is wrong OR if any byte in the header was altered
     let decaps_key_bytes = decrypt_aes_gcm(
-        &pqc_wrap_key,
+        &*pqc_wrap_key,
         &wrap_nonce,
         &wrapped_decaps_key,
-        &header.uuid,
+        &header_bytes,
     ).map_err(|_| WraithError::ManifestAuthFailed)?;
 
     // 6. Decapsulate PQC Shared Secret (ML-KEM NIST FIPS 203)
@@ -87,8 +91,8 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
 
     // 7. Derive Master Keys via HKDF-SHA512
     let master_keys = derive_master_keys(
-        &password_key,
-        &pqc_shared_secret,
+        &*password_key,
+        &*pqc_shared_secret,
         &header.uuid,
         &header.salt,
     )?;
@@ -128,13 +132,14 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
         aad.push(if is_final { 1 } else { 0 });
         aad.extend_from_slice(&(payload_len as u32).to_be_bytes());
 
-        let plaintext_chunk = decrypt_aes_gcm(&master_keys.dek, &chunk_nonce, &encrypted_payload, &aad)
+        let mut plaintext_chunk = decrypt_aes_gcm(&master_keys.dek, &chunk_nonce, &encrypted_payload, &aad)
             .map_err(|_| WraithError::ChunkTampered { index: chunk_index })?;
 
         sha256_hasher.update(&plaintext_chunk);
         writer.write_all(&plaintext_chunk)?;
         total_bytes_written += plaintext_chunk.len() as u64;
 
+        plaintext_chunk.zeroize();
         expected_chunk_index += 1;
 
         // Progress Telemetry
@@ -172,9 +177,10 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
 
     let manifest = Manifest::decrypt(&encrypted_manifest, &master_keys.manifest_key, &header.uuid)?;
 
-    // 10. Verify Hash & Size
+    // 10. Verify Hash in Constant Time & Size
     let final_hash: [u8; 32] = sha256_hasher.finalize().into();
-    if manifest.sha256_hash != final_hash || manifest.original_size != total_bytes_written {
+    let hash_match: bool = manifest.sha256_hash.ct_eq(&final_hash).into();
+    if !hash_match || manifest.original_size != total_bytes_written {
         return Err(WraithError::IntegrityHashMismatch);
     }
 

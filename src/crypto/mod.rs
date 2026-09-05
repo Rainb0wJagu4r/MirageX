@@ -13,7 +13,7 @@ pub enum CryptoError {
     #[error("PQC KEM Error: {0}")]
     KemError(String),
 
-    #[error("AEAD Decryption / Authentication Failed: data may be corrupted or password incorrect")]
+    #[error("AEAD Decryption / Authentication Failed: data may be corrupted, header modified, or password incorrect")]
     AeadAuthFailed,
 
     #[error("Invalid Key or Nonce Length: expected {expected}, got {got}")]
@@ -62,5 +62,4 @@ impl PqcSuite {
 pub struct MasterKeys {
     pub dek: [u8; 32],
     pub manifest_key: [u8; 32],
-    pub header_auth_key: [u8; 32],
 }
