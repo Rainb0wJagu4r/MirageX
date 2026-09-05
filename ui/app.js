@@ -387,7 +387,7 @@ function setupActions() {
       return;
     }
     const passes = parseInt(document.getElementById('shred-passes-select').value);
-    if (!confirm(`¿Estás seguro de destruir permanentemente '${selectedShredPath}' con ${passes} pasadas CSPRNG? Esta acción es IRREVERSIBLE.`)) {
+    if (!confirm(`¿Deseas ejecutar el borrado seguro de '${selectedShredPath}' con ${passes} pasadas CSPRNG?\n\nNota técnica: En medios magnéticos/HDD se efectúa sobrescritura física completa; en unidades SSD/NVMe modernas con wear-leveling la eliminación opera como mitigación best-effort de nivel forense.`)) {
       return;
     }
 
@@ -398,7 +398,7 @@ function setupActions() {
       });
       showToast(msg, 'success');
       selectedShredPath = null;
-      document.getElementById('shred-file-title').textContent = 'Archivo destruido permanentemente.';
+      document.getElementById('shred-file-title').textContent = 'Archivo procesado con borrado seguro (mitigación best-effort).';
     } catch (err) {
       showToast(`Fallo de destrucción: ${err}`, 'error');
     }

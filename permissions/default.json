@@ -1,15 +1,17 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/2.0.0/crates/tauri-utils/schema/permissions.json",
-  "identifier": "allow-all-miragex",
-  "description": "Allow all MirageX PQC encryption and storage commands",
+  "identifier": "default",
+  "description": "Granular permissions for MirageX native desktop GUI",
   "commands": {
     "allow": [
+      "select_file_dialog",
+      "select_wraith_dialog",
       "encrypt_file_cmd",
       "decrypt_file_cmd",
       "inspect_container_cmd",
-      "shred_file_cmd",
       "run_benchmark_cmd",
-      "generate_pqc_key_cmd"
+      "generate_pqc_key_cmd",
+      "shred_file_cmd"
     ]
   }
 }

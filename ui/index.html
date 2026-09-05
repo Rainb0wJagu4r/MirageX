@@ -316,13 +316,13 @@
         <div class="panel-card full-width">
           <div class="card-header">
             <h3>TRITURADOR CRIPTOGRÁFICO CSPRNG (SECURE WIPE)</h3>
-            <span class="badge red-badge">DESTRUCTIVO / IRREVERSIBLE</span>
+            <span class="badge red-badge">SECURE DELETION (BEST-EFFORT EN SSD/NVME)</span>
           </div>
 
           <div class="dropzone" id="shred-dropzone">
             <div class="dropzone-icon">☢️</div>
-            <div class="dropzone-title" id="shred-file-title">Arrastra o selecciona cualquier archivo sensible para destrucción permanente</div>
-            <div class="dropzone-sub">Sobreescritura multi-paso con CSPRNG + Patrones complementarios + Truncamiento forense</div>
+            <div class="dropzone-title" id="shred-file-title">Arrastra o selecciona un archivo sensible para borrado seguro</div>
+            <div class="dropzone-sub">Sobreescritura multi-paso con CSPRNG + Patrones complementarios + Truncamiento (mitigación best-effort en memorias flash con wear-leveling)</div>
           </div>
 
           <div class="form-group" style="margin-top: 20px;">
@@ -335,7 +335,7 @@
           </div>
 
           <button class="btn-danger" id="btn-execute-shred">
-            🌪️ DESTRUIR PERMANENTEMENTE EL ARCHIVO
+            🌪️ EJECUTAR BORRADO SEGURO DEL ARCHIVO
           </button>
         </div>
       </section>
