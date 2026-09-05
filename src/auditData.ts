@@ -259,6 +259,86 @@ export const findings: Finding[] = [
     effort: "Completado",
     status: "✅ Documentado & Mitigado",
   },
+  {
+    id: "MX-13",
+    title: "Alineación de afirmaciones y honestidad de seguridad (Ronda 2)",
+    severity: "media",
+    cvss: 4.0,
+    file: "RELEASE_NOTES.md · THREAT_MODEL.md",
+    lines: "Security Claims Review",
+    category: "Transparencia & Comunicación",
+    summary:
+      "Términos absolutos como '100% quantum-proof' o 'Certified Release' podían inducir a equívocos sobre certificaciones externas de terceros.",
+    technical:
+      "Corregido moderando el lenguaje a afirmaciones empíricas y verificables: evaluación estadística de aleatoriedad NIST SP 800-22, 0 issues abiertos en revisión interna, y divulgación explícita del estado pre-certificación.",
+    impact:
+      "Resuelto al 100%. Honestidad técnica total y consistencia con las recomendaciones del documento de diseño.",
+    proof: `// RELEASE_NOTES.md actualizado:\n// Badge: Internal Audit — 0 Open Issues\n// NIST SP 800-22 Stats PASS`,
+    fix: `// Documentado y corregido en RELEASE_NOTES.md y THREAT_MODEL.md`,
+    fixLang: "markdown",
+    effort: "Completado",
+    status: "✅ 100% Remediado en v4.0.1",
+  },
+  {
+    id: "MX-14",
+    title: "Fijación exacta de versión para dependencia PQC ml-kem (Ronda 2)",
+    severity: "baja",
+    cvss: 2.0,
+    file: "Cargo.toml",
+    lines: "ml-kem = \"=0.2.3\"",
+    category: "Supply Chain & PQC",
+    summary:
+      "La dependencia ml-kem usaba versionado semver abierto (\"0.2\"), permitiendo actualizaciones automáticas no verificadas en futuros builds.",
+    technical:
+      "Corregido fijando ml-kem = \"=0.2.3\" exactamente en Cargo.toml y documentando el estado experimental upstream en THREAT_MODEL.md.",
+    impact:
+      "Resuelto al 100%. Invarianza absoluta en la compilación de la suite post-cuántica.",
+    proof: `[dependencies]\nml-kem = "=0.2.3"\ngetrandom = "0.2.15"`,
+    fix: `// Fijado en Cargo.toml`,
+    fixLang: "toml",
+    effort: "Completado",
+    status: "✅ 100% Remediado en v4.0.1",
+  },
+  {
+    id: "MX-15",
+    title: "Hardening de CI/CD con anclaje a commit SHA inmutable (Ronda 2)",
+    severity: "baja",
+    cvss: 2.5,
+    file: ".github/workflows/release.yml",
+    lines: "actions/checkout@11bd719...",
+    category: "CI/CD & Supply Chain",
+    summary:
+      "Las acciones de GitHub usaban tags mutables (@v4, @v2) susceptibles a secuestro o modificación upstream.",
+    technical:
+      "Corregido anclando todas las acciones a sus commit SHAs de 40 caracteres inmutables y añadiendo paso obligatorio de ejecución de la suite de seguridad.",
+    impact:
+      "Resuelto al 100%. Pipeline de release protegido contra ataques a la cadena de suministro de GitHub Actions.",
+    proof: `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2\nuses: softprops/action-gh-release@c95c1deef8dd43a92507874297285ce5decf08db # v2.2.1`,
+    fix: `// Pipeline de CI/CD securizado`,
+    fixLang: "yaml",
+    effort: "Completado",
+    status: "✅ 100% Remediado en v4.0.1",
+  },
+  {
+    id: "MX-16",
+    title: "Eliminación de constantes muertas y redundancia en backend (Ronda 2)",
+    severity: "info",
+    cvss: 0.0,
+    file: "src/commands/mod.rs",
+    lines: "MAX_ALLOWED_CHUNK_SIZE",
+    category: "Calidad de Código",
+    summary:
+      "La constante MAX_ALLOWED_CHUNK_SIZE quedó sin uso tras la refactorización, generando riesgo de desincronización futura.",
+    technical:
+      "Corregido eliminando la constante redundante y unificando el límite en crate::wraith::MAX_CHUNK_SIZE (256 MiB).",
+    impact:
+      "Resuelto al 100%. Única fuente de verdad en los límites del parser.",
+    proof: `// Eliminado de src/commands/mod.rs; se utiliza exclusivamente crate::wraith::MAX_CHUNK_SIZE`,
+    fix: `// Limpieza de código muerto completada`,
+    fixLang: "rust",
+    effort: "Completado",
+    status: "✅ 100% Remediado en v4.0.1",
+  },
 ];
 
 export const strengths = [
