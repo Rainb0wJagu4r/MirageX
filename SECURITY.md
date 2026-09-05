@@ -2,9 +2,23 @@
 
 <img src="assets/logo.png" alt="MirageX Logo" width="220" />
 
-# MirageX — Security Policy & Vulnerability Disclosure
+# MirageX — Security Policy, Audits & Vulnerability Disclosure
+
+<p align="center">
+  <a href="SECURITY_AUDIT_REPORT_V2.md"><b>🛡️ Ver Reporte Completo de Auditoría de Seguridad v2</b></a> •
+  <a href="THREAT_MODEL.md"><b>📜 Modelo de Amenazas (Threat Model)</b></a> •
+  <a href="README.md"><b>📖 Volver al README</b></a>
+</p>
 
 </div>
+
+---
+
+## 🛡️ Security Audits & Hardening Reports
+
+MirageX maintains an open, transparent record of all security reviews and hardening cycles:
+- **[SECURITY_AUDIT_REPORT_V2.md](SECURITY_AUDIT_REPORT_V2.md):** Comprehensive static analysis and code audit report covering all remediated findings (`MX-01` to `MX-16`), 20/20 automated tests, and formal verification matrix.
+- **[THREAT_MODEL.md](THREAT_MODEL.md):** Cryptographic architecture, trust boundaries, AEAD streaming plaintext release trade-offs, and attack mitigation specifications.
 
 ---
 
