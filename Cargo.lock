@@ -2263,7 +2263,7 @@ dependencies = [
 
 [[package]]
 name = "miragex"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -2276,7 +2276,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "sha3",
  "subtle",
  "tauri",
  "tauri-build",

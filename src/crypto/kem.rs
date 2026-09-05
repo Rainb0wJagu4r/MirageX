@@ -3,16 +3,18 @@ use ml_kem::{
     Ciphertext, Encoded, EncodedSizeUser, KemCore, MlKem1024, MlKem1024Params, MlKem768, MlKem768Params,
 };
 use rand::{CryptoRng, RngCore};
+use zeroize::Zeroizing;
 
 use crate::crypto::{CryptoError, PqcSuite};
 
 pub struct PqcEncapsulationResult {
     pub ciphertext: Vec<u8>,
-    pub shared_secret: [u8; 32],
-    pub decapsulation_key_bytes: Vec<u8>,
+    pub shared_secret: Zeroizing<[u8; 32]>,
+    pub decapsulation_key_bytes: Zeroizing<Vec<u8>>,
 }
 
 /// Generates a keypair and encapsulates a shared secret for the specified PQC suite.
+/// Sensitive key materials are returned inside Zeroizing wrappers to safely wipe memory on drop.
 pub fn pqc_encapsulate<R: RngCore + CryptoRng>(
     suite: PqcSuite,
     rng: &mut R,
@@ -24,10 +26,10 @@ pub fn pqc_encapsulate<R: RngCore + CryptoRng>(
                 .encapsulate(rng)
                 .map_err(|e| CryptoError::KemError(format!("ML-KEM-768 encapsulation failed: {:?}", e)))?;
 
-            let mut ss = [0u8; 32];
+            let mut ss = Zeroizing::new([0u8; 32]);
             ss.copy_from_slice(shared_secret.as_slice());
 
-            let decaps_bytes = decaps_key.as_bytes().as_slice().to_vec();
+            let decaps_bytes = Zeroizing::new(decaps_key.as_bytes().as_slice().to_vec());
             let ct_bytes = ciphertext.as_slice().to_vec();
 
             Ok(PqcEncapsulationResult {
@@ -42,10 +44,10 @@ pub fn pqc_encapsulate<R: RngCore + CryptoRng>(
                 .encapsulate(rng)
                 .map_err(|e| CryptoError::KemError(format!("ML-KEM-1024 encapsulation failed: {:?}", e)))?;
 
-            let mut ss = [0u8; 32];
+            let mut ss = Zeroizing::new([0u8; 32]);
             ss.copy_from_slice(shared_secret.as_slice());
 
-            let decaps_bytes = decaps_key.as_bytes().as_slice().to_vec();
+            let decaps_bytes = Zeroizing::new(decaps_key.as_bytes().as_slice().to_vec());
             let ct_bytes = ciphertext.as_slice().to_vec();
 
             Ok(PqcEncapsulationResult {
@@ -58,11 +60,12 @@ pub fn pqc_encapsulate<R: RngCore + CryptoRng>(
 }
 
 /// Decapsulates the PQC ciphertext using the decrypted decapsulation key bytes.
+/// Returns the recovered shared secret inside a Zeroizing wrapper.
 pub fn pqc_decapsulate(
     suite: PqcSuite,
     decaps_key_bytes: &[u8],
     ciphertext_bytes: &[u8],
-) -> Result<[u8; 32], CryptoError> {
+) -> Result<Zeroizing<[u8; 32]>, CryptoError> {
     match suite {
         PqcSuite::MlKem768 => {
             let dk_array: &Encoded<DecapsulationKey<MlKem768Params>> = decaps_key_bytes
@@ -78,7 +81,7 @@ pub fn pqc_decapsulate(
                 .decapsulate(ct_array)
                 .map_err(|e| CryptoError::KemError(format!("ML-KEM-768 decapsulation failed: {:?}", e)))?;
 
-            let mut ss = [0u8; 32];
+            let mut ss = Zeroizing::new([0u8; 32]);
             ss.copy_from_slice(shared_secret.as_slice());
             Ok(ss)
         }
@@ -96,7 +99,7 @@ pub fn pqc_decapsulate(
                 .decapsulate(ct_array)
                 .map_err(|e| CryptoError::KemError(format!("ML-KEM-1024 decapsulation failed: {:?}", e)))?;
 
-            let mut ss = [0u8; 32];
+            let mut ss = Zeroizing::new([0u8; 32]);
             ss.copy_from_slice(shared_secret.as_slice());
             Ok(ss)
         }

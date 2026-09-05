@@ -1,6 +1,6 @@
 [package]
 name = "miragex"
-version = "4.0.0"
+version = "4.0.1"
 edition = "2021"
 authors = ["Mirage Security Team"]
 description = "High-Performance Post-Quantum (PQC) Decoupled Encryption Engine & WRAITH v4 Container"
@@ -12,10 +12,9 @@ aes-gcm = "0.10.3"
 argon2 = { version = "0.5.3", default-features = false, features = ["alloc", "rand"] }
 hkdf = "0.12.4"
 sha2 = "0.10.8"
-sha3 = "0.10.8"
 rand = "0.8.5"
 getrandom = { version = "0.2.15", features = ["js"] }
-zeroize = { version = "1.8.1", features = ["derive"] }
+zeroize = { version = "1.8.1", features = ["derive", "zeroize_derive"] }
 subtle = "2.6.1"
 thiserror = "1.0"
 
@@ -39,3 +38,4 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+overflow-checks = true

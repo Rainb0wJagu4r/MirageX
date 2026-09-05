@@ -18,7 +18,7 @@ fn test_kem_768_roundtrip() {
         &enc_res.ciphertext,
     ).expect("Decapsulation should succeed");
 
-    assert_eq!(enc_res.shared_secret, recovered_ss);
+    assert_eq!(*enc_res.shared_secret, *recovered_ss);
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn test_kem_1024_roundtrip() {
         &enc_res.ciphertext,
     ).expect("Decapsulation should succeed");
 
-    assert_eq!(enc_res.shared_secret, recovered_ss);
+    assert_eq!(*enc_res.shared_secret, *recovered_ss);
 }
 
 #[test]
@@ -44,15 +44,14 @@ fn test_argon2_and_hkdf_domain_separation() {
     let pqc_ss = [0x99u8; 32];
 
     let pwd_key = derive_password_key(password, &salt, 1024, 1, 1).expect("Argon2 should succeed");
-    let wrap_key = derive_pqc_wrap_key(&pwd_key, &salt, &container_uuid).expect("Wrap key should succeed");
-    let master_keys = derive_master_keys(&pwd_key, &pqc_ss, &container_uuid, &salt)
+    let wrap_key = derive_pqc_wrap_key(&*pwd_key, &salt, &container_uuid).expect("Wrap key should succeed");
+    let master_keys = derive_master_keys(&*pwd_key, &pqc_ss, &container_uuid, &salt)
         .expect("HKDF should succeed");
 
     // Ensure all derived keys are distinct
     assert_ne!(master_keys.dek, master_keys.manifest_key);
-    assert_ne!(master_keys.dek, master_keys.header_auth_key);
-    assert_ne!(master_keys.dek, wrap_key);
-    assert_ne!(master_keys.manifest_key, master_keys.header_auth_key);
+    assert_ne!(master_keys.dek, *wrap_key);
+    assert_ne!(master_keys.manifest_key, *wrap_key);
 }
 
 #[test]

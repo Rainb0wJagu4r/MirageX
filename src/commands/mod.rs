@@ -1,9 +1,10 @@
-use std::fs::File;
-use std::io::Cursor;
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use rand::rngs::OsRng;
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroize;
 
 use crate::crypto::{
     aead::{encrypt_aes_gcm, generate_nonce},
@@ -19,6 +20,8 @@ use crate::wraith::{
     manifest::Manifest,
     DEFAULT_CHUNK_SIZE,
 };
+
+pub const MAX_ALLOWED_CHUNK_SIZE: u32 = 256 * 1024 * 1024; // 256 MiB max
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EncryptionResult {
@@ -65,6 +68,36 @@ pub struct SelectedFileInfo {
     pub size: u64,
 }
 
+/// Sanitizes a filename from the container manifest to prevent Path Traversal attacks cross-platform.
+pub fn sanitize_filename(raw_filename: &str) -> String {
+    // 1. Remove null bytes and control characters
+    let cleaned: String = raw_filename
+        .chars()
+        .filter(|c| !c.is_control() && *c != '\0')
+        .collect();
+
+    // 2. Normalize backslashes to forward slashes for universal path separation
+    let normalized = cleaned.replace('\\', "/");
+    let path = Path::new(&normalized);
+    let basename = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    // 3. Reject forbidden and dangerous directory references
+    let safe_name = basename.trim();
+    if safe_name.is_empty()
+        || safe_name == "."
+        || safe_name == ".."
+        || safe_name.contains('/')
+        || safe_name.contains('\\')
+    {
+        "recovered_file.bin".to_string()
+    } else {
+        safe_name.to_string()
+    }
+}
+
 #[tauri::command]
 pub fn select_file_dialog() -> Result<Option<SelectedFileInfo>, String> {
     if let Some(path) = rfd::FileDialog::new().pick_file() {
@@ -99,7 +132,7 @@ pub fn select_wraith_dialog() -> Result<Option<SelectedFileInfo>, String> {
 pub fn encrypt_file_cmd(
     input_path: String,
     output_path: Option<String>,
-    password: String,
+    mut password: String,
     suite_id: Option<u8>,
     chunk_size_mb: Option<u32>,
     shred_source: bool,
@@ -127,8 +160,10 @@ pub fn encrypt_file_cmd(
         None => PqcSuite::MlKem768,
     };
 
+    // Safe chunk calculation with checked_mul and upper bounds
     let chunk_size = chunk_size_mb
-        .map(|mb| mb * 1024 * 1024)
+        .and_then(|mb| mb.checked_mul(1024 * 1024))
+        .map(|bytes| bytes.min(MAX_ALLOWED_CHUNK_SIZE))
         .unwrap_or(DEFAULT_CHUNK_SIZE);
 
     let original_filename = in_p
@@ -144,18 +179,45 @@ pub fn encrypt_file_cmd(
     };
 
     let in_file = File::open(in_p).map_err(|e| e.to_string())?;
-    let mut out_file = File::create(&out_p).map_err(|e| e.to_string())?;
+
+    // Atomic write to temporary file
+    let mut rng = OsRng;
+    let rand_suffix: u64 = rng.next_u64();
+    let tmp_out_path = match out_p.file_name() {
+        Some(fname) => out_p.with_file_name(format!("{}.tmp.{}", fname.to_string_lossy(), rand_suffix)),
+        None => PathBuf::from(format!("miragex_enc_{}.tmp", rand_suffix)),
+    };
+
+    let mut tmp_file = File::create(&tmp_out_path).map_err(|e| e.to_string())?;
 
     let start = Instant::now();
-    let total_encrypted = encrypt_stream(
+    let total_encrypted_res = encrypt_stream(
         in_file,
-        &mut out_file,
+        &mut tmp_file,
         password.as_bytes(),
         meta.size,
         options,
         |_| {},
-    ).map_err(|e| e.to_string())?;
+    );
+
+    // Scrub password string
+    password.zeroize();
+
+    let total_encrypted = match total_encrypted_res {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            let _ = fs::remove_file(&tmp_out_path);
+            return Err(e.to_string());
+        }
+    };
+
     let elapsed = start.elapsed().as_millis();
+
+    // Atomic commit
+    if let Err(e) = fs::rename(&tmp_out_path, &out_p) {
+        let _ = fs::remove_file(&tmp_out_path);
+        return Err(format!("Failed to commit encrypted file: {}", e));
+    }
 
     let out_meta = storage.stat(&out_p).map_err(|e| e.to_string())?;
 
@@ -185,7 +247,7 @@ pub fn encrypt_file_cmd(
 pub fn decrypt_file_cmd(
     input_path: String,
     output_path: Option<String>,
-    password: String,
+    mut password: String,
     shred_source: bool,
 ) -> Result<DecryptionResult, String> {
     let in_p = Path::new(&input_path);
@@ -195,29 +257,53 @@ pub fn decrypt_file_cmd(
 
     let in_file = File::open(in_p).map_err(|e| e.to_string())?;
 
-    let mut temp_buffer = Vec::new();
+    // Streaming direct to atomic temporary file on disk (Zero RAM accumulation)
+    let mut rng = OsRng;
+    let rand_suffix: u64 = rng.next_u64();
+    let parent_dir = in_p.parent().unwrap_or_else(|| Path::new("."));
+    let tmp_out_path = parent_dir.join(format!(".miragex_dec_{}.tmp", rand_suffix));
+
+    let mut tmp_file = File::create(&tmp_out_path).map_err(|e| e.to_string())?;
+
     let start = Instant::now();
-    let manifest: Manifest = decrypt_stream(
+    let decrypt_res: Result<Manifest, _> = decrypt_stream(
         in_file,
-        &mut temp_buffer,
+        &mut tmp_file,
         password.as_bytes(),
         DecryptOptions::default(),
         |_| {},
-    ).map_err(|e| e.to_string())?;
-    let elapsed = start.elapsed().as_millis();
+    );
 
-    let out_p = match output_path {
-        Some(p) => PathBuf::from(p),
-        None => {
-            let parent = in_p.parent().unwrap_or_else(|| Path::new("."));
-            parent.join(&manifest.original_filename)
+    // Scrub password string
+    password.zeroize();
+
+    let manifest = match decrypt_res {
+        Ok(m) => m,
+        Err(e) => {
+            // Decryption or integrity check failed: securely wipe temporary file
+            let _ = fs::remove_file(&tmp_out_path);
+            return Err(e.to_string());
         }
     };
 
-    let storage = LocalStorageAdapter::new();
-    storage.save_stream(&out_p, &mut Cursor::new(&temp_buffer)).map_err(|e| e.to_string())?;
+    let elapsed = start.elapsed().as_millis();
+
+    // Security Hardening: Sanitize original_filename to prevent Path Traversal
+    let sanitized_filename = sanitize_filename(&manifest.original_filename);
+
+    let out_p = match output_path {
+        Some(p) => PathBuf::from(p),
+        None => parent_dir.join(&sanitized_filename),
+    };
+
+    // Commit decrypted file atomically
+    if let Err(e) = fs::rename(&tmp_out_path, &out_p) {
+        let _ = fs::remove_file(&tmp_out_path);
+        return Err(format!("Failed to save decrypted file: {}", e));
+    }
 
     if shred_source {
+        let storage = LocalStorageAdapter::new();
         let _ = storage.shred_file(in_p, 3);
     }
 
@@ -225,7 +311,7 @@ pub fn decrypt_file_cmd(
         success: true,
         input_path,
         output_path: out_p.to_string_lossy().to_string(),
-        original_filename: manifest.original_filename,
+        original_filename: sanitized_filename,
         restored_size: manifest.original_size,
         sha256_hex: hex::encode(manifest.sha256_hash),
         elapsed_ms: elapsed,
