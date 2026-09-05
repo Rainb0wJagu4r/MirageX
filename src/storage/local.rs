@@ -29,7 +29,21 @@ impl StorageAdapter for LocalStorageAdapter {
             None => PathBuf::from(format!("miragex_tmp_{}", rand_suffix)),
         };
 
-        let mut file = File::create(&tmp_path)?;
+        #[cfg(unix)]
+        let mut file = {
+            use std::os::unix::fs::OpenOptionsExt;
+            OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o600)
+                .open(&tmp_path)?
+        };
+        #[cfg(not(unix))]
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp_path)?;
+
         let mut buffer = [0u8; 64 * 1024]; // 64 KB buffer for streaming
         let mut total_bytes = 0u64;
 

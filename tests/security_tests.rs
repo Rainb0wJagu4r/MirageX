@@ -337,3 +337,71 @@ fn test_argon2_header_kdf_parameters_preservation() {
     assert_eq!(manifest.original_size, payload.len() as u64);
 }
 
+#[test]
+fn test_zero_and_invalid_chunk_size_rejected_gracefully() {
+    let payload = b"Testing chunk size bounds validation";
+    let password = b"ChunkSizeTestPass123!";
+
+    // Test chunk_size = 0 (Must return InvalidChunkSize error without panicking / aborting)
+    let options_zero = EncryptOptions {
+        chunk_size: 0,
+        ..Default::default()
+    };
+    let mut container = Vec::new();
+    let res_zero = encrypt_stream(
+        Cursor::new(payload),
+        &mut container,
+        password,
+        payload.len() as u64,
+        options_zero,
+        |_| {},
+    );
+    assert!(res_zero.is_err(), "encrypt_stream must reject chunk_size = 0");
+
+    // Test chunk_size < 64 KiB (e.g. 1024 bytes)
+    let options_small = EncryptOptions {
+        chunk_size: 1024,
+        ..Default::default()
+    };
+    let res_small = encrypt_stream(
+        Cursor::new(payload),
+        &mut container,
+        password,
+        payload.len() as u64,
+        options_small,
+        |_| {},
+    );
+    assert!(res_small.is_err(), "encrypt_stream must reject chunk_size below MIN_CHUNK_SIZE");
+
+    // Test chunk_size > 256 MiB
+    let options_huge = EncryptOptions {
+        chunk_size: 512 * 1024 * 1024,
+        ..Default::default()
+    };
+    let res_huge = encrypt_stream(
+        Cursor::new(payload),
+        &mut container,
+        password,
+        payload.len() as u64,
+        options_huge,
+        |_| {},
+    );
+    assert!(res_huge.is_err(), "encrypt_stream must reject chunk_size above MAX_CHUNK_SIZE");
+}
+
+#[test]
+fn test_shred_directory_rejected() {
+    let temp_dir = std::env::temp_dir().join("miragex_shred_dir_safety_test");
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    // Call shred_file_cmd on a directory
+    let res = miragex::commands::shred_file_cmd(
+        temp_dir.to_string_lossy().to_string(),
+        Some(3),
+        Some("ssd".into()),
+    );
+
+    assert!(res.is_err(), "shred_file_cmd must reject directories to prevent accidental damage");
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+

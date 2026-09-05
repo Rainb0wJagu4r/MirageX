@@ -11,12 +11,13 @@ use rand::RngCore;
 
 #[test]
 fn test_wraith_v4_768_streaming_roundtrip() {
-    let original_payload = b"Quantum-safe classified documents and flight telemetry 2026";
+    let mut original_payload = vec![0u8; 130 * 1024]; // 130 KB -> 3 chunks (64K, 64K, 2K)
+    OsRng.fill_bytes(&mut original_payload);
     let password = b"PqcSuperKey768!";
 
     let options = EncryptOptions {
         suite: PqcSuite::MlKem768,
-        chunk_size: 16, // Small chunks to force multiple chunks
+        chunk_size: 64 * 1024, // 64 KiB chunks
         original_filename: "telemetry.dat".into(),
         argon2_m_cost: 1024,
         argon2_t_cost: 1,
@@ -25,7 +26,7 @@ fn test_wraith_v4_768_streaming_roundtrip() {
 
     let mut encrypted_container = Vec::new();
     let bytes_encrypted = encrypt_stream(
-        Cursor::new(original_payload),
+        Cursor::new(&original_payload),
         &mut encrypted_container,
         password,
         original_payload.len() as u64,
@@ -61,18 +62,18 @@ fn test_wraith_v4_768_streaming_roundtrip() {
 
     assert_eq!(manifest.original_filename, "telemetry.dat");
     assert_eq!(manifest.original_size, original_payload.len() as u64);
-    assert_eq!(original_payload.to_vec(), decrypted_payload);
+    assert_eq!(original_payload, decrypted_payload);
 }
 
 #[test]
 fn test_wraith_v4_1024_streaming_roundtrip() {
-    let mut large_payload = vec![0u8; 128 * 1024]; // 128 KB
+    let mut large_payload = vec![0u8; 192 * 1024]; // 192 KB -> 3 chunks of 64K
     OsRng.fill_bytes(&mut large_payload);
     let password = b"PqcLevel5MasterPassword!";
 
     let options = EncryptOptions {
         suite: PqcSuite::MlKem1024,
-        chunk_size: 16 * 1024, // 16 KB chunks -> 8 chunks
+        chunk_size: 64 * 1024, // 64 KB chunks
         original_filename: "archive.tar".into(),
         argon2_m_cost: 1024,
         argon2_t_cost: 1,
@@ -151,20 +152,21 @@ fn test_wraith_v4_wrong_password_fails() {
 
 #[test]
 fn test_wraith_v4_chunk_tamper_fails() {
-    let payload = b"Data that must not be tampered with!";
+    let mut payload = vec![0u8; 130 * 1024]; // 130 KB
+    OsRng.fill_bytes(&mut payload);
     let password = b"TamperTestPass";
 
     let options = EncryptOptions {
         argon2_m_cost: 1024,
         argon2_t_cost: 1,
         argon2_p_cost: 1,
-        chunk_size: 8,
+        chunk_size: 64 * 1024,
         ..Default::default()
     };
 
     let mut container = Vec::new();
     encrypt_stream(
-        Cursor::new(payload),
+        Cursor::new(&payload),
         &mut container,
         password,
         payload.len() as u64,
