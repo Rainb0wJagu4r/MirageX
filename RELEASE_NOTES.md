@@ -3,18 +3,18 @@
 <img src="https://raw.githubusercontent.com/Rainb0wJagu4r/MirageX/main/assets/logo.png" alt="MirageX Logo" width="220" />
 
 # MirageX v4.0.1 — Post-Quantum Cryptographic Release
-### Official Multi-Platform Binaries & Security Certified Release
+### Official Multi-Platform Binaries & Security Hardened Release
 
 [![Release Version](https://img.shields.io/badge/Release-v4.0.1-brightgreen.svg)](https://github.com/Rainb0wJagu4r/MirageX/releases/tag/v4.0.1)
 [![NIST FIPS 203](https://img.shields.io/badge/PQC-ML--KEM--768%20%2F%201024-purple.svg)](https://csrc.nist.gov/pubs/fips/203/final)
-[![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
-[![Security Hardened](https://img.shields.io/badge/Security%20Audit-100%25%20Remediated-brightgreen.svg)]()
+[![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22%20Stats-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
+[![Security Hardened](https://img.shields.io/badge/Internal%20Audit-0%20Open%20Issues-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0%20%2F%20MIT-blue.svg)]()
 
 <br/>
 
 <p align="center">
-<strong>MirageX v4.0.1</strong> es el motor criptográfico desacoplado y formato de contenedor binario (<strong>WRAITH v4</strong>) de grado de producción, resistente a computación cuántica (<em>NIST FIPS 203 ML-KEM</em>), auditado estadísticamente con la suite <strong>NIST SP 800-22</strong> y 100% endurecido tras dos rigurosas rondas de auditoría de seguridad.
+<strong>MirageX v4.0.1</strong> es el motor criptográfico desacoplado y formato de contenedor binario (<strong>WRAITH v4</strong>), diseñado para mitigar riesgos de computación cuántica (<em>NIST FIPS 203 ML-KEM</em>), evaluado estadísticamente con la suite de aleatoriedad <strong>NIST SP 800-22</strong> y endurecido tras dos rondas de revisión y pruebas de seguridad interna.
 </p>
 
 <br/>
@@ -27,10 +27,10 @@
 
 | Plataforma | Archivo / Instalador | Formato | Tamaño | Checksum SHA-256 |
 | :--- | :--- | :---: | :---: | :--- |
-| 🍎 **macOS (Apple Silicon)** | `MirageX_4.0.0_aarch64.dmg` | Instalador DMG con GUI | `3.3 MB` | `c11320e79baca4d23f87ac4455c60a9bd65672aac985958ec57bdceb07844743` |
+| 🍎 **macOS (Apple Silicon)** | `MirageX_4.0.0_aarch64.dmg` | Instalador DMG con GUI | `3.3 MB` | `60e24c6bfc8e6855b210138f8f560f43ebe8b538977ddf1d2dfcb21d8c2bb3c1` |
 | 🍎 **macOS (Bundle)** | `MirageX.app` | App Bundle Nativo | `7.0 MB` | *(Contenido firmado en bundle)* |
-| 🍎 **macOS (CLI)** | `miragex_macos_cli` | Binario CLI Nativo | `7.0 MB` | `587e3b6964b5be2d162646cd633fd9ebde73c6b0c2b9aa01dd6d2997a8c8236b` |
-| 🪟 **Windows (x64)** | `miragex.exe` | Ejecutable Portable Nativo | `5.0 MB` | `fe95d38cf6c6d4f75d747820d15431c05adffcc67ffb3aafd63983296ff72103` |
+| 🍎 **macOS (CLI)** | `miragex_macos_cli` | Binario CLI Nativo | `7.0 MB` | `a9d49580e5f63c23f484bf27830d6495098c41198baddd463bc055ddbc8c7084` |
+| 🪟 **Windows (x64)** | `miragex.exe` | Ejecutable Portable Nativo | `5.0 MB` | `c46e20d7c889a6f18d53d2a9bc8a9d734d65e267927a850a8cf4b0efe8bd0cb2` |
 
 <div align="center">
 
@@ -43,7 +43,7 @@
 **1. Criptografía Post-Cuántica (PQC)**<br/>
 Implementación estricta de **NIST FIPS 203**: **ML-KEM-768** (Nivel 3) y **ML-KEM-1024** (Nivel 5).<br/>
 Envelope híbrido: `Argon2id + ML-KEM Key Encapsulation -> HKDF-SHA512 -> AES-256-GCM DEK`.<br/>
-Protección integral frente a amenazas *Harvest Now, Decrypt Later* (HNDL).
+Mitigación arquitectónica frente a riesgos de interceptación *Harvest Now, Decrypt Later* (HNDL).
 
 <br/>
 
@@ -112,10 +112,10 @@ open MirageX.app
 
 ---
 
-## ⚛️ Certificación Estadística NIST SP 800-22
+## 📊 Evaluación Estadística de Aleatoriedad (NIST SP 800-22)
 
 <p align="center">
-Los contenedores <code>.wraith</code> v4 generados por <strong>MirageX Ultra (ML-KEM-1024 / Nivel 5)</strong> superaron con éxito la suite completa de pruebas estadísticas <strong>NIST SP 800-22</strong> con cero correlación y balance de bits óptimo (50.0%).
+Los datos cifrados en contenedores <code>.wraith</code> v4 generados por <strong>MirageX Ultra (ML-KEM-1024 / Nivel 5)</strong> superaron con éxito la batería de pruebas estadísticas de aleatoriedad <strong>NIST SP 800-22</strong> con distribución uniforme de bits y cero sesgos detectables.
 </p>
 
 ---
