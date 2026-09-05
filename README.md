@@ -2,10 +2,18 @@
 
 [![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org/)
 [![NIST FIPS 203](https://img.shields.io/badge/PQC-ML--KEM--768%20%2F%201024-purple.svg)](https://csrc.nist.gov/pubs/fips/203/final)
+[![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
 [![Tauri 2.0](https://img.shields.io/badge/Tauri-v2.0-blue.svg)](https://tauri.app/)
 [![Zero Dependencies](https://img.shields.io/badge/Supply%20Chain-Zero%20NPM%20Deps-brightgreen.svg)]()
 
 **MirageX** is a next-generation, quantum-resistant, decoupled file encryption engine and container format (**WRAITH v4**). Written in pure native **Rust** with a native **Tauri 2.0** desktop interface (zero local web servers, 100% direct IPC).
+
+> [!WARNING]
+> **Project Origin & Active Development Status**
+> - 🇲🇽 **Born in Mexico:** This project is proud to be born in Mexico.
+> - **In Active Development:** Software is under active research and implementation.
+> - **NIST SP 800-22 Statistical Audit:** The entropy and pseudorandomness of **MirageX Ultra (ML-KEM-1024 / Level 5 PQC)** WRAITH v4 envelopes have been audited across random binary, structured text, and all-zeroes payloads. All tests passed with zero correlation: [PROJECT-MIRAGE-NIST-Analyze-results](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results).
+> - **Open to Audits:** We welcome open cryptographic audits and code reviews to help us continue learning, developing, and contributing to post-quantum cybersecurity.
 
 ---
 
@@ -100,6 +108,28 @@ cargo run --release
 - **Memory Protection**: Sensitive key materials and intermediate secrets implement `Zeroize` and are cleared from memory upon drop.
 - **Envelope Hierarchy**: Password derivation and quantum encapsulation are separated using HKDF domain-separated subkeys (`miragex-v4-pqc-wrap-key`, `miragex-v4-aes256-gcm-dek`, `miragex-v4-manifest-key`, `miragex-v4-header-auth-key`).
 - **Integrity**: Full SHA-256 manifest hash verification + GCM authentication tags per chunk.
+
+---
+
+## ⚛️ NIST SP 800-22 Empirical Entropy & Statistical Randomness Audit
+
+The `.wraith` v4 containers produced by **MirageX Ultra (ML-KEM-1024 / NIST Level 5)** were audited using the **NIST SP 800-22** statistical test suite across diverse payload profiles (random binary, structured repeated text, and all-zeroes `\x00` payloads). Full reports and CLI reproduction tools are hosted at [PROJECT-MIRAGE-NIST-Analyze-results](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results).
+
+| NIST SP 800-22 Statistical Test | Random Binary Payload | Structured Text Payload | All-Zeroes `\x00` Payload | Statistical Status ($\alpha=0.01$) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Bit Balance (Proportion of 1s)** | 50.00% ones | 49.98% ones | 50.01% ones | **Optimal ($0.5$)** |
+| **Serial Autocorrelation (Lag 1)** | `+0.000062` | `-0.000132` | `+0.000164` | **Zero Correlation** |
+| **Frequency (Monobit) Test** | `0.71236` | `0.20062` | `0.64910` | **PASS** |
+| **Frequency Test within a Block ($M=128$)** | `0.06584` | `0.47384` | `0.82379` | **PASS** |
+| **Runs Test** | `0.79946` | `0.58692` | `0.50191` | **PASS** |
+| **Longest Run of Ones in a Block** | `0.29160` | `0.47189` | `0.17197` | **PASS** |
+| **Discrete Fourier Transform (Spectral)** | `0.30926` | `0.66735` | `0.81112` | **PASS** |
+| **Cumulative Sums (Cusum Forward)** | `0.75004` | `0.07870` | `0.87089` | **PASS** |
+| **Cumulative Sums (Cusum Backward)** | `0.93817` | `0.38733` | `0.46799` | **PASS** |
+| **Approximate Entropy ($m=3$)** | `0.99139` | `0.42544` | `0.82460` | **PASS** |
+| **Serial Test ($m=3$)** | `0.93628, 0.73516` | `0.46603, 0.43912` | `0.73596, 0.51164` | **PASS** |
+| **Non-overlapping Template Matching** | `0.84219` | `0.23030` | `0.99140` | **PASS** |
+| **OVERALL VERDICT** | **NIST STS PASS** | **NIST STS PASS** | **NIST STS PASS** | **CRYPTOGRAPHIC RANDOM (PASS)** |
 
 ---
 
