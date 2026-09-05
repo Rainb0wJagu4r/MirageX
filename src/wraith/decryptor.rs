@@ -15,6 +15,10 @@ use crate::wraith::{
     ProgressReport, WraithError,
 };
 
+pub const MAX_WRAPPED_KEY_LEN: usize = 8 * 1024;              // 8 KiB max
+pub const MAX_CHUNK_PAYLOAD_LEN: usize = 256 * 1024 * 1024;  // 256 MiB max
+pub const MAX_MANIFEST_LEN: usize = 64 * 1024;                // 64 KiB max
+
 pub struct DecryptOptions {
     pub argon2_m_cost: u32,
     pub argon2_t_cost: u32,
@@ -45,18 +49,23 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     let header = WraithHeader::read_from(&mut reader)?;
     let header_bytes = header.to_bytes();
 
-    // 2. Read PQC Envelope
+    // 2. Read PQC Envelope (Enforcing strict bounds against allocation bombs)
     let mut u32_buf = [0u8; 4];
     reader.read_exact(&mut u32_buf)?;
     let pqc_ct_len = u32::from_be_bytes(u32_buf) as usize;
+
+    // Validate pqc_ct_len strictly against expected suite ciphertext size (NIST FIPS 203)
+    if pqc_ct_len != header.suite.ciphertext_size() {
+        return Err(WraithError::InvalidContainer);
+    }
 
     let mut pqc_ct = vec![0u8; pqc_ct_len];
     reader.read_exact(&mut pqc_ct)?;
 
     reader.read_exact(&mut u32_buf)?;
     let wrapped_len = u32::from_be_bytes(u32_buf) as usize;
-    if wrapped_len < NONCE_SIZE + TAG_SIZE {
-        return Err(WraithError::UnexpectedEof);
+    if wrapped_len < NONCE_SIZE + TAG_SIZE || (wrapped_len - NONCE_SIZE) > MAX_WRAPPED_KEY_LEN {
+        return Err(WraithError::InvalidContainer);
     }
 
     let mut wrap_nonce = [0u8; NONCE_SIZE];
@@ -113,11 +122,19 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
 
         let mut final_buf = [0u8; 1];
         reader.read_exact(&mut final_buf)?;
-        let is_final = final_buf[0] == 1;
+        // Strict canonical boolean check: only 0x00 and 0x01 are valid
+        let is_final = match final_buf[0] {
+            0 => false,
+            1 => true,
+            _ => return Err(WraithError::InvalidContainer),
+        };
 
         let mut len_buf = [0u8; 4];
         reader.read_exact(&mut len_buf)?;
         let payload_len = u32::from_be_bytes(len_buf) as usize;
+        if payload_len > MAX_CHUNK_PAYLOAD_LEN {
+            return Err(WraithError::InvalidContainer);
+        }
 
         let mut chunk_nonce = [0u8; NONCE_SIZE];
         reader.read_exact(&mut chunk_nonce)?;
@@ -171,17 +188,30 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
 
     reader.read_exact(&mut u32_buf)?;
     let manifest_len = u32::from_be_bytes(u32_buf) as usize;
+    if manifest_len > MAX_MANIFEST_LEN {
+        return Err(WraithError::InvalidContainer);
+    }
 
     let mut encrypted_manifest = vec![0u8; manifest_len];
     reader.read_exact(&mut encrypted_manifest)?;
 
     let manifest = Manifest::decrypt(&encrypted_manifest, &master_keys.manifest_key, &header.uuid)?;
 
-    // 10. Verify Hash in Constant Time & Size
+    // 10. Verify Total Chunks Count & Hash in Constant Time & Size
+    if manifest.total_chunks != expected_chunk_index {
+        return Err(WraithError::IntegrityHashMismatch);
+    }
+
     let final_hash: [u8; 32] = sha256_hasher.finalize().into();
     let hash_match: bool = manifest.sha256_hash.ct_eq(&final_hash).into();
     if !hash_match || manifest.original_size != total_bytes_written {
         return Err(WraithError::IntegrityHashMismatch);
+    }
+
+    // 11. Reject Trailing Garbage / Verify EOF
+    let mut extra = [0u8; 1];
+    if reader.read(&mut extra)? != 0 {
+        return Err(WraithError::InvalidContainer);
     }
 
     Ok(manifest)

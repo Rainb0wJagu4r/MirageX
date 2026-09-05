@@ -105,14 +105,20 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
         (total_file_size + chunk_size as u64 - 1) / (chunk_size as u64)
     };
 
-    // 8. Stream Chunks with AEAD AES-256-GCM
+    // 8. Stream Chunks with AEAD AES-256-GCM (Lookahead EOF to prevent TOCTOU truncation)
     let mut chunk_buf = vec![0u8; chunk_size];
     let mut chunk_index = 0u64;
     let mut total_bytes_read = 0u64;
     let mut sha256_hasher = Sha256::new();
+    let mut lookahead_byte: Option<u8> = None;
 
     loop {
         let mut n = 0;
+        if let Some(b) = lookahead_byte.take() {
+            chunk_buf[0] = b;
+            n = 1;
+        }
+
         while n < chunk_size {
             let read_bytes = reader.read(&mut chunk_buf[n..])?;
             if read_bytes == 0 {
@@ -121,7 +127,21 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
             n += read_bytes;
         }
 
-        let is_final = n < chunk_size || total_bytes_read + (n as u64) == total_file_size;
+        let is_final;
+        if n < chunk_size {
+            is_final = true;
+        } else {
+            // We filled a complete chunk buffer (n == chunk_size).
+            // Probe 1 byte to check for genuine EOF without relying on pre-calculated file size.
+            let mut probe = [0u8; 1];
+            let probe_n = reader.read(&mut probe)?;
+            if probe_n == 0 {
+                is_final = true;
+            } else {
+                is_final = false;
+                lookahead_byte = Some(probe[0]);
+            }
+        }
 
         sha256_hasher.update(&chunk_buf[..n]);
         total_bytes_read += n as u64;
@@ -155,10 +175,10 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
         };
 
         progress_callback(ProgressReport {
-            total_bytes: total_file_size,
+            total_bytes: total_file_size.max(total_bytes_read),
             processed_bytes: total_bytes_read,
             current_chunk: chunk_index,
-            total_chunks,
+            total_chunks: total_chunks.max(chunk_index),
             percentage,
             speed_mb_s,
         });

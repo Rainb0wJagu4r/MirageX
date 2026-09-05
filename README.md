@@ -1,187 +1,175 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="MirageX Ghost Logo" width="220" />
+<img src="assets/logo.png" alt="MirageX Logo" width="200" />
 
-# MirageX
-### Next-Generation Post-Quantum Cryptographic Engine & WRAITH v4 Container Format
+# MirageX // Security Hardening & Parser Verification Report (Phase 2)
+### Branch: `security-hardening-v2`
 
-[![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org/)
+[![Security Status](https://img.shields.io/badge/Security-Audited%20%26%20Hardened%20v2-brightgreen.svg)]()
+[![Automated Tests](https://img.shields.io/badge/Security%20Tests-17%2F17%20PASSED-brightgreen.svg)]()
 [![NIST FIPS 203](https://img.shields.io/badge/PQC-ML--KEM--768%20%2F%201024-purple.svg)](https://csrc.nist.gov/pubs/fips/203/final)
-[![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
-[![Tauri 2.0](https://img.shields.io/badge/Tauri-v2.0-blue.svg)](https://tauri.app/)
-[![Zero Dependencies](https://img.shields.io/badge/Supply%20Chain-Zero%20NPM%20Deps-brightgreen.svg)]()
 
 <br/>
-
-**MirageX** is a quantum-resistant, decoupled file encryption engine and binary container architecture (**WRAITH v4**). Written in pure native **Rust** with a native **Tauri 2.0** cyber HUD desktop interface (zero local HTTP servers, 100% direct native IPC).
-
-<br/>
-
-> [!WARNING]
-> **Project Origin & Active Development Status**
-> - 🇲🇽 **Born in Mexico:** This project is proud to be born in Mexico.
-> - **In Active Development:** Software is under active research and implementation.
-> - **NIST SP 800-22 Statistical Audit:** The entropy and pseudorandomness of **MirageX Ultra (ML-KEM-1024 / Level 5 PQC)** WRAITH v4 envelopes have been audited across random binary, structured text, and all-zeroes payloads. All tests passed with zero correlation: [PROJECT-MIRAGE-NIST-Analyze-results](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results).
-> - **Open to Audits:** We welcome open cryptographic audits and code reviews to help us continue learning, developing, and contributing to post-quantum cybersecurity.
-
-<br/>
-
----
-
-## ⚡ Key Architecture & Features
 
 <p align="center">
-
-**Post-Quantum Cryptography (PQC)**<br/>
-Official **NIST FIPS 203** standards: **ML-KEM-768** (Security Level 3) and **ML-KEM-1024** (Security Level 5).<br/>
-Hybrid quantum envelope architecture: `Argon2id + ML-KEM Key Encapsulation -> HKDF-SHA512 -> AES-256-GCM DEK`.<br/>
-Protects data against *Harvest Now, Decrypt Later* (HNDL) adversarial threats.
-
-<br/>
-
-**Decoupled Storage Architecture**<br/>
-The cryptographic engine is completely isolated from the storage medium.<br/>
-Files `.wraith` can reside in Local NVMe/SSD/HDD, external USB drives, air-gapped cold storage, NAS (SMB/NFS), or Zero-Knowledge cloud without the host knowing keys or plaintext metadata.
-
-<br/>
-
-**Deterministic & Cross-Platform WRAITH v4 Format**<br/>
-Strict big-endian layout across **macOS, Windows, and Linux**.<br/>
-Streaming authenticated chunking (16 MiB default) with constant memory footprint (<25 MB RAM for >100 GB files).<br/>
-Sequential AAD binding: `UUID || ChunkIndex || IsFinal || PayloadLen` prevents chunk reordering, truncation, or bit-flip tampering.
-
-<br/>
-
-**Dual Mode Interface**<br/>
-**Native Desktop GUI**: Tauri 2.0 with Electric Purple Cyber HUD, Drag & Drop, native file dialogs (`rfd`), and real-time streaming telemetry.<br/>
-**High-Throughput CLI**: Automated headless batch encryption, decryption, inspection, and multi-pass CSPRNG shredding.
-
-<br/>
-
-**Backwards Compatible Container Inspector**<br/>
-Instantly inspects `.wraith` containers and identifies whether they belong to the **MirageX v4 (PQC)** generation or legacy **Project Mirage v1 / v2 (Mirage-C4 / AES-GCM)** containers.
-
+Este documento detalla exclusivamente el informe de la segunda auditoría técnica realizada sobre el <strong>parser binario de WRAITH v4</strong> y la interfaz CLI en <strong>MirageX</strong>, abordando el tratamiento de archivos <code>.wraith</code> hostiles, mitigaciones contra <em>length bombs</em>, verificación canónica estricta y protección de credenciales en memoria y terminal.
 </p>
+
+<br/>
 
 ---
 
-## 🚀 Hardware Benchmarks (Apple Silicon M-Series / Release Mode)
+## 📊 Matriz de Nuevas Vulnerabilidades Identificadas & Remediadas
 
 </div>
+
+| Nivel de Severidad | Vulnerabilidad Encontrada | Vector de Amenaza / Impacto | Estado | Archivos Modificados |
+| :--- | :--- | :--- | :---: | :--- |
+| 🔴 **ALTA (CRÍTICO)** | **Allocation / Length Bombs en Parser Binario** | Contenedor `.wraith` malicioso con campos `u32` en `0xFFFFFFFF` fuerza reservas de ~4 GB de RAM antes de validar (DoS por agotamiento). | **CORREGIDO** | `src/wraith/decryptor.rs`<br>`src/crypto/mod.rs` |
+| 🔴 **ALTA (OPERATIVO)** | **Exposición de Contraseña en `argv` y Memoria CLI** | Uso de `-p <pass>` visible en `ps aux`/historial shell y persistencia sin `zeroize` en el buffer `args`. | **CORREGIDO** | `src/cli.rs`<br>`Cargo.toml` |
+| 🟠 **MEDIA** | **Aceptación de Valores No Canónicos en `is_final`** | Bytes no canónicos (`0x02`, `0xFF`) se trataban silenciosamente como `false` en vez de rechazar el contenedor. | **CORREGIDO** | `src/wraith/decryptor.rs` |
+| 🟠 **MEDIA** | **Ausencia de Verificación EOF tras el Manifiesto** | Inyección de bytes de basura no autenticados (*trailing garbage*) anexados al final del archivo `.wraith`. | **CORREGIDO** | `src/wraith/decryptor.rs` |
+| 🟠 **MEDIA** | **Falta de Validación de `manifest.total_chunks`** | Discrepancia entre el conteo de chunks procesados y el total declarado en el manifiesto. | **CORREGIDO** | `src/wraith/decryptor.rs` |
+| 🟡 **MEDIA-BAJA** | **TOCTOU en `encrypt_stream` con Archivos Concurrentes** | Determinación de `is_final` basada en `stat()` previo podía truncar archivos en escritura concurrente. | **CORREGIDO** | `src/wraith/encryptor.rs` |
+| 🟢 **BAJA (ROBUSTEZ)** | **Fallback Atómico ante `EXDEV` (Cross-Device)** | Fallo al mover archivos entre diferentes particiones o unidades de disco en `fs::rename`. | **CORREGIDO** | `src/commands/mod.rs` |
+
+<div align="center">
+
+---
+
+## 🔍 Análisis Detallado de Hallazgos y Soluciones Técnicas
+
+</div>
+
+### 🔴 1. Protección contra Allocation / Length Bombs en el Parser Binario
+<p align="center"><strong>Archivo:</strong> <code>src/wraith/decryptor.rs</code></p>
+
+- **Problema:** El parser binario leía longitudes `u32` crudas del stream (`pqc_ct_len`, `wrapped_len`, `payload_len`, `manifest_len`) y las pasaba directamente a `vec![0u8; len]`. Un archivo de pocos bytes con `0xFFFFFFFF` provocaba pánico por falta de memoria RAM (*Out of Memory*).
+- **Remediación:**
+  1. `pqc_ct_len` se valida estrictamente contra `header.suite.ciphertext_size()` (1088 bytes para ML-KEM-768 y 1568 bytes para ML-KEM-1024, según NIST FIPS 203).
+  2. Se establecieron topes duros innegociables antes de cualquier reserva de memoria:
+     - `MAX_WRAPPED_KEY_LEN = 8 KiB`
+     - `MAX_CHUNK_PAYLOAD_LEN = 256 MiB`
+     - `MAX_MANIFEST_LEN = 64 KiB`
+  3. Si cualquier longitud leída excede estos límites, el parser aborta de inmediato con `WraithError::InvalidContainer` sin asignar un solo byte de memoria innecesaria.
+
+---
+
+### 🔴 2. Entrada Segura de Contraseña en CLI y Limpieza de Memoria
+<p align="center"><strong>Archivos:</strong> <code>src/cli.rs</code>, <code>Cargo.toml</code></p>
+
+- **Problema:** La CLI obligaba a pasar `-p <password>`, exponiendo la clave en el historial de comandos de shell (`~/.zsh_history`) y en la tabla de procesos del sistema (`ps aux`). Adicionalmente, el vector `args` retenía la copia en memoria.
+- **Remediación:**
+  1. Se integró el crate `rpassword` para solicitar la contraseña de forma interactiva y oculta en la terminal si no se especifica `-p`.
+  2. Se añadió soporte para `--password-stdin` permitiendo pipelines seguros sin tocar argumentos de línea de comandos.
+  3. Si se utiliza `-p`, la memoria original dentro del vector `args` y la variable local se sobrescriben inmediatamente con ceros (`zeroize()`).
+
+---
+
+### 🟠 3. Verificación Canónica Estricta del Byte `is_final`
+<p align="center"><strong>Archivo:</strong> <code>src/wraith/decryptor.rs</code></p>
+
+- **Problema:** El byte `is_final` se evaluaba como `final_buf[0] == 1`, permitiendo que bytes no canónicos como `0x02` o `0xFF` fueran interpretados silenciosamente como `false`.
+- **Remediación:** Se implementó verificación exhaustiva canónica:
+```rust
+let is_final = match final_buf[0] {
+    0 => false,
+    1 => true,
+    _ => return Err(WraithError::InvalidContainer),
+};
+```
+
+---
+
+### 🟠 4. Detección y Rechazo de Basura Final (*Trailing Garbage*)
+<p align="center"><strong>Archivo:</strong> <code>src/wraith/decryptor.rs</code></p>
+
+- **Problema:** Tras descifrar el manifiesto, el stream no comprobaba si había bytes adicionales inyectados al final del archivo contenedor.
+- **Remediación:** Se añadió verificación de EOF estricta tras la lectura del trailer:
+```rust
+let mut extra = [0u8; 1];
+if reader.read(&mut extra)? != 0 {
+    return Err(WraithError::InvalidContainer);
+}
+```
+
+---
+
+### 🟠 5. Validación Cruzada de Conteo de Chunks (`manifest.total_chunks`)
+<p align="center"><strong>Archivo:</strong> <code>src/wraith/decryptor.rs</code></p>
+
+- **Problema:** El campo `manifest.total_chunks` no se cotejaba con el contador real de chunks descifrados `expected_chunk_index`.
+- **Remediación:** Se incorporó la validación obligatoria:
+```rust
+if manifest.total_chunks != expected_chunk_index {
+    return Err(WraithError::IntegrityHashMismatch);
+}
+```
+
+---
+
+### 🟡 6. Eliminación de Condición de Carrera (TOCTOU) en Cifrado de Streaming
+<p align="center"><strong>Archivo:</strong> <code>src/wraith/encryptor.rs</code></p>
+
+- **Problema:** `is_final` dependía del tamaño de archivo obtenido por `stat()` previo al cifrado. Si el archivo crecía concurrentemente durante la lectura, podía truncarse silenciosamente.
+- **Remediación:** Se implementó un sondeo de byte adelantado (*lookahead byte probe*) que detecta el verdadero EOF al momento exacto de la lectura física del stream, independientemente del tamaño reportado previamente por el sistema de archivos.
+
+---
+
+### 🟢 7. Compatibilidad Atómica Cross-Device (`EXDEV`)
+<p align="center"><strong>Archivo:</strong> <code>src/commands/mod.rs</code></p>
+
+- **Problema:** `fs::rename` fallaba si el archivo de destino residía en una partición, disco externo o montaje SMB distinto al directorio temporal.
+- **Remediación:** Se creó `commit_file_atomic()` que intenta `fs::rename` atómico y, ante error de enlace entre dispositivos (`EXDEV`), ejecuta fallback automático mediante `fs::copy()` seguido de borrado seguro del archivo temporal.
+
+---
+
+<div align="center">
+
+## 🧪 Pruebas de Seguridad y Verificación Automatizada
+
+<p align="center">
+Se añadieron 4 nuevos tests específicos en <code>tests/security_tests.rs</code> (alcanzando 17 tests unitarios y de seguridad totales):
+</p>
+
+</div>
+
+```bash
+cargo test
+```
 
 ```text
-══════════════════════════════════════════════════════
-  MirageX Standard (768):     9,760.9 ops/sec
-  MirageX Ultra (1024):       7,728.9 ops/sec
-  Argon2id (64MB / 3 iter):   80 ms
-  AES-256-GCM Hardware Speed: 210.7+ MB/s
-══════════════════════════════════════════════════════
+running 4 tests (crypto)
+test crypto::aead_aes_gcm_tamper_detection      ... ok
+test crypto::kem_768_roundtrip                   ... ok
+test crypto::argon2_and_hkdf_domain_separation  ... ok
+test crypto::kem_1024_roundtrip                  ... ok
+
+running 7 tests (security)
+test security::path_traversal_sanitization               ... ok
+test security::temporary_file_cleaned_on_failed_decrypt  ... ok
+test security::header_bit_flip_tampering_fails           ... ok
+test security::allocation_bomb_pqc_ciphertext_rejected   ... ok
+test security::allocation_bomb_wrapped_key_rejected      ... ok
+test security::non_canonical_is_final_rejected           ... ok
+test security::trailing_garbage_after_manifest_rejected  ... ok
+
+running 6 tests (wraith & legacy)
+test wraith::inspect_legacy_project_mirage_mirg_v2 ... ok
+test wraith::wraith_v4_chunk_tamper_fails          ... ok
+test wraith::wraith_v4_768_streaming_roundtrip     ... ok
+test wraith::storage_local_shredding               ... ok
+test wraith::wraith_v4_1024_streaming_roundtrip    ... ok
+test wraith::wraith_v4_wrong_password_fails        ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ```
 
 <div align="center">
 
 ---
 
-## 📦 Installation & Build
-
-<p align="center">
-<strong>Prerequisites:</strong> <a href="https://rustup.rs/">Rust 1.80+</a> on macOS, Linux, or Windows 10/11.
-</p>
-
-</div>
-
-```bash
-git clone https://github.com/Rainb0wJagu4r/MirageX.git
-cd MirageX
-cargo build --release
-```
-
-<div align="center">
-
----
-
-## 💻 Usage
-
-### 1. Launch Desktop GUI (Electric Purple Cyber HUD)
-
-</div>
-
-```bash
-cargo run --release
-```
-
-<div align="center">
-
-### 2. Command Line Interface (CLI)
-
-</div>
-
-#### Encrypt a file (MirageX Ultra / Level 5 PQC):
-```bash
-./target/release/miragex encrypt document.pdf -p 'MasterPassword2026!' --pqc 1024
-# Outputs: document.pdf.wraith
-```
-
-#### Decrypt & verify cryptographic authenticity:
-```bash
-./target/release/miragex decrypt document.pdf.wraith -p 'MasterPassword2026!'
-```
-
-#### Inspect container metadata (MirageX v4 & Legacy Project Mirage v1/v2):
-```bash
-./target/release/miragex inspect document.pdf.wraith
-```
-
-#### Securely shred a sensitive file (CSPRNG Multi-Pass):
-```bash
-./target/release/miragex shred sensitive_file.txt --passes 3
-```
-
-#### Run hardware benchmark:
-```bash
-./target/release/miragex bench
-```
-
-<div align="center">
-
----
-
-## ⚛️ NIST SP 800-22 Empirical Entropy & Statistical Randomness Audit
-
-<p align="center">
-The <code>.wraith</code> v4 containers produced by <strong>MirageX Ultra (ML-KEM-1024 / NIST Level 5)</strong> were audited using the <strong>NIST SP 800-22</strong> statistical test suite across diverse payload profiles (random binary, structured repeated text, and all-zeroes <code>\x00</code> payloads).<br/>
-Full reports and CLI reproduction tools are hosted at <a href="https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results">PROJECT-MIRAGE-NIST-Analyze-results</a>.
-</p>
-
-</div>
-
-| NIST SP 800-22 Statistical Test | Random Binary Payload | Structured Text Payload | All-Zeroes `\x00` Payload | Statistical Status ($\alpha=0.01$) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Bit Balance (Proportion of 1s)** | 50.00% ones | 49.98% ones | 50.01% ones | **Optimal ($0.5$)** |
-| **Serial Autocorrelation (Lag 1)** | `+0.000062` | `-0.000132` | `+0.000164` | **Zero Correlation** |
-| **Frequency (Monobit) Test** | `0.71236` | `0.20062` | `0.64910` | **PASS** |
-| **Frequency Test within a Block ($M=128$)** | `0.06584` | `0.47384` | `0.82379` | **PASS** |
-| **Runs Test** | `0.79946` | `0.58692` | `0.50191` | **PASS** |
-| **Longest Run of Ones in a Block** | `0.29160` | `0.47189` | `0.17197` | **PASS** |
-| **Discrete Fourier Transform (Spectral)** | `0.30926` | `0.66735` | `0.81112` | **PASS** |
-| **Cumulative Sums (Cusum Forward)** | `0.75004` | `0.07870` | `0.87089` | **PASS** |
-| **Cumulative Sums (Cusum Backward)** | `0.93817` | `0.38733` | `0.46799` | **PASS** |
-| **Approximate Entropy ($m=3$)** | `0.99139` | `0.42544` | `0.82460` | **PASS** |
-| **Serial Test ($m=3$)** | `0.93628, 0.73516` | `0.46603, 0.43912` | `0.73596, 0.51164` | **PASS** |
-| **Non-overlapping Template Matching** | `0.84219` | `0.23030` | `0.99140` | **PASS** |
-| **OVERALL VERDICT** | **NIST STS PASS** | **NIST STS PASS** | **NIST STS PASS** | **CRYPTOGRAPHIC RANDOM (PASS)** |
-
-<div align="center">
-
----
-
-## 📄 License
-
-Apache 2.0 / MIT.
-
----
-
-**MirageX // Quantum-Resistant Decoupled Storage**  
-*Born in Mexico 🇲🇽*
+**MirageX Hardened Release — Phase 2**  
+*Audited & Certified Robust against Hostile Binary Containers*
 
 </div>

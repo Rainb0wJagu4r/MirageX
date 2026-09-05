@@ -1,11 +1,14 @@
 use std::env;
+use std::io::{self, BufRead};
 use std::process;
+use zeroize::Zeroize;
+
 use crate::commands::{
     decrypt_file_cmd, encrypt_file_cmd, inspect_container_cmd, run_benchmark_cmd, shred_file_cmd,
 };
 
 pub fn run_cli() -> bool {
-    let args: Vec<String> = env::args().collect();
+    let mut args: Vec<String> = env::args().collect();
     if args.len() <= 1 {
         // No arguments -> launch GUI
         return false;
@@ -18,11 +21,11 @@ pub fn run_cli() -> bool {
             process::exit(0);
         }
         "encrypt" => {
-            handle_encrypt(&args[2..]);
+            handle_encrypt(&mut args[2..]);
             true
         }
         "decrypt" => {
-            handle_decrypt(&args[2..]);
+            handle_decrypt(&mut args[2..]);
             true
         }
         "inspect" => {
@@ -53,14 +56,15 @@ fn print_help() {
 
 USAGE:
     miragex                               Launch Desktop GUI
-    miragex encrypt <file> -p <password> [options]
-    miragex decrypt <file.wraith> -p <password> [options]
+    miragex encrypt <file> [options]
+    miragex decrypt <file.wraith> [options]
     miragex inspect <file.wraith>
     miragex shred <file> [--passes <N>]
     miragex bench
 
 OPTIONS:
-    -p, --password <PASS>      Encryption/Decryption password
+    -p, --password <PASS>      Password (visible in process list; prefer interactive prompt)
+    --password-stdin           Read password securely from standard input
     -o, --output <PATH>        Custom output destination path
     --pqc <768|1024>           PQC Suite (default: 768)
     --chunk-size <MB>          Streaming chunk size in MB (default: 16)
@@ -69,28 +73,56 @@ OPTIONS:
 "#);
 }
 
-fn handle_encrypt(args: &[String]) {
+fn get_password(args: &mut [String], from_stdin: bool) -> String {
+    if from_stdin {
+        let mut line = String::new();
+        let stdin = io::stdin();
+        let mut handle = stdin.lock();
+        let _ = handle.read_line(&mut line);
+        let trimmed = line.trim_end_matches(&['\r', '\n'][..]).to_string();
+        line.zeroize();
+        return trimmed;
+    }
+
+    let mut i = 0;
+    while i < args.len() {
+        if args[i] == "-p" || args[i] == "--password" {
+            if i + 1 < args.len() {
+                let pass = args[i + 1].clone();
+                args[i + 1].zeroize(); // Scrub original argument memory
+                return pass;
+            }
+        }
+        i += 1;
+    }
+
+    // Prompt interactively with hidden terminal input
+    match rpassword::prompt_password("🔑 Enter master password: ") {
+        Ok(pass) => pass,
+        Err(e) => {
+            eprintln!("Error reading password: {}", e);
+            process::exit(1);
+        }
+    }
+}
+
+fn handle_encrypt(args: &mut [String]) {
     if args.is_empty() {
         eprintln!("Error: Input file required for encryption.");
         process::exit(1);
     }
 
     let input_path = args[0].clone();
-    let mut password = String::new();
     let mut output_path = None;
     let mut suite_id = Some(1u8); // Default 768
     let mut chunk_size_mb = Some(16u32);
     let mut shred = false;
+    let mut from_stdin = false;
 
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
-            "-p" | "--password" => {
-                if i + 1 < args.len() {
-                    password = args[i + 1].clone();
-                    i += 1;
-                }
-            }
+            "--password-stdin" => from_stdin = true,
             "-o" | "--output" => {
                 if i + 1 < args.len() {
                     output_path = Some(args[i + 1].clone());
@@ -119,8 +151,9 @@ fn handle_encrypt(args: &[String]) {
         i += 1;
     }
 
+    let password = get_password(args, from_stdin);
     if password.is_empty() {
-        eprintln!("Error: Password is required (-p <password>).");
+        eprintln!("Error: Password cannot be empty.");
         process::exit(1);
     }
 
@@ -142,26 +175,21 @@ fn handle_encrypt(args: &[String]) {
     }
 }
 
-fn handle_decrypt(args: &[String]) {
+fn handle_decrypt(args: &mut [String]) {
     if args.is_empty() {
         eprintln!("Error: Container file required for decryption.");
         process::exit(1);
     }
 
     let input_path = args[0].clone();
-    let mut password = String::new();
     let mut output_path = None;
     let mut shred = false;
+    let mut from_stdin = false;
 
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
-            "-p" | "--password" => {
-                if i + 1 < args.len() {
-                    password = args[i + 1].clone();
-                    i += 1;
-                }
-            }
+            "--password-stdin" => from_stdin = true,
             "-o" | "--output" => {
                 if i + 1 < args.len() {
                     output_path = Some(args[i + 1].clone());
@@ -174,8 +202,9 @@ fn handle_decrypt(args: &[String]) {
         i += 1;
     }
 
+    let password = get_password(args, from_stdin);
     if password.is_empty() {
-        eprintln!("Error: Password is required (-p <password>).");
+        eprintln!("Error: Password cannot be empty.");
         process::exit(1);
     }
 
