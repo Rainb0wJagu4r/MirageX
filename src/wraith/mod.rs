@@ -35,6 +35,9 @@ pub enum WraithError {
 
     #[error("Invalid Container Structure: Unexpected end of stream")]
     UnexpectedEof,
+
+    #[error("Invalid or Malformed WRAITH Container")]
+    InvalidContainer,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

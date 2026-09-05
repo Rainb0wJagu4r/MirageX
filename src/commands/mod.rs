@@ -128,6 +128,17 @@ pub fn select_wraith_dialog() -> Result<Option<SelectedFileInfo>, String> {
     }
 }
 
+/// Atomically commits a temporary file to its final destination, falling back to copy+delete on cross-device links (EXDEV).
+fn commit_file_atomic(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
+    if fs::rename(tmp_path, final_path).is_ok() {
+        return Ok(());
+    }
+    // Fallback for cross-device links (EXDEV)
+    fs::copy(tmp_path, final_path).map_err(|e| format!("Failed to copy file to destination: {}", e))?;
+    let _ = fs::remove_file(tmp_path);
+    Ok(())
+}
+
 #[tauri::command]
 pub fn encrypt_file_cmd(
     input_path: String,
@@ -213,8 +224,8 @@ pub fn encrypt_file_cmd(
 
     let elapsed = start.elapsed().as_millis();
 
-    // Atomic commit
-    if let Err(e) = fs::rename(&tmp_out_path, &out_p) {
+    // Atomic commit (with EXDEV cross-device fallback)
+    if let Err(e) = commit_file_atomic(&tmp_out_path, &out_p) {
         let _ = fs::remove_file(&tmp_out_path);
         return Err(format!("Failed to commit encrypted file: {}", e));
     }
@@ -296,8 +307,8 @@ pub fn decrypt_file_cmd(
         None => parent_dir.join(&sanitized_filename),
     };
 
-    // Commit decrypted file atomically
-    if let Err(e) = fs::rename(&tmp_out_path, &out_p) {
+    // Commit decrypted file atomically (with EXDEV fallback)
+    if let Err(e) = commit_file_atomic(&tmp_out_path, &out_p) {
         let _ = fs::remove_file(&tmp_out_path);
         return Err(format!("Failed to save decrypted file: {}", e));
     }
