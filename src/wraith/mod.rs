@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 
 pub const MAGIC_BYTES: &[u8; 6] = b"WRAITH";
 pub const CURRENT_VERSION: u8 = 4;
+pub const MIN_CHUNK_SIZE: u32 = 64 * 1024; // 64 KiB
 pub const DEFAULT_CHUNK_SIZE: u32 = 16 * 1024 * 1024; // 16 MiB
+pub const MAX_CHUNK_SIZE: u32 = 256 * 1024 * 1024; // 256 MiB
 
 #[derive(Debug, thiserror::Error)]
 pub enum WraithError {
@@ -23,6 +25,9 @@ pub enum WraithError {
 
     #[error("Unsupported WRAITH Version: {0}")]
     UnsupportedVersion(u8),
+
+    #[error("Invalid Chunk Size: {0} bytes (allowed range: 64 KiB to 256 MiB)")]
+    InvalidChunkSize(u32),
 
     #[error("Container Tampered: Chunk {index} authentication failed or corrupted")]
     ChunkTampered { index: u64 },

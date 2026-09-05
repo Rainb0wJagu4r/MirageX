@@ -173,10 +173,10 @@ pub fn encrypt_file_cmd(
         None => PqcSuite::MlKem768,
     };
 
-    // Safe chunk calculation with checked_mul and upper bounds
+    // Safe chunk calculation with checked_mul and strict bounds
     let chunk_size = chunk_size_mb
         .and_then(|mb| mb.checked_mul(1024 * 1024))
-        .map(|bytes| bytes.min(MAX_ALLOWED_CHUNK_SIZE))
+        .map(|bytes| bytes.clamp(crate::wraith::MIN_CHUNK_SIZE, crate::wraith::MAX_CHUNK_SIZE))
         .unwrap_or(DEFAULT_CHUNK_SIZE);
 
     let original_filename = in_p
@@ -193,7 +193,7 @@ pub fn encrypt_file_cmd(
 
     let in_file = File::open(in_p).map_err(|e| e.to_string())?;
 
-    // Atomic write to temporary file
+    // Atomic write to temporary file with 0600 mode
     let mut rng = OsRng;
     let rand_suffix: u64 = rng.next_u64();
     let tmp_out_path = match out_p.file_name() {
@@ -201,7 +201,24 @@ pub fn encrypt_file_cmd(
         None => PathBuf::from(format!("miragex_enc_{}.tmp", rand_suffix)),
     };
 
-    let mut tmp_file = File::create(&tmp_out_path).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    let mut tmp_file = {
+        use std::os::unix::fs::OpenOptionsExt;
+        std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&tmp_out_path)
+            .map_err(|e| e.to_string())?
+    };
+    #[cfg(not(unix))]
+    let mut tmp_file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .open(&tmp_out_path)
+        .map_err(|e| e.to_string())?;
 
     let start = Instant::now();
     let total_encrypted_res = encrypt_stream(
@@ -219,7 +236,8 @@ pub fn encrypt_file_cmd(
     let total_encrypted = match total_encrypted_res {
         Ok(bytes) => bytes,
         Err(e) => {
-            let _ = fs::remove_file(&tmp_out_path);
+            let storage = LocalStorageAdapter::new();
+            let _ = storage.shred_file_with_mode(&tmp_out_path, 1, crate::storage::ShredMode::Hdd);
             return Err(e.to_string());
         }
     };
@@ -228,7 +246,8 @@ pub fn encrypt_file_cmd(
 
     // Atomic commit (with EXDEV cross-device fallback)
     if let Err(e) = commit_file_atomic(&tmp_out_path, &out_p) {
-        let _ = fs::remove_file(&tmp_out_path);
+        let storage = LocalStorageAdapter::new();
+        let _ = storage.shred_file_with_mode(&tmp_out_path, 1, crate::storage::ShredMode::Hdd);
         return Err(format!("Failed to commit encrypted file: {}", e));
     }
 
@@ -277,13 +296,30 @@ pub fn decrypt_file_cmd(
 
     let in_file = File::open(in_p).map_err(|e| e.to_string())?;
 
-    // Streaming direct to atomic temporary file on disk (Zero RAM accumulation)
+    // Streaming direct to atomic temporary file with 0600 permissions
     let mut rng = OsRng;
     let rand_suffix: u64 = rng.next_u64();
     let parent_dir = in_p.parent().unwrap_or_else(|| Path::new("."));
     let tmp_out_path = parent_dir.join(format!(".miragex_dec_{}.tmp", rand_suffix));
 
-    let mut tmp_file = File::create(&tmp_out_path).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    let mut tmp_file = {
+        use std::os::unix::fs::OpenOptionsExt;
+        std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&tmp_out_path)
+            .map_err(|e| e.to_string())?
+    };
+    #[cfg(not(unix))]
+    let mut tmp_file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .open(&tmp_out_path)
+        .map_err(|e| e.to_string())?;
 
     let start = Instant::now();
     let decrypt_res: Result<Manifest, _> = decrypt_stream(
@@ -300,8 +336,9 @@ pub fn decrypt_file_cmd(
     let manifest = match decrypt_res {
         Ok(m) => m,
         Err(e) => {
-            // Decryption or integrity check failed: securely wipe temporary file
-            let _ = fs::remove_file(&tmp_out_path);
+            // Decryption or integrity check failed: securely wipe temporary file with shredder
+            let storage = LocalStorageAdapter::new();
+            let _ = storage.shred_file_with_mode(&tmp_out_path, 1, crate::storage::ShredMode::Hdd);
             return Err(e.to_string());
         }
     };
@@ -318,7 +355,8 @@ pub fn decrypt_file_cmd(
 
     // Commit decrypted file atomically (with EXDEV fallback)
     if let Err(e) = commit_file_atomic(&tmp_out_path, &out_p) {
-        let _ = fs::remove_file(&tmp_out_path);
+        let storage = LocalStorageAdapter::new();
+        let _ = storage.shred_file_with_mode(&tmp_out_path, 1, crate::storage::ShredMode::Hdd);
         return Err(format!("Failed to save decrypted file: {}", e));
     }
 
@@ -363,6 +401,11 @@ pub fn shred_file_cmd(
     let in_p = Path::new(&input_path);
     if !in_p.exists() {
         return Err(format!("Target file not found: {}", input_path));
+    }
+
+    // Backend Safety Scope: Ensure target is a regular file before proceeding with destruction
+    if !in_p.is_file() {
+        return Err(format!("Security restriction: '{}' is a directory or special device, not a regular file.", input_path));
     }
 
     let storage = LocalStorageAdapter::new();

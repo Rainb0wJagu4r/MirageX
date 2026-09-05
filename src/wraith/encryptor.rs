@@ -47,6 +47,11 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     options: EncryptOptions,
     mut progress_callback: F,
 ) -> Result<u64, WraithError> {
+    // 0. Enforce strict chunk size bounds (prevents panic/DoS on chunk_size = 0 or allocation bombs)
+    if options.chunk_size < crate::wraith::MIN_CHUNK_SIZE || options.chunk_size > crate::wraith::MAX_CHUNK_SIZE {
+        return Err(WraithError::InvalidChunkSize(options.chunk_size));
+    }
+
     let mut rng = OsRng;
     let start_time = Instant::now();
 
