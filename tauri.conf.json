@@ -69,6 +69,14 @@
         "Resources/wraith.icns": "icons/wraith.icns"
       },
       "infoPlist": "./Info.plist"
+    },
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      },
+      "nsis": {
+        "displayLanguageSelector": false
+      }
     }
   }
 }
