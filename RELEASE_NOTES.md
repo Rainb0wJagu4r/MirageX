@@ -27,7 +27,7 @@
 
 | Plataforma | Archivo / Instalador | Formato | Tamaño | Checksum SHA-256 |
 | :--- | :--- | :---: | :---: | :--- |
-| 🍎 **macOS (Apple Silicon)** | `MirageX_4.0.0_aarch64.dmg` | Instalador DMG con GUI | `3.3 MB` | `60e24c6bfc8e6855b210138f8f560f43ebe8b538977ddf1d2dfcb21d8c2bb3c1` |
+| 🍎 **macOS (Apple Silicon)** | `MirageX_4.0.1_aarch64.dmg` | Instalador DMG con GUI | `4.8 MB` | `c8bd28ba84e2783ae4e024943ecc9b704d74d03b7d27b994ff27c29f7079cecd` |
 | 🍎 **macOS (Bundle)** | `MirageX.app` | App Bundle Nativo | `7.0 MB` | *(Contenido firmado en bundle)* |
 | 🍎 **macOS (CLI)** | `miragex_macos_cli` | Binario CLI Nativo | `7.0 MB` | `a9d49580e5f63c23f484bf27830d6495098c41198baddd463bc055ddbc8c7084` |
 | 🪟 **Windows (x64)** | `miragex.exe` | Ejecutable Portable Nativo | `5.0 MB` | `c46e20d7c889a6f18d53d2a9bc8a9d734d65e267927a850a8cf4b0efe8bd0cb2` |

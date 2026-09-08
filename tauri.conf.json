@@ -43,6 +43,32 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": [
+      "icons/nobug.icns",
+      "icons/wraith.icns",
+      "icons/nobug.ico",
+      "icons/wraith.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["wraith"],
+        "name": "WRAITH Encrypted Container",
+        "description": "MirageX WRAITH Post-Quantum Encrypted Container",
+        "role": "Editor",
+        "mimeType": "application/x-wraith",
+        "exportedType": {
+          "identifier": "com.miragesecurity.wraith",
+          "conformsTo": ["public.data", "public.item"]
+        }
+      }
+    ],
+    "macOS": {
+      "files": {
+        "Resources/nobug.icns": "icons/nobug.icns",
+        "Resources/wraith.icns": "icons/wraith.icns"
+      },
+      "infoPlist": "./Info.plist"
+    }
   }
 }
