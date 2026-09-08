@@ -39,14 +39,14 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Run Security Test Suite
-        run: cargo test --release
-
       - name: Install Linux dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev libayatana-appindicator3-dev
+
+      - name: Run Security Test Suite
+        run: cargo test --release
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0.0" --locked
@@ -56,8 +56,8 @@ jobs:
 
       - name: Upload Release Artifacts
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: "v4.0.1"
           files: |
             target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             target/${{ matrix.target }}/release/bundle/msi/*.msi
