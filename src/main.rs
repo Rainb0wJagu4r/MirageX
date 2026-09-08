@@ -20,8 +20,43 @@ fn disable_core_dumps() {
 #[cfg(not(unix))]
 fn disable_core_dumps() {}
 
+#[cfg(windows)]
+fn register_windows_file_association() {
+    if let Ok(exe_path) = std::env::current_exe() {
+        let exe_str = exe_path.to_string_lossy().to_string();
+        let _ = std::process::Command::new("reg")
+            .args(&[
+                "add", "HKCU\\Software\\Classes\\.wraith",
+                "/ve", "/d", "MirageX.wraith", "/f"
+            ])
+            .output();
+        let _ = std::process::Command::new("reg")
+            .args(&[
+                "add", "HKCU\\Software\\Classes\\MirageX.wraith",
+                "/ve", "/d", "WRAITH Encrypted Container", "/f"
+            ])
+            .output();
+        let _ = std::process::Command::new("reg")
+            .args(&[
+                "add", "HKCU\\Software\\Classes\\MirageX.wraith\\DefaultIcon",
+                "/ve", "/d", &format!("\"{}\",0", exe_str), "/f"
+            ])
+            .output();
+        let _ = std::process::Command::new("reg")
+            .args(&[
+                "add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open\\command",
+                "/ve", "/d", &format!("\"{}\" \"%1\"", exe_str), "/f"
+            ])
+            .output();
+    }
+}
+
+#[cfg(not(windows))]
+fn register_windows_file_association() {}
+
 fn main() {
     disable_core_dumps();
+    register_windows_file_association();
 
     // Check if running from CLI
     if run_cli() {
