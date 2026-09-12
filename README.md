@@ -8,14 +8,15 @@
 [![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org/)
 [![NIST FIPS 203](https://img.shields.io/badge/PQC-ML--KEM--768%20%2F%201024-purple.svg)](https://csrc.nist.gov/pubs/fips/203/final)
 [![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
-[![Security Audit v2](https://img.shields.io/badge/Audit%20Report-v2%20(Hardened)-purple.svg)](SECURITY_AUDIT_REPORT_V2.md)
+[![Security Audit v3](https://img.shields.io/badge/Audit%20Report-v3%20(100%25%20Remediated)-brightgreen.svg)](SECURITY_AUDIT_REPORT_V3.md)
 [![Tauri 2.0](https://img.shields.io/badge/Tauri-v2.0-blue.svg)](https://tauri.app/)
 
 <br/>
 
 <p align="center">
   <a href="README.md"><b>📖 Overview</b></a> •
-  <a href="SECURITY_AUDIT_REPORT_V2.md"><b>🛡️ Security Audit Report v2</b></a> •
+  <a href="SECURITY_AUDIT_REPORT_V3.md"><b>🛡️ Security Audit Report v3</b></a> •
+  <a href="SECURITY_AUDIT_REPORT_V2.md"><b>📋 Audit Report v2</b></a> •
   <a href="THREAT_MODEL.md"><b>📜 Threat Model</b></a> •
   <a href="SECURITY.md"><b>⚖️ Security Policy</b></a> •
   <a href="RELEASE_NOTES.md"><b>📦 Release Notes</b></a>

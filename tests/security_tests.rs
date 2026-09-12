@@ -405,3 +405,140 @@ fn test_shred_directory_rejected() {
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
 
+#[test]
+fn test_empty_password_rejected() {
+    let payload = b"Sensitive data";
+    let mut container = Vec::new();
+    let res = encrypt_stream(
+        Cursor::new(payload),
+        &mut container,
+        b"", // Empty password
+        payload.len() as u64,
+        EncryptOptions::default(),
+        |_| {},
+    );
+    assert!(res.is_err(), "encrypt_stream must reject empty password");
+
+    let mut out = Vec::new();
+    let res_dec = decrypt_stream(
+        Cursor::new(&container),
+        &mut out,
+        b"",
+        DecryptOptions::default(),
+        |_| {},
+    );
+    assert!(res_dec.is_err(), "decrypt_stream must reject empty password");
+}
+
+#[test]
+fn test_argon2_bounds_and_work_factor_rejected() {
+    let payload = b"Argon2 bounds check";
+    let mut container = Vec::new();
+
+    // m_cost > 256 MiB
+    let res_m = encrypt_stream(
+        Cursor::new(payload),
+        &mut container,
+        b"ValidPass123!",
+        payload.len() as u64,
+        EncryptOptions {
+            argon2_m_cost: 512 * 1024, // 512 MiB (exceeds 256 MiB limit)
+            ..Default::default()
+        },
+        |_| {},
+    );
+    assert!(res_m.is_err(), "encrypt_stream must reject argon2_m_cost exceeding 256 MiB");
+
+    // t_cost > 10
+    let res_t = encrypt_stream(
+        Cursor::new(payload),
+        &mut container,
+        b"ValidPass123!",
+        payload.len() as u64,
+        EncryptOptions {
+            argon2_t_cost: 11, // Exceeds 10 limit
+            ..Default::default()
+        },
+        |_| {},
+    );
+    assert!(res_t.is_err(), "encrypt_stream must reject argon2_t_cost exceeding 10");
+
+    // Total work factor product > 256 MiB * 10
+    let res_wf = encrypt_stream(
+        Cursor::new(payload),
+        &mut container,
+        b"ValidPass123!",
+        payload.len() as u64,
+        EncryptOptions {
+            argon2_m_cost: 200 * 1024,
+            argon2_t_cost: 15,
+            ..Default::default()
+        },
+        |_| {},
+    );
+    assert!(res_wf.is_err(), "encrypt_stream must reject work factor exceeding product limit");
+}
+
+#[test]
+fn test_windows_device_names_and_illegal_chars_sanitization() {
+    use miragex::commands::sanitize_filename;
+
+    // Windows device names with and without extensions
+    assert_eq!(sanitize_filename("CON"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("con.txt"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("PRN.log"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("AUX"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("NUL.dat"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("com1.exe"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("LPT9.docx"), "recovered_file.bin");
+
+    // Trailing dots and whitespaces
+    assert_eq!(sanitize_filename("test."), "test");
+    assert_eq!(sanitize_filename("test..."), "test");
+    assert_eq!(sanitize_filename("test  "), "test");
+    assert_eq!(sanitize_filename("..."), "recovered_file.bin");
+
+    // Illegal Windows characters
+    assert_eq!(sanitize_filename("file:name.txt"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("file*name.txt"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("file?name.txt"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("file\"name.txt"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("file<name.txt"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("file>name.txt"), "recovered_file.bin");
+    assert_eq!(sanitize_filename("file|name.txt"), "recovered_file.bin");
+
+    // Valid filenames
+    assert_eq!(sanitize_filename("my_document.pdf"), "my_document.pdf");
+    assert_eq!(sanitize_filename("financial_report_2026.xlsx"), "financial_report_2026.xlsx");
+}
+
+#[test]
+#[cfg(unix)]
+fn test_shred_symlink_rejected() {
+    use std::os::unix::fs::symlink;
+
+    let temp_dir = std::env::temp_dir().join("miragex_shred_symlink_test");
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    let target_file = temp_dir.join("target.txt");
+    std::fs::write(&target_file, b"Target real data").unwrap();
+
+    let symlink_file = temp_dir.join("link_to_target.txt");
+    let _ = std::fs::remove_file(&symlink_file);
+    symlink(&target_file, &symlink_file).unwrap();
+
+    // Calling shred on symlink must fail and preserve target
+    let res = miragex::commands::shred_file_cmd(
+        symlink_file.to_string_lossy().to_string(),
+        Some(1),
+        Some("ssd".into()),
+    );
+    assert!(res.is_err(), "shred_file_cmd must reject symbolic links");
+    assert!(target_file.exists(), "Target file must not be modified or deleted via symlink");
+
+    let _ = std::fs::remove_file(&symlink_file);
+    let _ = std::fs::remove_file(&target_file);
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+
