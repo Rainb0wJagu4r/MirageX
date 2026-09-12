@@ -41,6 +41,9 @@ pub enum WraithError {
     #[error("Invalid Container Structure: Unexpected end of stream")]
     UnexpectedEof,
 
+    #[error("Invalid password: password cannot be empty")]
+    InvalidPassword,
+
     #[error("Invalid or Malformed WRAITH Container")]
     InvalidContainer,
 }

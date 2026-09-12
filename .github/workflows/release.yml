@@ -55,9 +55,10 @@ jobs:
         run: cargo tauri build ${{ matrix.args }}
 
       - name: Upload Release Artifacts
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v4.0.1"
+          tag_name: ${{ github.ref_name }}
           files: |
             target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             target/${{ matrix.target }}/release/bundle/msi/*.msi

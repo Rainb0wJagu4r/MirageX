@@ -4,3 +4,6 @@ target/
 .DS_Store
 test_rfd.rs
 *.wraith
+node_modules/
+dist/
+gen/

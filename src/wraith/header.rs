@@ -8,15 +8,15 @@ use crate::wraith::{WraithError, CURRENT_VERSION, MAGIC_BYTES};
 pub const HEADER_SIZE: usize = 80;
 
 pub const MIN_ARGON2_M_COST: u32 = 8; // 8 KiB minimum
-// Security hardening (AUDIT.md M1): bounds cap the work factor an unauthenticated,
+// Security hardening (MXA-01): bounds cap the work factor an unauthenticated,
 // attacker-crafted header can force on the decrypting machine (Argon2 runs BEFORE
-// any authenticated check). Worst case is now ~1 GiB RAM x 10 iterations, bounded
-// to a few seconds instead of hours.
-pub const MAX_ARGON2_M_COST: u32 = 1024 * 1024; // 1 GiB maximum (in KiB)
+// any authenticated check). Enforces strict memory ceiling and total work factor limit.
+pub const MAX_ARGON2_M_COST: u32 = 256 * 1024; // 256 MiB maximum (in KiB)
 pub const MIN_ARGON2_T_COST: u32 = 1;
 pub const MAX_ARGON2_T_COST: u32 = 10;
 pub const MIN_ARGON2_P_COST: u32 = 1;
 pub const MAX_ARGON2_P_COST: u32 = 8;
+pub const MAX_ARGON2_WORK_FACTOR: u64 = 256 * 1024 * 10; // (m_cost * t_cost) maximum product
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WraithHeader {
@@ -111,9 +111,15 @@ impl WraithHeader {
         let argon2_p_cost = u32::from_be_bytes(buf[68..72].try_into().unwrap());
         let flags = u32::from_be_bytes(buf[72..76].try_into().unwrap());
 
+        if !(crate::wraith::MIN_CHUNK_SIZE..=crate::wraith::MAX_CHUNK_SIZE).contains(&chunk_size) {
+            return Err(WraithError::InvalidChunkSize(chunk_size));
+        }
+
+        let work_factor = (argon2_m_cost as u64) * (argon2_t_cost as u64);
         if !(MIN_ARGON2_M_COST..=MAX_ARGON2_M_COST).contains(&argon2_m_cost)
             || !(MIN_ARGON2_T_COST..=MAX_ARGON2_T_COST).contains(&argon2_t_cost)
             || !(MIN_ARGON2_P_COST..=MAX_ARGON2_P_COST).contains(&argon2_p_cost)
+            || work_factor > MAX_ARGON2_WORK_FACTOR
         {
             return Err(WraithError::InvalidContainer);
         }

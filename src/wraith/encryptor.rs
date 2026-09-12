@@ -47,9 +47,27 @@ pub fn encrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     options: EncryptOptions,
     mut progress_callback: F,
 ) -> Result<u64, WraithError> {
-    // 0. Enforce strict chunk size bounds (prevents panic/DoS on chunk_size = 0 or allocation bombs)
+    // 0. Enforce non-empty password
+    if password.is_empty() {
+        return Err(WraithError::InvalidPassword);
+    }
+
+    // 0b. Enforce strict chunk size bounds (prevents panic/DoS on chunk_size = 0 or allocation bombs)
     if options.chunk_size < crate::wraith::MIN_CHUNK_SIZE || options.chunk_size > crate::wraith::MAX_CHUNK_SIZE {
         return Err(WraithError::InvalidChunkSize(options.chunk_size));
+    }
+
+    // 0c. Enforce Argon2 parameter bounds on encryption path (MXA-06)
+    let work_factor = (options.argon2_m_cost as u64) * (options.argon2_t_cost as u64);
+    if options.argon2_m_cost < crate::wraith::header::MIN_ARGON2_M_COST
+        || options.argon2_m_cost > crate::wraith::header::MAX_ARGON2_M_COST
+        || options.argon2_t_cost < crate::wraith::header::MIN_ARGON2_T_COST
+        || options.argon2_t_cost > crate::wraith::header::MAX_ARGON2_T_COST
+        || options.argon2_p_cost < crate::wraith::header::MIN_ARGON2_P_COST
+        || options.argon2_p_cost > crate::wraith::header::MAX_ARGON2_P_COST
+        || work_factor > crate::wraith::header::MAX_ARGON2_WORK_FACTOR
+    {
+        return Err(WraithError::InvalidContainer);
     }
 
     let mut rng = OsRng;

@@ -21,6 +21,9 @@ pub enum StorageError {
 
     #[error("Secure wipe error: {0}")]
     ShredFailed(String),
+
+    #[error("Invalid path: {0}")]
+    InvalidPath(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

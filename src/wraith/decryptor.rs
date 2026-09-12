@@ -43,6 +43,9 @@ pub fn decrypt_stream<R: Read, W: Write, F: FnMut(ProgressReport)>(
     _options: DecryptOptions,
     mut progress_callback: F,
 ) -> Result<Manifest, WraithError> {
+    if password.is_empty() {
+        return Err(WraithError::InvalidPassword);
+    }
     let start_time = Instant::now();
 
     // 1. Read & Validate Header

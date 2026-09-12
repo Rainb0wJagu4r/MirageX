@@ -82,18 +82,42 @@ pub fn sanitize_filename(raw_filename: &str) -> String {
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
 
-    // 3. Reject forbidden and dangerous directory references
-    let safe_name = basename.trim();
-    if safe_name.is_empty()
-        || safe_name == "."
-        || safe_name == ".."
-        || safe_name.contains('/')
-        || safe_name.contains('\\')
+    // 3. Trim trailing dots and whitespaces (invalid in Windows/cross-platform)
+    let trimmed = basename.trim_matches(|c: char| c.is_whitespace() || c == '.');
+
+    // 4. Reject forbidden characters and dangerous directory references
+    if trimmed.is_empty()
+        || trimmed == "."
+        || trimmed == ".."
+        || trimmed.contains('/')
+        || trimmed.contains('\\')
+        || trimmed.contains(':')
+        || trimmed.contains('*')
+        || trimmed.contains('?')
+        || trimmed.contains('"')
+        || trimmed.contains('<')
+        || trimmed.contains('>')
+        || trimmed.contains('|')
     {
-        "recovered_file.bin".to_string()
-    } else {
-        safe_name.to_string()
+        return "recovered_file.bin".to_string();
     }
+
+    // 5. Reject Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+    let stem = Path::new(trimmed)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(trimmed);
+    let stem_upper = stem.to_ascii_uppercase();
+    const RESERVED_NAMES: &[&str] = &[
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ];
+    if RESERVED_NAMES.contains(&stem_upper.as_str()) {
+        return "recovered_file.bin".to_string();
+    }
+
+    trimmed.to_string()
 }
 
 #[tauri::command]
@@ -148,6 +172,10 @@ pub fn encrypt_file_cmd(
     shred_mode: Option<String>,
     shred_passes: Option<u8>,
 ) -> Result<EncryptionResult, String> {
+    if password.is_empty() {
+        return Err("Password cannot be empty".to_string());
+    }
+
     let in_p = Path::new(&input_path);
     if !in_p.exists() {
         return Err(format!("Input file not found on disk: '{}'. Ensure the full path is provided.", input_path));
@@ -240,6 +268,14 @@ pub fn encrypt_file_cmd(
         }
     };
 
+    // fsync before rename to guarantee data durability (MXA-11)
+    if let Err(e) = tmp_file.sync_all() {
+        let storage = LocalStorageAdapter::new();
+        let _ = storage.shred_file_with_mode(&tmp_out_path, 1, crate::storage::ShredMode::Hdd);
+        return Err(format!("Failed to fsync temporary encrypted file: {}", e));
+    }
+    drop(tmp_file);
+
     let elapsed = start.elapsed().as_millis();
 
     // Atomic commit (with EXDEV cross-device fallback)
@@ -291,6 +327,10 @@ pub fn decrypt_file_cmd(
     shred_mode: Option<String>,
     shred_passes: Option<u8>,
 ) -> Result<DecryptionResult, String> {
+    if password.is_empty() {
+        return Err("Password cannot be empty".to_string());
+    }
+
     let in_p = Path::new(&input_path);
     if !in_p.exists() {
         return Err(format!("Container file not found on disk: '{}'.", input_path));
@@ -344,6 +384,14 @@ pub fn decrypt_file_cmd(
             return Err(e.to_string());
         }
     };
+
+    // fsync before rename to guarantee data durability (MXA-11)
+    if let Err(e) = tmp_file.sync_all() {
+        let storage = LocalStorageAdapter::new();
+        let _ = storage.shred_file_with_mode(&tmp_out_path, 1, crate::storage::ShredMode::Hdd);
+        return Err(format!("Failed to fsync temporary decrypted file: {}", e));
+    }
+    drop(tmp_file);
 
     let elapsed = start.elapsed().as_millis();
 
@@ -409,8 +457,12 @@ pub fn shred_file_cmd(
         return Err(format!("Target file not found: {}", input_path));
     }
 
-    // Backend Safety Scope: Ensure target is a regular file before proceeding with destruction
-    if !in_p.is_file() {
+    // Backend Safety Scope: Ensure target is not a symlink and is a regular file before proceeding with destruction (MXA-03)
+    let sym_meta = fs::symlink_metadata(in_p).map_err(|e| e.to_string())?;
+    if sym_meta.file_type().is_symlink() {
+        return Err(format!("Security restriction: '{}' is a symbolic link. Shredding symlinks is prohibited.", input_path));
+    }
+    if !sym_meta.is_file() {
         return Err(format!("Security restriction: '{}' is a directory or special device, not a regular file.", input_path));
     }
 

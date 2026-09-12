@@ -75,14 +75,28 @@ impl StorageAdapter for LocalStorageAdapter {
     }
 
     fn shred_file_with_mode(&self, path: &Path, passes: u8, mode: crate::storage::ShredMode) -> Result<(), StorageError> {
-        if !path.exists() {
-            return Err(StorageError::NotFound(path.display().to_string()));
+        let sym_meta = fs::symlink_metadata(path)?;
+        if sym_meta.file_type().is_symlink() {
+            return Err(StorageError::InvalidPath(format!("Path '{}' is a symbolic link; shredding symlinks is prohibited", path.display())));
+        }
+        if !sym_meta.is_file() {
+            return Err(StorageError::InvalidPath(format!("Path '{}' is not a regular file", path.display())));
         }
 
-        let metadata = fs::metadata(path)?;
-        let file_size = metadata.len();
+        let file_size = sym_meta.len();
         let num_passes = passes.max(1);
 
+        #[cfg(unix)]
+        let mut file = {
+            use std::os::unix::fs::OpenOptionsExt;
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .custom_flags(libc::O_NOFOLLOW)
+                .open(path)?
+        };
+
+        #[cfg(not(unix))]
         let mut file = OpenOptions::new()
             .read(true)
             .write(true)

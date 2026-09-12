@@ -90,6 +90,7 @@ fn get_password(args: &mut [String], from_stdin: bool) -> String {
     while i < args.len() {
         if args[i] == "-p" || args[i] == "--password" {
             if i + 1 < args.len() {
+                eprintln!("⚠️ Warning: Passing passwords via CLI argument is visible in system process lists (ps). Use interactive prompt or --password-stdin instead.");
                 let pass = args[i + 1].clone();
                 args[i + 1].zeroize(); // Scrub original argument memory
                 return pass;
@@ -150,13 +151,13 @@ fn handle_encrypt(args: &mut [String]) {
                 }
             }
             "--shred" => shred = true,
-            "--shred-mode" => {
+            "--mode" | "--shred-mode" => {
                 if i + 1 < args.len() {
                     shred_mode = Some(args[i + 1].clone());
                     i += 1;
                 }
             }
-            "--shred-passes" => {
+            "--passes" | "--shred-passes" => {
                 if i + 1 < args.len() {
                     shred_passes = args[i + 1].parse().ok();
                     i += 1;
@@ -215,13 +216,13 @@ fn handle_decrypt(args: &mut [String]) {
                 }
             }
             "--shred" => shred = true,
-            "--shred-mode" => {
+            "--mode" | "--shred-mode" => {
                 if i + 1 < args.len() {
                     shred_mode = Some(args[i + 1].clone());
                     i += 1;
                 }
             }
-            "--shred-passes" => {
+            "--passes" | "--shred-passes" => {
                 if i + 1 < args.len() {
                     shred_passes = args[i + 1].parse().ok();
                     i += 1;
@@ -290,10 +291,10 @@ fn handle_shred(args: &[String]) {
 
     let mut i = 1;
     while i < args.len() {
-        if args[i] == "--passes" && i + 1 < args.len() {
+        if (args[i] == "--passes" || args[i] == "--shred-passes") && i + 1 < args.len() {
             passes = args[i + 1].parse().unwrap_or(3);
             i += 1;
-        } else if args[i] == "--mode" && i + 1 < args.len() {
+        } else if (args[i] == "--mode" || args[i] == "--shred-mode") && i + 1 < args.len() {
             mode = Some(args[i + 1].clone());
             i += 1;
         }
