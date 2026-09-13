@@ -1,10 +1,38 @@
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::time::Instant;
 use rand::rngs::OsRng;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InitialFilePayload {
+    pub path: String,
+    pub name: String,
+    pub size: u64,
+    pub action: Option<String>,
+}
+
+static INITIAL_FILE: Mutex<Option<InitialFilePayload>> = Mutex::new(None);
+
+pub fn set_initial_file(path_str: &str, action: Option<&str>) {
+    let path = Path::new(path_str);
+    let size = fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| path_str.to_string());
+    if let Ok(mut lock) = INITIAL_FILE.lock() {
+        *lock = Some(InitialFilePayload {
+            path: path_str.to_string(),
+            name,
+            size,
+            action: action.map(|s| s.to_string()),
+        });
+    }
+}
 
 use crate::crypto::{
     aead::{encrypt_aes_gcm, generate_nonce},
@@ -547,3 +575,196 @@ pub fn run_benchmark_cmd() -> Result<BenchmarkResult, String> {
         aes_256_gcm_throughput_mb_s: aes_throughput,
     })
 }
+
+#[tauri::command]
+pub fn get_initial_file_cmd() -> Result<Option<InitialFilePayload>, String> {
+    if let Ok(mut lock) = INITIAL_FILE.lock() {
+        Ok(lock.take())
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn setup_context_menu_cmd() -> Result<String, String> {
+    #[cfg(windows)]
+    {
+        if let Ok(exe_path) = std::env::current_exe() {
+            let exe_str = exe_path.to_string_lossy().to_string();
+            
+            // Files Context Menu (*\shell\MirageX.Encrypt)
+            let _ = std::process::Command::new("reg")
+                .args(&[
+                    "add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt",
+                    "/ve", "/d", "Cifrar con MirageX (Post-Quantum)", "/f"
+                ])
+                .output();
+            let _ = std::process::Command::new("reg")
+                .args(&[
+                    "add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt",
+                    "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"
+                ])
+                .output();
+            let _ = std::process::Command::new("reg")
+                .args(&[
+                    "add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt\\command",
+                    "/ve", "/d", &format!("\"{}\" \"%1\"", exe_str), "/f"
+                ])
+                .output();
+
+            // Directory Context Menu (Directory\shell\MirageX.Encrypt)
+            let _ = std::process::Command::new("reg")
+                .args(&[
+                    "add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt",
+                    "/ve", "/d", "Cifrar con MirageX (Post-Quantum)", "/f"
+                ])
+                .output();
+            let _ = std::process::Command::new("reg")
+                .args(&[
+                    "add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt",
+                    "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"
+                ])
+                .output();
+            let _ = std::process::Command::new("reg")
+                .args(&[
+                    "add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt\\command",
+                    "/ve", "/d", &format!("\"{}\" \"%1\"", exe_str), "/f"
+                ])
+                .output();
+
+            Ok("Menú contextual de Windows Explorer registrado exitosamente.".into())
+        } else {
+            Err("No se pudo obtener la ruta del ejecutable actual en Windows.".into())
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(home) = std::env::var_os("HOME") {
+            let services_dir = PathBuf::from(home).join("Library/Services");
+            let _ = fs::create_dir_all(&services_dir);
+            let workflow_dir = services_dir.join("Cifrar con MirageX (Post-Quantum).workflow");
+            let contents_dir = workflow_dir.join("Contents");
+            let _ = fs::create_dir_all(&contents_dir);
+
+            let info_plist = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSServices</key>
+    <array>
+        <dict>
+            <key>NSBackgroundColorName</key>
+            <string>background</string>
+            <key>NSBackgroundStrokeColorName</key>
+            <string>line</string>
+            <key>NSIconName</key>
+            <string>NSActionTemplate</string>
+            <key>NSMenuItem</key>
+            <dict>
+                <key>default</key>
+                <string>Cifrar con MirageX (Post-Quantum)</string>
+            </dict>
+            <key>NSMessage</key>
+            <string>runWorkflowAsService</string>
+            <key>NSRequiredContext</key>
+            <dict>
+                <key>NSApplicationIdentifier</key>
+                <string>com.apple.finder</string>
+            </dict>
+            <key>NSSendFileTypes</key>
+            <array>
+                <string>public.item</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>"#;
+
+            let doc_wflow = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>AMApplicationBuild</key>
+    <string>523</string>
+    <key>AMApplicationVersion</key>
+    <string>2.10</string>
+    <key>AMDocumentVersion</key>
+    <string>2</string>
+    <key>actions</key>
+    <array>
+        <dict>
+            <key>action</key>
+            <dict>
+                <key>AMAccepts</key>
+                <dict>
+                    <key>Container</key>
+                    <string>List</string>
+                    <key>Optional</key>
+                    <true/>
+                    <key>Types</key>
+                    <array>
+                        <string>com.apple.cocoa.path</string>
+                    </array>
+                </dict>
+                <key>AMActionVersion</key>
+                <string>2.0.3</string>
+                <key>AMParameterProperties</key>
+                <dict>
+                    <key>COMMAND_STRING</key>
+                    <dict/>
+                </dict>
+                <key>AMProvides</key>
+                <dict>
+                    <key>Container</key>
+                    <string>List</string>
+                    <key>Types</key>
+                    <array>
+                        <string>com.apple.cocoa.path</string>
+                    </array>
+                </dict>
+                <key>ActionBundlePath</key>
+                <string>/System/Library/Automator/Run Shell Script.action</string>
+                <key>ActionName</key>
+                <string>Run Shell Script</string>
+                <key>ActionParameters</key>
+                <dict>
+                    <key>COMMAND_STRING</key>
+                    <string>for f in "$@"
+do
+    open -a "MirageX" "$f" 2>/dev/null || open -a "/Applications/MirageX.app" "$f" 2>/dev/null
+done</string>
+                    <key>inputMethod</key>
+                    <integer>1</integer>
+                    <key>shell</key>
+                    <string>/bin/bash</string>
+                    <key>source</key>
+                    <string></string>
+                </dict>
+                <key>BundleIdentifier</key>
+                <string>com.apple.RunShellScript</string>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>"#;
+
+            let _ = fs::write(contents_dir.join("Info.plist"), info_plist);
+            let _ = fs::write(contents_dir.join("document.wflow"), doc_wflow);
+
+            let _ = std::process::Command::new("/System/Library/CoreServices/pbs")
+                .arg("-flush")
+                .output();
+
+            Ok("Acción Rápida de Finder en macOS registrada correctamente en ~/Library/Services/.".into())
+        } else {
+            Err("No se pudo resolver el directorio HOME en macOS.".into())
+        }
+    }
+
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        Ok("Integración de menú contextual completada.".into())
+    }
+}
+

@@ -40,6 +40,18 @@ pub fn run_cli() -> bool {
             handle_bench();
             true
         }
+        "--gui-encrypt" if args.len() > 2 => {
+            crate::commands::set_initial_file(&args[2], Some("encrypt"));
+            false
+        }
+        "--gui-decrypt" if args.len() > 2 => {
+            crate::commands::set_initial_file(&args[2], Some("decrypt"));
+            false
+        }
+        arg if !arg.starts_with('-') || std::path::Path::new(arg).exists() => {
+            crate::commands::set_initial_file(arg, None);
+            false
+        }
         _ => {
             eprintln!("Unknown command: '{}'. Run 'miragex --help' for usage.", args[1]);
             process::exit(1);

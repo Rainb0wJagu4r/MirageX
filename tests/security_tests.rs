@@ -541,4 +541,25 @@ fn test_shred_symlink_rejected() {
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
 
+#[test]
+fn test_initial_file_payload_and_context_menu_commands() {
+    let dummy_path = "/tmp/test_context_file.txt";
+    miragex::commands::set_initial_file(dummy_path, Some("encrypt"));
+
+    let payload = miragex::commands::get_initial_file_cmd().expect("Should get payload");
+    assert!(payload.is_some(), "Payload must be set");
+    let p = payload.unwrap();
+    assert_eq!(p.path, dummy_path);
+    assert_eq!(p.action.as_deref(), Some("encrypt"));
+
+    // Second call should return None because it was taken
+    let second = miragex::commands::get_initial_file_cmd().expect("Should get second payload");
+    assert!(second.is_none(), "Payload should be cleared after being retrieved");
+
+    // Context menu command should succeed without panicking
+    let ctx_res = miragex::commands::setup_context_menu_cmd();
+    assert!(ctx_res.is_ok(), "setup_context_menu_cmd should succeed");
+}
+
+
 

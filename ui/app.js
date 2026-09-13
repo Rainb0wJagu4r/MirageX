@@ -34,9 +34,11 @@ let selectedShredPath = null;
 document.addEventListener('DOMContentLoaded', () => {
   setupTabs();
   setupPasswordLogic();
+  setupQrModalLogic();
   setupDropzones();
   setupActions();
   setupTauriNativeEvents();
+  checkInitialFilePayload();
 });
 
 // 1. Navigation Tabs
@@ -458,6 +460,179 @@ async function runInspection(path) {
   }
 }
 
+// 7. QR Code Password Sharing & Shoulder-Surfing Protection
+let qrTimerInterval = null;
+let currentQrPassword = '';
+let qrRevealed = false;
+
+function setupQrModalLogic() {
+  const btnShareEnc = document.getElementById('btn-share-qr-encrypt');
+  const btnShareDec = document.getElementById('btn-share-qr-decrypt');
+  const btnCloseModal = document.getElementById('btn-close-qr-modal');
+  const modalOverlay = document.getElementById('qr-modal-overlay');
+  const btnToggleReveal = document.getElementById('btn-toggle-qr-reveal');
+  const btnCopyPass = document.getElementById('btn-copy-qr-pass');
+
+  if (btnShareEnc) {
+    btnShareEnc.addEventListener('click', () => {
+      const pass = document.getElementById('encrypt-password').value;
+      openQrModal(pass, 'Contraseña de Cifrado');
+    });
+  }
+
+  if (btnShareDec) {
+    btnShareDec.addEventListener('click', () => {
+      const pass = document.getElementById('decrypt-password').value;
+      openQrModal(pass, 'Contraseña de Descifrado');
+    });
+  }
+
+  if (btnCloseModal) {
+    btnCloseModal.addEventListener('click', closeQrModal);
+  }
+
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeQrModal();
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeQrModal();
+  });
+
+  if (btnToggleReveal) {
+    btnToggleReveal.addEventListener('click', () => {
+      qrRevealed = !qrRevealed;
+      const passText = document.getElementById('qr-password-text');
+      if (qrRevealed) {
+        passText.textContent = currentQrPassword;
+      } else {
+        passText.textContent = '•'.repeat(Math.min(currentQrPassword.length, 24));
+      }
+    });
+  }
+
+  if (btnCopyPass) {
+    btnCopyPass.addEventListener('click', async () => {
+      if (!currentQrPassword) return;
+      try {
+        await navigator.clipboard.writeText(currentQrPassword);
+        showToast('Contraseña copiada al portapapeles.', 'success');
+      } catch (e) {
+        showToast('No se pudo acceder al portapapeles.', 'error');
+      }
+    });
+  }
+
+  // Context menu setup button in header
+  const btnContextMenu = document.getElementById('btn-setup-context-menu');
+  if (btnContextMenu) {
+    btnContextMenu.addEventListener('click', async () => {
+      try {
+        const res = await invokeBackend('setup_context_menu_cmd');
+        showToast(res || 'Menú contextual configurado exitosamente.', 'success');
+      } catch (err) {
+        showToast(`Error al configurar menú contextual: ${err}`, 'error');
+      }
+    });
+  }
+}
+
+function openQrModal(password, title) {
+  if (!password || password.trim() === '') {
+    showToast('Introduce o genera una contraseña primero para generar el código QR.', 'error');
+    return;
+  }
+
+  currentQrPassword = password;
+  qrRevealed = false;
+
+  const modal = document.getElementById('qr-modal-overlay');
+  const canvas = document.getElementById('qr-code-canvas');
+  const passText = document.getElementById('qr-password-text');
+  const timerFill = document.getElementById('qr-timer-fill');
+  const timerLabel = document.getElementById('qr-timer-label');
+
+  passText.textContent = '•'.repeat(Math.min(password.length, 24));
+
+  if (window.QRCodeGenerator && typeof window.QRCodeGenerator.generate === 'function') {
+    window.QRCodeGenerator.generate(password, canvas, {
+      size: 200,
+      colorDark: '#0a0714',
+      colorLight: '#ffffff'
+    });
+  }
+
+  // 30s auto-close security countdown
+  let timeLeft = 30;
+  if (qrTimerInterval) clearInterval(qrTimerInterval);
+  timerFill.style.width = '100%';
+  timerLabel.textContent = `Auto-cierre de seguridad en ${timeLeft}s`;
+
+  qrTimerInterval = setInterval(() => {
+    timeLeft -= 1;
+    const pct = Math.max(0, (timeLeft / 30) * 100);
+    timerFill.style.width = `${pct}%`;
+    timerLabel.textContent = `Auto-cierre de seguridad en ${timeLeft}s`;
+    if (timeLeft <= 0) {
+      closeQrModal();
+      showToast('Código QR cerrado automáticamente por seguridad.', 'info');
+    }
+  }, 1000);
+
+  modal.style.display = 'flex';
+}
+
+function closeQrModal() {
+  const modal = document.getElementById('qr-modal-overlay');
+  if (modal) modal.style.display = 'none';
+  if (qrTimerInterval) {
+    clearInterval(qrTimerInterval);
+    qrTimerInterval = null;
+  }
+  currentQrPassword = '';
+  qrRevealed = false;
+}
+
+// 8. OS Context Menu & Incoming File Payload Handler
+async function checkInitialFilePayload() {
+  try {
+    const payload = await invokeBackend('get_initial_file_cmd');
+    if (payload && payload.path) {
+      handleIncomingFile(payload.path, payload.name, payload.size, payload.action);
+    }
+  } catch (e) {
+    console.debug('No initial file payload:', e);
+  }
+}
+
+function handleIncomingFile(fullPath, fileName, fileSize, action) {
+  fileName = fileName || fullPath.split('/').pop() || fullPath.split('\\').pop() || fullPath;
+  const isWraith = fullPath.toLowerCase().endsWith('.wraith');
+
+  if (action === 'decrypt' || (isWraith && action !== 'encrypt')) {
+    // Switch to Decrypt tab
+    document.querySelector('.nav-tab[data-tab="decrypt"]')?.click();
+    selectedDecryptPath = fullPath;
+    document.getElementById('meta-decrypt-name').textContent = fileName;
+    document.getElementById('meta-decrypt-path').textContent = fullPath;
+    document.getElementById('decrypt-file-meta').style.display = 'flex';
+    document.getElementById('decrypt-password').focus();
+    showToast(`Contenedor cargado desde menú contextual: ${fileName}`, 'success');
+  } else {
+    // Switch to Encrypt tab
+    document.querySelector('.nav-tab[data-tab="encrypt"]')?.click();
+    selectedEncryptPath = fullPath;
+    document.getElementById('meta-encrypt-name').textContent = fileName;
+    document.getElementById('meta-encrypt-path').textContent = fullPath;
+    document.getElementById('meta-encrypt-size').textContent = fileSize ? formatBytes(fileSize) : 'Detectado por menú contextual';
+    document.getElementById('encrypt-file-meta').style.display = 'flex';
+    document.getElementById('encrypt-password').focus();
+    showToast(`Archivo listo para cifrar desde menú contextual: ${fileName}`, 'success');
+  }
+}
+
 // Utilities
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toast-container');
@@ -478,3 +653,4 @@ function formatBytes(bytes) {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
