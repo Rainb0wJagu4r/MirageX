@@ -831,8 +831,10 @@ input[type="password"]:focus, input[type="text"]:focus, .hud-select:focus {
 
 #qr-code-canvas {
   display: block;
-  width: 200px;
-  height: 200px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  max-width: 100%;
+  height: auto;
 }
 
 .qr-password-display {
