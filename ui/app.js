@@ -558,7 +558,8 @@ function openQrModal(password, title) {
 
   if (window.QRCodeGenerator && typeof window.QRCodeGenerator.generate === 'function') {
     window.QRCodeGenerator.generate(password, canvas, {
-      size: 200,
+      size: 220,
+      margin: 3,
       colorDark: '#0a0714',
       colorLight: '#ffffff'
     });
