@@ -24,6 +24,9 @@
           <span class="status-dot"></span>
           <span class="status-label">ALGORITMO: MIRAGEX (NIST FIPS 203)</span>
         </div>
+        <button class="status-chip btn-clickable" id="btn-setup-context-menu" title="Configurar acceso rápido en menú contextual (Windows Explorer / Finder)">
+          🖱️ INTEGRACIÓN MENÚ OS
+        </button>
         <div class="status-chip">ZERO-SERVER // IPC NATIVO</div>
       </div>
     </header>
@@ -89,6 +92,7 @@
               <div class="input-with-action">
                 <input type="password" id="encrypt-password" placeholder="Introduce una contraseña para el envelope MirageX..." autocomplete="off">
                 <button type="button" class="btn-secondary" id="btn-gen-pass">🎲 Generar</button>
+                <button type="button" class="btn-secondary" id="btn-share-qr-encrypt" title="Compartir contraseña mediante Código QR">📲 QR</button>
                 <button type="button" class="btn-icon" id="btn-toggle-encrypt-pass">👁️</button>
               </div>
               <div class="password-meter">
@@ -213,6 +217,7 @@
               <label for="decrypt-password">CONTRASEÑA DE AUTENTICACIÓN</label>
               <div class="input-with-action">
                 <input type="password" id="decrypt-password" placeholder="Contraseña de desencapsulado..." autocomplete="off">
+                <button type="button" class="btn-secondary" id="btn-share-qr-decrypt" title="Ver contraseña en Código QR">📲 QR</button>
                 <button type="button" class="btn-icon" id="btn-toggle-decrypt-pass">👁️</button>
               </div>
             </div>
@@ -391,8 +396,39 @@
 
     <!-- Global Toast Container -->
     <div class="toast-container" id="toast-container"></div>
+
+    <!-- QR Code Share Modal -->
+    <div class="modal-overlay" id="qr-modal-overlay" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="modal-icon">📲</span>
+            <h3>COMPARTIR CONTRASEÑA // CÓDIGO QR</h3>
+          </div>
+          <button class="modal-close" id="btn-close-qr-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="qr-notice">
+            <span>🛡️ <strong>Zero-Network:</strong> Generado 100% en tu dispositivo. No se transmite por la red.</span>
+          </div>
+          <div class="qr-canvas-wrapper">
+            <canvas id="qr-code-canvas"></canvas>
+          </div>
+          <div class="qr-password-display">
+            <div class="qr-pass-text" id="qr-password-text">••••••••••••••••</div>
+            <button class="btn-icon" id="btn-toggle-qr-reveal" title="Mostrar/Ocultar contraseña">👁️</button>
+            <button class="btn-secondary" id="btn-copy-qr-pass" title="Copiar al portapapeles">📋 Copiar</button>
+          </div>
+          <div class="qr-timer-bar">
+            <div class="qr-timer-fill" id="qr-timer-fill" style="width: 100%;"></div>
+          </div>
+          <div class="qr-timer-label" id="qr-timer-label">Auto-cierre de seguridad en 30s</div>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <script src="qrcode.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -48,5 +48,24 @@
             <string>nobug.icns</string>
         </dict>
     </array>
+    <key>NSServices</key>
+    <array>
+        <dict>
+            <key>NSMenuItem</key>
+            <dict>
+                <key>default</key>
+                <string>Cifrar con MirageX (Post-Quantum)</string>
+            </dict>
+            <key>NSMessage</key>
+            <string>openFile</string>
+            <key>NSPortName</key>
+            <string>MirageX</string>
+            <key>NSSendFileTypes</key>
+            <array>
+                <string>public.item</string>
+                <string>public.folder</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>

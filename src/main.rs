@@ -58,6 +58,9 @@ fn main() {
     disable_core_dumps();
     register_windows_file_association();
 
+    // Auto-setup OS integrations on launch
+    let _ = miragex::commands::setup_context_menu_cmd();
+
     // Check if running from CLI
     if run_cli() {
         return;
@@ -74,6 +77,8 @@ fn main() {
             miragex::commands::generate_pqc_key_cmd,
             miragex::commands::select_file_dialog,
             miragex::commands::select_wraith_dialog,
+            miragex::commands::get_initial_file_cmd,
+            miragex::commands::setup_context_menu_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running MirageX Tauri desktop application");
