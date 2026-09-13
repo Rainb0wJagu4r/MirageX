@@ -125,6 +125,13 @@ function setupTauriNativeEvents() {
     listen('tauri://drag-leave', () => {
       document.querySelectorAll('.dropzone').forEach(d => d.classList.remove('dragover'));
     });
+
+    listen('open-file-payload', (event) => {
+      const payload = event.payload;
+      if (payload && payload.path) {
+        handleIncomingFile(payload.path, payload.name, payload.size, payload.action);
+      }
+    });
   }
 }
 

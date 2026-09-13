@@ -590,47 +590,35 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
     #[cfg(windows)]
     {
         if let Ok(exe_path) = std::env::current_exe() {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
             let exe_str = exe_path.to_string_lossy().to_string();
-            
-            // Files Context Menu (*\shell\MirageX.Encrypt)
-            let _ = std::process::Command::new("reg")
-                .args(&[
-                    "add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt",
-                    "/ve", "/d", "Cifrar con MirageX (Post-Quantum)", "/f"
-                ])
-                .output();
-            let _ = std::process::Command::new("reg")
-                .args(&[
-                    "add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt",
-                    "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"
-                ])
-                .output();
-            let _ = std::process::Command::new("reg")
-                .args(&[
-                    "add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt\\command",
-                    "/ve", "/d", &format!("\"{}\" \"%1\"", exe_str), "/f"
-                ])
-                .output();
 
-            // Directory Context Menu (Directory\shell\MirageX.Encrypt)
-            let _ = std::process::Command::new("reg")
-                .args(&[
-                    "add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt",
-                    "/ve", "/d", "Cifrar con MirageX (Post-Quantum)", "/f"
-                ])
-                .output();
-            let _ = std::process::Command::new("reg")
-                .args(&[
-                    "add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt",
-                    "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"
-                ])
-                .output();
-            let _ = std::process::Command::new("reg")
-                .args(&[
-                    "add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt\\command",
-                    "/ve", "/d", &format!("\"{}\" \"%1\"", exe_str), "/f"
-                ])
-                .output();
+            let run_reg = |args: &[&str]| {
+                let _ = std::process::Command::new("reg")
+                    .args(args)
+                    .creation_flags(CREATE_NO_WINDOW)
+                    .output();
+            };
+
+            // 1. File Context Menu (*\shell\MirageX.Encrypt)
+            run_reg(&["add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt", "/ve", "/d", "Cifrar con MirageX (Post-Quantum)", "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt\\command", "/ve", "/d", &format!("\"{}\" --gui-encrypt \"%1\"", exe_str), "/f"]);
+
+            // 2. Directory Context Menu (Directory\shell\MirageX.Encrypt)
+            run_reg(&["add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt", "/ve", "/d", "Cifrar con MirageX (Post-Quantum)", "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt\\command", "/ve", "/d", &format!("\"{}\" --gui-encrypt \"%1\"", exe_str), "/f"]);
+
+            // 3. .wraith Context Menu (MirageX.wraith\shell)
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open", "/ve", "/d", "Descifrar con MirageX (Post-Quantum)", "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open\\command", "/ve", "/d", &format!("\"{}\" --gui-decrypt \"%1\"", exe_str), "/f"]);
+
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect", "/ve", "/d", "Inspeccionar Contenedor WRAITH", "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect\\command", "/ve", "/d", &format!("\"{}\" --gui-inspect \"%1\"", exe_str), "/f"]);
 
             Ok("Menú contextual de Windows Explorer registrado exitosamente.".into())
         } else {
@@ -643,11 +631,14 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
         if let Some(home) = std::env::var_os("HOME") {
             let services_dir = PathBuf::from(home).join("Library/Services");
             let _ = fs::create_dir_all(&services_dir);
-            let workflow_dir = services_dir.join("Cifrar con MirageX (Post-Quantum).workflow");
-            let contents_dir = workflow_dir.join("Contents");
-            let _ = fs::create_dir_all(&contents_dir);
 
-            let info_plist = r#"<?xml version="1.0" encoding="UTF-8"?>
+            // Helper to generate automator workflow
+            let create_workflow = |name: &str, title: &str, send_types: &str| {
+                let workflow_dir = services_dir.join(format!("{}.workflow", name));
+                let contents_dir = workflow_dir.join("Contents");
+                let _ = fs::create_dir_all(&contents_dir);
+
+                let info_plist = format!(r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -663,7 +654,7 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
             <key>NSMenuItem</key>
             <dict>
                 <key>default</key>
-                <string>Cifrar con MirageX (Post-Quantum)</string>
+                <string>{}</string>
             </dict>
             <key>NSMessage</key>
             <string>runWorkflowAsService</string>
@@ -674,14 +665,14 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
             </dict>
             <key>NSSendFileTypes</key>
             <array>
-                <string>public.item</string>
+                {}
             </array>
         </dict>
     </array>
 </dict>
-</plist>"#;
+</plist>"#, title, send_types);
 
-            let doc_wflow = r#"<?xml version="1.0" encoding="UTF-8"?>
+                let doc_wflow = r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -749,14 +740,29 @@ done</string>
 </dict>
 </plist>"#;
 
-            let _ = fs::write(contents_dir.join("Info.plist"), info_plist);
-            let _ = fs::write(contents_dir.join("document.wflow"), doc_wflow);
+                let _ = fs::write(contents_dir.join("Info.plist"), info_plist);
+                let _ = fs::write(contents_dir.join("document.wflow"), doc_wflow);
+            };
+
+            // 1. Cifrar con MirageX
+            create_workflow(
+                "Cifrar con MirageX (Post-Quantum)",
+                "Cifrar con MirageX (Post-Quantum)",
+                "<string>public.item</string>\n                <string>public.folder</string>"
+            );
+
+            // 2. Descifrar con MirageX
+            create_workflow(
+                "Descifrar con MirageX (Post-Quantum)",
+                "Descifrar con MirageX (Post-Quantum)",
+                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>"
+            );
 
             let _ = std::process::Command::new("/System/Library/CoreServices/pbs")
                 .arg("-flush")
                 .output();
 
-            Ok("Acción Rápida de Finder en macOS registrada correctamente en ~/Library/Services/.".into())
+            Ok("Acciones Rápidas y Servicios de Finder en macOS registrados correctamente.".into())
         } else {
             Err("No se pudo resolver el directorio HOME en macOS.".into())
         }
