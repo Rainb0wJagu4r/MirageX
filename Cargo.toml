@@ -1,6 +1,6 @@
 [package]
 name = "miragex"
-version = "4.0.1"
+version = "4.0.2"
 edition = "2021"
 authors = ["Mirage Security Team"]
 description = "High-Performance Post-Quantum (PQC) Decoupled Encryption Engine & WRAITH v4 Container"

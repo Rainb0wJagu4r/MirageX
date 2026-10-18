@@ -2354,7 +2354,7 @@ dependencies = [
 
 [[package]]
 name = "miragex"
-version = "4.0.1"
+version = "4.0.2"
 dependencies = [
  "aes-gcm",
  "argon2",

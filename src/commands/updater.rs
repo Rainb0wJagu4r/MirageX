@@ -36,8 +36,8 @@ pub struct UpdateProgress {
 pub fn get_changelog_entries() -> Vec<ChangelogEntry> {
     vec![
         ChangelogEntry {
-            version: "v4.0.1".to_string(),
-            title: "Velvet Security, Bóvedas In-Memory & Centro de Orientación".to_string(),
+            version: "v4.0.2".to_string(),
+            title: "Velvet HUD, In-App Auto-Updates, Bóvedas In-Memory & Centro de Orientación".to_string(),
             date: "18 de Octubre, 2026".to_string(),
             is_current: true,
             highlights: vec![
