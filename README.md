@@ -218,7 +218,8 @@ Full reports and CLI reproduction tools are hosted at <a href="https://github.co
 
 ## ⚠️ Known Limitations
 
-- **Vault memory usage:** `.wvault` archives are packed and decrypted in memory, so very large (multi-GB) vaults can exhaust RAM. Regular `.wraith` file containers keep using streaming with constant memory.
+- **Vault size limit:** `.wvault` archives are packed and decrypted in memory and are capped at **2 GiB of plaintext** (plus TAR overhead); larger vaults are rejected with a clear error. Regular `.wraith` file containers keep using streaming with constant memory.
+- **No silent overwrites:** when no explicit destination is chosen, existing files are never overwritten (a `name (1).ext` suffix is used), and symlink destinations are refused.
 - **Keyfile compatibility is not container compatibility:** keyfile derivation matches VeraCrypt/Arcanum, but MirageX does **not** mount or open VeraCrypt `.tc` / `.hc` / `.vc` volumes. Vaults use the MirageX `.wvault` format.
 - **Symlinks are rejected:** vault creation refuses symlinks and special files because following them could include data outside the selected tree or loop indefinitely. Add the real paths instead.
 - **Vault UI is desktop-only:** creating, browsing and extracting vaults is currently available in the Tauri GUI; the CLI covers keyfiles and `.wraith` file containers.

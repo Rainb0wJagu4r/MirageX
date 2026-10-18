@@ -121,8 +121,10 @@ pub fn read_keyfile_from_path<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, String
 
     let mut buf = Vec::new();
     let mut take = (&mut file).take(KEYFILE_MAX_READ_LEN as u64);
-    take.read_to_end(&mut buf)
-        .map_err(|e| format!("Failed to read keyfile '{}': {}", p.display(), e))?;
+    if let Err(e) = take.read_to_end(&mut buf) {
+        buf.zeroize();
+        return Err(format!("Failed to read keyfile '{}': {}", p.display(), e));
+    }
 
     if buf.is_empty() {
         return Err(format!(
@@ -143,12 +145,27 @@ pub fn apply_keyfile_paths<P: AsRef<Path>>(
         return Ok(Zeroizing::new(password.to_vec()));
     }
 
-    let mut kf_data = Vec::with_capacity(paths.len());
+    let mut kf_data: Vec<Vec<u8>> = Vec::with_capacity(paths.len());
     for p in paths {
-        kf_data.push(read_keyfile_from_path(p)?);
+        match read_keyfile_from_path(p) {
+            Ok(data) => kf_data.push(data),
+            Err(e) => {
+                for kf in kf_data.iter_mut() {
+                    kf.zeroize();
+                }
+                return Err(e);
+            }
+        }
     }
 
-    apply_keyfiles(password, &kf_data)
+    let result = apply_keyfiles(password, &kf_data);
+
+    // Keyfile material is an authentication factor: scrub it even if derivation fails.
+    for kf in kf_data.iter_mut() {
+        kf.zeroize();
+    }
+
+    result
 }
 
 /// Generates a cryptographically secure keyfile using `OsRng` fold-mixed with

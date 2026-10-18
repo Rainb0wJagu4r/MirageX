@@ -421,8 +421,52 @@ pub fn close_vault_cmd(session_id: String) -> Result<(), String> {
     crate::vault::close_vault(&session_id)
 }
 
+/// Returns `desired` if it does not exist, otherwise a non-colliding
+/// `"<stem> (N)<ext>"` sibling. Used for automatic output names so a malicious
+/// container manifest can never silently overwrite an existing file.
+fn unique_output_path(desired: &Path) -> PathBuf {
+    if fs::symlink_metadata(desired).is_err() {
+        return desired.to_path_buf();
+    }
+
+    let parent = desired.parent().unwrap_or_else(|| Path::new("."));
+    let stem = desired
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "output".to_string());
+    let ext = desired
+        .extension()
+        .map(|e| format!(".{}", e.to_string_lossy()))
+        .unwrap_or_default();
+
+    for n in 1..=9999u32 {
+        let candidate = parent.join(format!("{} ({}){}", stem, n, ext));
+        if fs::symlink_metadata(&candidate).is_err() {
+            return candidate;
+        }
+    }
+
+    parent.join(format!("{}-{}", stem, OsRng.next_u64()))
+}
+
+/// Refuses to write through a symbolic link. This matters on Windows, where the
+/// `fs::copy` fallback would follow the link and overwrite its target.
+fn reject_symlink_destination(path: &Path) -> Result<(), String> {
+    if let Ok(meta) = fs::symlink_metadata(path) {
+        if meta.file_type().is_symlink() {
+            return Err(format!(
+                "Refusing to overwrite symbolic link '{}'",
+                path.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Atomically commits a temporary file to its final destination, falling back to copy+delete on cross-device links (EXDEV).
 fn commit_file_atomic(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
+    reject_symlink_destination(final_path)?;
+
     if fs::rename(tmp_path, final_path).is_ok() {
         return Ok(());
     }
@@ -467,7 +511,9 @@ pub fn encrypt_file_cmd(
             let mut p = in_p.to_path_buf();
             let orig_name = in_p.file_name().unwrap_or_default().to_string_lossy();
             p.set_file_name(format!("{}.wraith", orig_name));
-            p
+            // Never silently overwrite an existing container when the user did
+            // not choose an explicit destination.
+            unique_output_path(&p)
         }
     };
 
@@ -686,7 +732,9 @@ pub fn decrypt_file_cmd(
 
     let out_p = match output_path {
         Some(p) => PathBuf::from(p),
-        None => parent_dir.join(&sanitized_filename),
+        // The filename comes from the (attacker-controllable) manifest: never
+        // silently overwrite an existing file with it.
+        None => unique_output_path(&parent_dir.join(&sanitized_filename)),
     };
 
     // Commit decrypted file atomically (with EXDEV fallback)

@@ -39,6 +39,7 @@ let selectedVaultOpenKeyfilePath = null;
 let currentVaultSession = null;
 let vaultCachedEntries = [];
 let collectedEntropyBytes = [];
+let clipboardClearTimer = null;
 
 // DOM Initialization
 document.addEventListener('DOMContentLoaded', () => {
@@ -571,7 +572,8 @@ function setupQrModalLogic() {
       if (!currentQrPassword) return;
       try {
         await navigator.clipboard.writeText(currentQrPassword);
-        showToast('Contraseña copiada al portapapeles.', 'success');
+        scheduleClipboardClear(currentQrPassword);
+        showToast('Contraseña copiada. Se borrará del portapapeles en 30 s.', 'success');
       } catch (e) {
         showToast('No se pudo acceder al portapapeles.', 'error');
       }
@@ -647,6 +649,25 @@ function closeQrModal() {
   }
   currentQrPassword = '';
   qrRevealed = false;
+}
+
+// Clears the clipboard after 30 s, but only if it still contains the copied
+// password (never wipes unrelated clipboard content the user copied later).
+function scheduleClipboardClear(password) {
+  if (clipboardClearTimer) clearTimeout(clipboardClearTimer);
+  clipboardClearTimer = setTimeout(async () => {
+    clipboardClearTimer = null;
+    try {
+      const current = await navigator.clipboard.readText();
+      if (current === password) {
+        await navigator.clipboard.writeText('');
+        showToast('Contraseña eliminada del portapapeles.', 'info');
+      }
+    } catch (e) {
+      // Clipboard read may be denied; do not clear blindly.
+      console.debug('Clipboard auto-clear skipped:', e);
+    }
+  }, 30000);
 }
 
 // 8. OS Context Menu & Incoming File Payload Handler

@@ -258,3 +258,160 @@ fn test_create_vault_rejects_symlink_sources() {
 
     let _ = fs::remove_dir_all(&base);
 }
+
+/// Default decrypt output must never overwrite an existing file: the filename
+/// comes from the container manifest, which an attacker controls.
+#[test]
+fn test_decrypt_default_output_does_not_overwrite_existing_file() {
+    let tmp = std::env::temp_dir().join(format!("miragex_nooverwrite_{}", OsRng.next_u64()));
+    fs::create_dir_all(&tmp).unwrap();
+
+    let input = tmp.join("secret.txt");
+    fs::write(&input, b"attacker payload").unwrap();
+
+    let enc = encrypt_file_cmd(
+        input.to_string_lossy().to_string(),
+        None,
+        "pw".to_string(),
+        None,
+        Some(1),
+        None,
+        false,
+        None,
+        None,
+    )
+    .unwrap();
+
+    // The original plaintext file still exists at the default output name, so
+    // decryption must pick a fresh name instead of clobbering it.
+    let before = fs::read(&input).unwrap();
+    let dec = decrypt_file_cmd(
+        enc.output_path.clone(),
+        None,
+        "pw".to_string(),
+        None,
+        false,
+        None,
+        None,
+    )
+    .unwrap();
+
+    assert_ne!(dec.output_path, input.to_string_lossy());
+    assert!(dec.output_path.contains("secret (1).txt"), "got {}", dec.output_path);
+    assert_eq!(fs::read(&input).unwrap(), before, "original file was overwritten");
+    assert_eq!(fs::read(&dec.output_path).unwrap(), b"attacker payload");
+
+    let _ = fs::remove_dir_all(tmp);
+}
+
+/// Default encryption output must not clobber an existing `.wraith` container.
+#[test]
+fn test_encrypt_default_output_does_not_overwrite_existing_container() {
+    let tmp = std::env::temp_dir().join(format!("miragex_enc_nooverwrite_{}", OsRng.next_u64()));
+    fs::create_dir_all(&tmp).unwrap();
+
+    let input = tmp.join("doc.txt");
+    fs::write(&input, b"same content").unwrap();
+
+    let enc1 = encrypt_file_cmd(
+        input.to_string_lossy().to_string(),
+        None,
+        "pw".to_string(),
+        None,
+        Some(1),
+        None,
+        false,
+        None,
+        None,
+    )
+    .unwrap();
+    let enc2 = encrypt_file_cmd(
+        input.to_string_lossy().to_string(),
+        None,
+        "pw".to_string(),
+        None,
+        Some(1),
+        None,
+        false,
+        None,
+        None,
+    )
+    .unwrap();
+
+    assert_ne!(enc1.output_path, enc2.output_path);
+    assert!(enc2.output_path.contains("doc.txt (1).wraith"), "got {}", enc2.output_path);
+    assert!(std::path::Path::new(&enc1.output_path).exists());
+    assert!(std::path::Path::new(&enc2.output_path).exists());
+
+    let _ = fs::remove_dir_all(tmp);
+}
+
+/// Explicit destinations that are symlinks must be refused (Windows `fs::copy`
+/// would otherwise follow the link and overwrite its target).
+#[cfg(unix)]
+#[test]
+fn test_decrypt_rejects_symlink_output() {
+    use std::os::unix::fs::symlink;
+
+    let tmp = std::env::temp_dir().join(format!("miragex_symlink_out_{}", OsRng.next_u64()));
+    fs::create_dir_all(&tmp).unwrap();
+
+    let input = tmp.join("plain.txt");
+    fs::write(&input, b"payload").unwrap();
+    let enc = encrypt_file_cmd(
+        input.to_string_lossy().to_string(),
+        None,
+        "pw".to_string(),
+        None,
+        Some(1),
+        None,
+        false,
+        None,
+        None,
+    )
+    .unwrap();
+
+    let target = tmp.join("target.txt");
+    fs::write(&target, b"do not touch").unwrap();
+    let link = tmp.join("link.txt");
+    symlink(&target, &link).unwrap();
+
+    let err = decrypt_file_cmd(
+        enc.output_path,
+        Some(link.to_string_lossy().to_string()),
+        "pw".to_string(),
+        None,
+        false,
+        None,
+        None,
+    )
+    .unwrap_err();
+
+    assert!(err.contains("symbolic link"), "unexpected error: {err}");
+    assert_eq!(fs::read(&target).unwrap(), b"do not touch");
+
+    let _ = fs::remove_dir_all(tmp);
+}
+
+/// Vault packing must reject sources above the in-memory ceiling before
+/// reading them (sparse file: only metadata is consulted).
+#[test]
+fn test_create_vault_rejects_sources_over_limit() {
+    use miragex::crypto::PqcSuite;
+    use miragex::vault::{create_vault, MAX_VAULT_PLAINTEXT_SIZE};
+
+    let tmp = std::env::temp_dir().join(format!("miragex_vault_limit_{}", OsRng.next_u64()));
+    fs::create_dir_all(&tmp).unwrap();
+
+    let big = tmp.join("big.bin");
+    let f = fs::File::create(&big).unwrap();
+    f.set_len(MAX_VAULT_PLAINTEXT_SIZE + 1).unwrap();
+    drop(f);
+
+    let vault = tmp.join("big.wvault");
+    let err = create_vault(&vault, &[big], b"pw", &[], PqcSuite::MlKem768).unwrap_err();
+    assert!(err.contains("in-memory limit"), "unexpected error: {err}");
+    assert!(!vault.exists());
+
+    let _ = fs::remove_dir_all(tmp);
+}

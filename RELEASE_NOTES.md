@@ -143,7 +143,8 @@ Los datos cifrados en contenedores <code>.wraith</code> v4 generados por <strong
 
 ## ⚠️ Limitaciones Conocidas
 
-- **Memoria de las bóvedas:** los `.wvault` se empaquetan y descifran en memoria; bóvedas de varios GB pueden agotar la RAM. Los contenedores individuales `.wraith` siguen usando streaming con memoria constante.
+- **Límite de tamaño de las bóvedas:** los `.wvault` se empaquetan y descifran en memoria y están limitados a **2 GiB de texto plano** (más el overhead del TAR); las bóvedas mayores se rechazan con un error claro. Los contenedores individuales `.wraith` siguen usando streaming con memoria constante.
+- **Sin sobrescrituras silenciosas:** cuando no se elige un destino explícito, nunca se sobrescribe un archivo existente (se usa el sufijo `nombre (1).ext`) y se rechazan destinos que sean symlinks.
 - **Compatibilidad de keyfiles ≠ compatibilidad de contenedores:** la derivación de keyfiles coincide con VeraCrypt/Arcanum, pero MirageX **no** monta ni abre volúmenes VeraCrypt `.tc` / `.hc` / `.vc`. Las bóvedas usan el formato MirageX `.wvault`.
 - **Symlinks rechazados:** al crear una bóveda se rechazan symlinks y archivos especiales para evitar incluir datos fuera del árbol seleccionado o bucles infinitos.
 - **Bóvedas solo en GUI:** la creación, exploración y extracción de bóvedas está disponible en la interfaz Tauri; la CLI cubre keyfiles y contenedores `.wraith`.

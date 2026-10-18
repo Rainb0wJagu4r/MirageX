@@ -25,6 +25,56 @@ use crate::wraith::DEFAULT_CHUNK_SIZE;
 /// MirageX vault payload (as opposed to a regular single-file container).
 pub const VAULT_PAYLOAD_NAME: &str = "vault_payload.tar";
 
+/// Hard ceiling for the plaintext TAR of a vault. Vaults are packed and
+/// decrypted in memory, so this bounds peak RAM usage for both legitimate and
+/// attacker-crafted containers (availability / memory-exhaustion defense).
+pub const MAX_VAULT_PLAINTEXT_SIZE: u64 = 2 * 1024 * 1024 * 1024; // 2 GiB
+
+/// Reserve for TAR headers and padding when validating source sizes, so a
+/// vault created at the limit can still be opened within the same ceiling.
+const VAULT_TAR_OVERHEAD_MARGIN: u64 = 64 * 1024 * 1024; // 64 MiB
+
+/// A `Write` sink that refuses to buffer more than `limit` bytes and zeroizes
+/// its plaintext buffer when dropped (including every error path).
+struct LimitedWriter {
+    buf: Zeroizing<Vec<u8>>,
+    limit: u64,
+}
+
+impl LimitedWriter {
+    fn new(limit: u64) -> Self {
+        Self {
+            buf: Zeroizing::new(Vec::new()),
+            limit,
+        }
+    }
+
+    fn into_inner(self) -> Zeroizing<Vec<u8>> {
+        self.buf
+    }
+}
+
+impl std::io::Write for LimitedWriter {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        let new_len = (self.buf.len() as u64).saturating_add(data.len() as u64);
+        if new_len > self.limit {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "Vault plaintext exceeds the {} GiB in-memory limit",
+                    MAX_VAULT_PLAINTEXT_SIZE / (1024 * 1024 * 1024)
+                ),
+            ));
+        }
+        self.buf.extend_from_slice(data);
+        Ok(data.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultEntryInfo {
     pub path: String,
@@ -87,11 +137,14 @@ fn is_extractable_entry_type(entry_type: tar::EntryType) -> bool {
 }
 
 /// Validates that every source (and everything inside folders) is a regular file
-/// or directory. Symlinks and special files are rejected: following them while
-/// packaging could silently include files outside the selected tree, and symlink
-/// loops could hang or exhaust memory.
-fn validate_source_paths(source_paths: &[PathBuf]) -> Result<(), String> {
+/// or directory, and that the total plaintext stays within the in-memory limit.
+/// Symlinks and special files are rejected: following them while packaging could
+/// silently include files outside the selected tree, and symlink loops could
+/// hang or exhaust memory.
+fn validate_source_paths(source_paths: &[PathBuf]) -> Result<u64, String> {
     let mut stack: Vec<PathBuf> = source_paths.to_vec();
+    let mut total: u64 = 0;
+    let max_sources = MAX_VAULT_PLAINTEXT_SIZE.saturating_sub(VAULT_TAR_OVERHEAD_MARGIN);
 
     while let Some(path) = stack.pop() {
         let meta = fs::symlink_metadata(&path)
@@ -119,10 +172,21 @@ fn validate_source_paths(source_paths: &[PathBuf]) -> Result<(), String> {
                 "Source '{}' is not a regular file or folder (device, socket or FIFO).",
                 path.display()
             ));
+        } else {
+            total = total
+                .checked_add(meta.len())
+                .ok_or_else(|| "Vault source size overflow".to_string())?;
+            if total > max_sources {
+                return Err(format!(
+                    "Vault sources exceed the {} GiB in-memory limit. \
+                     Split the content into smaller vaults.",
+                    MAX_VAULT_PLAINTEXT_SIZE / (1024 * 1024 * 1024)
+                ));
+            }
         }
     }
 
-    Ok(())
+    Ok(total)
 }
 
 /// Creates a new encrypted vault container from one or more source paths.
@@ -141,13 +205,13 @@ pub fn create_vault(
         return Err("No source files or folders selected for the vault".to_string());
     }
 
-    // Reject symlinks / special files before packing anything.
+    // Reject symlinks / special files and enforce the in-memory size ceiling.
     validate_source_paths(source_paths)?;
 
-    // 1. Pack sources into a TAR archive in memory
-    let mut tar_buf = Vec::new();
+    // 1. Pack sources into a TAR archive in memory (zeroized on every exit path)
+    let mut tar_buf = Zeroizing::new(Vec::new());
     {
-        let mut builder = tar::Builder::new(&mut tar_buf);
+        let mut builder = tar::Builder::new(&mut *tar_buf);
         // Defense-in-depth against TOCTOU: never dereference a symlink during packing.
         builder.follow_symlinks(false);
 
@@ -179,6 +243,14 @@ pub fn create_vault(
     }
 
     let unencrypted_len = tar_buf.len() as u64;
+    if unencrypted_len > MAX_VAULT_PLAINTEXT_SIZE {
+        return Err(format!(
+            "Packed vault is {} bytes, exceeding the {} GiB in-memory limit. \
+             Split the content into smaller vaults.",
+            unencrypted_len,
+            MAX_VAULT_PLAINTEXT_SIZE / (1024 * 1024 * 1024)
+        ));
+    }
 
     // 2. Derive effective password using VeraCrypt/Arcanum keyfile pool
     let effective_pwd = apply_keyfile_paths(password, keyfile_paths)?;
@@ -222,7 +294,7 @@ pub fn create_vault(
     };
 
     let enc_res = encrypt_stream(
-        Cursor::new(&tar_buf),
+        Cursor::new(&tar_buf[..]),
         &mut tmp_file,
         &effective_pwd,
         unencrypted_len,
@@ -243,7 +315,18 @@ pub fn create_vault(
     }
     drop(tmp_file);
 
-    // Commit file atomically
+    // Commit file atomically. Refuse to write through a symlink: the Windows
+    // copy fallback would otherwise follow it and overwrite the link target.
+    if let Ok(meta) = fs::symlink_metadata(output_vault_path) {
+        if meta.file_type().is_symlink() {
+            let _ = fs::remove_file(&tmp_vault_path);
+            return Err(format!(
+                "Refusing to write the vault through symbolic link '{}'",
+                output_vault_path.display()
+            ));
+        }
+    }
+
     if fs::rename(&tmp_vault_path, output_vault_path).is_err() {
         fs::copy(&tmp_vault_path, output_vault_path)
             .map_err(|e| format!("Failed to commit vault container: {}", e))?;
@@ -269,10 +352,12 @@ pub fn open_vault(
     let mut in_file = File::open(vault_path)
         .map_err(|e| format!("Failed to open vault file '{}': {}", vault_path.display(), e))?;
 
-    let mut decrypted_tar = Vec::new();
+    // Bounded, zeroizing sink: a malicious container cannot exhaust RAM and the
+    // plaintext is scrubbed on every error path as well.
+    let mut limited = LimitedWriter::new(MAX_VAULT_PLAINTEXT_SIZE);
     let manifest = decrypt_stream(
         &mut in_file,
-        &mut decrypted_tar,
+        &mut limited,
         &effective_pwd,
         DecryptOptions::default(),
         |_| {},
@@ -288,8 +373,10 @@ pub fn open_vault(
         );
     }
 
+    let decrypted_tar = limited.into_inner();
+
     // Parse TAR archive entries
-    let mut archive = tar::Archive::new(Cursor::new(&decrypted_tar));
+    let mut archive = tar::Archive::new(Cursor::new(&decrypted_tar[..]));
     let mut entries_info = Vec::new();
     let mut total_unpacked_size = 0u64;
 
@@ -342,7 +429,7 @@ pub fn open_vault(
 
     let session = VaultSession {
         vault_path: vault_path.to_path_buf(),
-        archive_data: Zeroizing::new(decrypted_tar),
+        archive_data: decrypted_tar,
         entries: entries_info.clone(),
     };
 
@@ -498,6 +585,14 @@ pub fn list_vault_entries(session_id: &str) -> Result<Vec<VaultEntryInfo>, Strin
 mod tests {
     use super::*;
     use std::io::Write;
+
+    #[test]
+    fn test_limited_writer_enforces_limit_and_zeroizes() {
+        let mut writer = LimitedWriter::new(4);
+        writer.write_all(b"abcd").unwrap();
+        assert!(writer.write_all(b"e").is_err());
+        assert_eq!(&*writer.into_inner(), b"abcd");
+    }
 
     #[test]
     fn test_vault_create_open_extract_roundtrip() {
