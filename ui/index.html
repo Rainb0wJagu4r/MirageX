@@ -24,6 +24,13 @@
           <span class="status-dot"></span>
           <span class="status-label">ALGORITMO: MIRAGEX (NIST FIPS 203)</span>
         </div>
+        <button class="status-chip btn-clickable highlight-pink" id="btn-quick-guide" title="Guía explicativa paso a paso de opciones y algoritmos">
+          💡 ¿POR DÓNDE EMPIEZO?
+        </button>
+        <button class="status-chip btn-clickable" id="btn-open-updater" title="Verificar actualizaciones y consultar Changelog">
+          <span id="updater-badge-dot" class="updater-dot" style="display: none;"></span>
+          🔄 UPDATES & CHANGELOG
+        </button>
         <button class="status-chip btn-clickable" id="btn-setup-context-menu" title="Configurar acceso rápido en menú contextual (Windows Explorer / Finder)">
           🖱️ INTEGRACIÓN MENÚ OS
         </button>
@@ -56,6 +63,10 @@
       <button class="nav-tab" data-tab="shred">
         <span class="nav-icon">🌪️</span>
         <span class="nav-text">TRITURADOR</span>
+      </button>
+      <button class="nav-tab" data-tab="guide">
+        <span class="nav-icon">💡</span>
+        <span class="nav-text">GUÍA & AYUDA</span>
       </button>
     </nav>
 
@@ -561,7 +572,231 @@
           </button>
         </div>
       </section>
+
+      <!-- 7. GUIDE & USE CASES PANEL (CENTRO DE ORIENTACIÓN CRIPTOGRÁFICA) -->
+      <section id="tab-guide" class="tab-content">
+        <div class="guide-scrollable">
+          <!-- Hero Banner -->
+          <div class="guide-hero-card">
+            <div class="guide-hero-header">
+              <span class="badge pink">💡 GUÍA OFICIAL MIRAGEX</span>
+              <span class="badge navy">ZERO-KNOWLEDGE // POST-CUÁNTICO</span>
+            </div>
+            <h2 class="guide-hero-title">¿No sabes por dónde empezar? <span class="highlight-pink-text">Te guiamos paso a paso.</span></h2>
+            <p class="guide-hero-desc">MirageX está diseñado para que cualquier persona pueda proteger sus documentos más valiosos con seguridad de grado militar y resistencia post-cuántica (NIST FIPS 203). Aquí aprenderás qué herramienta usar según lo que necesites hacer.</p>
+            
+            <div class="guide-quick-nav">
+              <button type="button" class="btn-guide-pill" data-goto="encrypt">🛡️ Cifrar un Archivo</button>
+              <button type="button" class="btn-guide-pill" data-goto="vault">📦 Proteger una Carpeta (Bóveda)</button>
+              <button type="button" class="btn-guide-pill" data-goto="shred">🌪️ Borrar Archivo para Siempre</button>
+              <button type="button" class="btn-guide-pill" data-goto="decrypt">🔓 Desbloquear Archivo .wraith</button>
+              <button type="button" class="btn-guide-pill" id="btn-guide-changelog">📜 Historial Changelog</button>
+              <button type="button" class="btn-guide-pill external-link" data-url="https://github.com/Rainb0wJagu4r/MirageX">⭐ GitHub Repo</button>
+              <button type="button" class="btn-guide-pill external-link" data-url="https://github.com/Rainb0wJagu4r/MirageX/issues">🐞 Reportes GitHub</button>
+            </div>
+          </div>
+
+          <!-- Section 1: Casos de Uso Cotidianos -->
+          <div class="guide-block">
+            <div class="guide-block-title">
+              <span class="block-number">01</span>
+              <h3>CASOS DE USO PRÁCTICOS // ¿QUÉ QUIERES HACER HOY?</h3>
+            </div>
+
+            <div class="guide-cases-grid">
+              <div class="case-card">
+                <div class="case-badge">CASO TÍPICO A</div>
+                <h4>Quiero enviar un documento privado por WhatsApp, Telegram o subirlo a la nube (Drive/Dropbox)</h4>
+                <p class="case-intro"><strong>El peligro:</strong> Los archivos subidos a la nube o chats pueden ser filtrados, interceptados o revisados por terceros.</p>
+                <div class="case-solution-box">
+                  <div class="solution-item"><span class="step-num">1</span> Ve a la pestaña <strong class="color-pink">🛡️ CIFRAR</strong>.</div>
+                  <div class="solution-item"><span class="step-num">2</span> Arrastra tu documento (PDF, Excel, Foto, Video, etc.).</div>
+                  <div class="solution-item"><span class="step-num">3</span> Escribe una contraseña o pulsa <em>🎲 Generar</em>.</div>
+                  <div class="solution-item"><span class="step-num">4</span> Pulsa <em>Cifrar</em>: se creará un archivo <code class="code-pill">.wraith</code> impenetrable.</div>
+                  <div class="solution-item success"><span class="step-check">✓</span> Sube ese <code class="code-pill">.wraith</code> con tranquilidad: sin tu contraseña es matemáticamente imposible de abrir.</div>
+                </div>
+                <button type="button" class="btn-case-cta" data-goto="encrypt">Ir a Cifrar Archivo →</button>
+              </div>
+
+              <div class="case-card">
+                <div class="case-badge">CASO TÍPICO B</div>
+                <h4>Tengo muchos archivos personales (contratos, fotos, proyectos) y quiero guardarlos juntos en mi PC</h4>
+                <p class="case-intro"><strong>El problema:</strong> Cifrar 200 archivos uno por uno es una molestia y difícil de organizar.</p>
+                <div class="case-solution-box">
+                  <div class="solution-item"><span class="step-num">1</span> Ve a la pestaña <strong class="color-pink">📦 BÓVEDA</strong>.</div>
+                  <div class="solution-item"><span class="step-num">2</span> Selecciona tus carpetas y archivos en bloque.</div>
+                  <div class="solution-item"><span class="step-num">3</span> Elige contraseña y/o Keyfile y pulsa <em>Crear Bóveda</em>.</div>
+                  <div class="solution-item"><span class="step-num">4</span> Genera un único contenedor cifrado <code class="code-pill">.wvault</code>.</div>
+                  <div class="solution-item success"><span class="step-check">✓</span> Cuando lo desbloquees en MirageX, verás un <em>Explorador de Archivos Portátil</em> para ver tamaños, buscar y extraer archivos sin instalar drivers en tu OS.</div>
+                </div>
+                <button type="button" class="btn-case-cta" data-goto="vault">Ir a Crear Bóveda →</button>
+              </div>
+
+              <div class="case-card">
+                <div class="case-badge">CASO TÍPICO C</div>
+                <h4>Quiero autenticación de doble factor física (2FA) para máxima paranoia</h4>
+                <p class="case-intro"><strong>El problema:</strong> Una contraseña memorizada puede ser grabada por un keylogger o vista por cámaras espía.</p>
+                <div class="case-solution-box">
+                  <div class="solution-item"><span class="step-num">1</span> Usa el estándar de <strong>Keyfiles (VeraCrypt / Arcanum)</strong>.</div>
+                  <div class="solution-item"><span class="step-num">2</span> Pulsa <em>🎲 Generar Keyfile</em> y mueve el ratón en el radar de entropía.</div>
+                  <div class="solution-item"><span class="step-num">3</span> Guarda el archivo <code class="code-pill">.key</code> generado en una memoria USB física.</div>
+                  <div class="solution-item success"><span class="step-check">✓</span> Cifra con <strong>Contraseña + Keyfile</strong>. Aunque alguien averigüe tu contraseña, sin tu memoria USB física conectada jamás podrán descifrarlo.</div>
+                </div>
+                <button type="button" class="btn-case-cta" data-goto="encrypt">Probar con Keyfile →</button>
+              </div>
+
+              <div class="case-card">
+                <div class="case-badge">CASO TÍPICO D</div>
+                <h4>Voy a vender mi computadora o quiero borrar archivos bancarios sin que nadie los recupere</h4>
+                <p class="case-intro"><strong>El peligro:</strong> La "Papelera de reciclaje" de Windows o Mac NO borra el archivo. Programas forenses gratuitos lo recuperan en minutos.</p>
+                <div class="case-solution-box">
+                  <div class="solution-item"><span class="step-num">1</span> Ve a la pestaña <strong class="color-pink">🌪️ TRITURADOR</strong>.</div>
+                  <div class="solution-item"><span class="step-num">2</span> Arrastra el archivo confidencial que deseas destruir.</div>
+                  <div class="solution-item"><span class="step-num">3</span> Selecciona tu medio (SSD/NVMe con mitigación wear-leveling, o HDD magnético).</div>
+                  <div class="solution-item success"><span class="step-check">✓</span> Sobreescribe con múltiples pasadas de ruido aleatorio CSPRNG y trunca los sectores físicos dejándolo irrecuperable.</div>
+                </div>
+                <button type="button" class="btn-case-cta" data-goto="shred">Ir al Triturador Seguro →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Explicación de Algoritmos -->
+          <div class="guide-block">
+            <div class="guide-block-title">
+              <span class="block-number">02</span>
+              <h3>ALGORITMOS CRIPTOGRÁFICOS // ¿QUÉ HACEN Y POR QUÉ SON LOS MEJORES?</h3>
+            </div>
+
+            <div class="guide-algo-grid">
+              <div class="algo-card">
+                <div class="algo-top">
+                  <span class="algo-pill pqc">POST-CUÁNTICO (NIST 2024)</span>
+                  <h4>ML-KEM (Kyber) // FIPS 203</h4>
+                </div>
+                <p class="algo-summary">Es el algoritmo de criptografía post-cuántica estandarizado oficialmente por el NIST de Estados Unidos en agosto de 2024. Se basa en el problema matemático de retículos de módulos (Module Learning-with-Errors).</p>
+                <div class="algo-details">
+                  <div class="detail-row">
+                    <span class="detail-name">MirageX Standard (ML-KEM-768):</span>
+                    <span class="detail-val">Nivel de seguridad 3 del NIST (equivalente a AES-192 contra ataques cuánticos). Es el equilibrio ideal entre velocidad fulgurante y protección futura.</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">MirageX Ultra (ML-KEM-1024):</span>
+                    <span class="detail-val">Nivel de seguridad 5 del NIST (equivalente a AES-256 cuántico). Nivel de paranoia máxima para documentos que deben permanecer secretos durante más de 30 años.</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">Protección "Store Now, Decrypt Later":</span>
+                    <span class="detail-val">Evita que atacantes guarden tus archivos hoy para descifrarlos cuando existan computadoras cuánticas potentes.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="algo-card">
+                <div class="algo-top">
+                  <span class="algo-pill symmetric">ALTA VELOCIDAD & INTEGRIDAD</span>
+                  <h4>AES-256-GCM (Cifrado Autenticado AEAD)</h4>
+                </div>
+                <p class="algo-summary">El estándar de oro mundial en cifrado simétrico con autenticación. Cada fragmento de datos (chunk) no solo se cifra, sino que calcula una firma matemática criptográfica (Tag de 128 bits).</p>
+                <div class="algo-details">
+                  <div class="detail-row">
+                    <span class="detail-name">Detección Inmediata de Manipulación:</span>
+                    <span class="detail-val">Si un virus, disco dañado o atacante altera aunque sea un solo bit del archivo en tránsito, el sistema lo detecta y rechaza la descapsulación.</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">Aceleración por Hardware (AES-NI):</span>
+                    <span class="detail-val">Procesa datos a velocidades de cientos de MB por segundo aprovechando las instrucciones dedicadas del procesador sin recalentar el equipo.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="algo-card">
+                <div class="algo-top">
+                  <span class="algo-pill kdf">RESISTENCIA A FUERZA BRUTA</span>
+                  <h4>Argon2id (Derivación de Clave KDF)</h4>
+                </div>
+                <p class="algo-summary">Ganador unánime de la competencia mundial de hashing de contraseñas. Convierte tu contraseña en una clave maestra de 256 bits forzando el uso intensivo de memoria RAM.</p>
+                <div class="algo-details">
+                  <div class="detail-row">
+                    <span class="detail-name">Inmune a Gráficas (Anti-GPU & ASIC):</span>
+                    <span class="detail-val">Exige 64 MB de memoria RAM por intento, lo que impide que atacantes usen clusters de tarjetas gráficas para adivinar millones de contraseñas por segundo.</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">Protección Híbrida:</span>
+                    <span class="detail-val">Combina resistencia contra ataques de canal lateral (Argon2i) y resistencia a cómputo paralelo (Argon2d).</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="algo-card">
+                <div class="algo-top">
+                  <span class="algo-pill veracrypt">ESTÁNDAR VERACRYPT & ARCANUM</span>
+                  <h4>Keyfile Pool & Generador de Entropía</h4>
+                </div>
+                <p class="algo-summary">Implementación idéntica byte a byte al algoritmo de mezcla de VeraCrypt y Arcanum con tabla CRC-32 IEEE 802.3 (polinomio 0xEDB88320).</p>
+                <div class="algo-details">
+                  <div class="detail-row">
+                    <span class="detail-name">Modo de Autenticación Flexible:</span>
+                    <span class="detail-val">Puedes cifrar solo con contraseña, solo con Keyfile (sin escribir nada), o con ambos a la vez para doble factor (2FA).</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">Sensor Radar de Entropía:</span>
+                    <span class="detail-val">Combina el generador CSPRNG del sistema operativo con los movimientos físicos de tu ratón para garantizar entropía cuántica complementaria impredecible.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Preguntas Frecuentes -->
+          <div class="guide-block">
+            <div class="guide-block-title">
+              <span class="block-number">03</span>
+              <h3>PREGUNTAS FRECUENTES (FAQ) // TRANSPARENCIA TOTAL</h3>
+            </div>
+
+            <div class="guide-faq-grid">
+              <div class="faq-card">
+                <h4>¿MirageX tiene acceso a mis archivos o contraseñas?</h4>
+                <p><strong>Absolutamente no.</strong> MirageX opera bajo estricto principio de <em>Zero-Knowledge</em> y <em>Zero-Network</em>. No tiene servidores, no envía telemetría ni requiere conexión a internet. Todo el proceso ocurre 100% dentro de tu propio procesador.</p>
+              </div>
+
+              <div class="faq-card">
+                <h4>¿Qué pasa si olvido mi contraseña o pierdo mi keyfile?</h4>
+                <p>Por diseño de seguridad matemática, <strong>nadie en el mundo (ni siquiera los creadores de MirageX) puede recuperar tus datos</strong>. No hay puertas traseras ni botones de recuperación. Te recomendamos anotar tus contraseñas en un gestor seguro.</p>
+              </div>
+
+              <div class="faq-card">
+                <h4>¿Un archivo .wraith hecho en Mac se puede abrir en Windows?</h4>
+                <p><strong>Sí, 100% compatible.</strong> Los archivos cifrados en Mac funcionan de inmediato en Windows y viceversa. La arquitectura es multiplataforma y universal.</p>
+              </div>
+
+              <div class="faq-card">
+                <h4>¿Qué diferencia hay entre .wraith y .wvault?</h4>
+                <p><code class="code-pill">.wraith</code> es para <strong>un archivo individual</strong> cifrado en streaming con velocidad extrema. <code class="code-pill">.wvault</code> es una <strong>bóveda multi-archivo</strong> que empaqueta carpetas completas y te permite explorar y extraer archivos de forma selectiva sin drivers de kernel.</p>
+              </div>
+            </div>
+          </div>
+        </div>
     </main>
+
+    <!-- Persistent Application Footer -->
+    <footer class="hud-footer">
+      <div class="footer-left">
+        <span class="footer-love">Made with love ❤️ by <a href="#" class="external-link link-author" data-url="https://github.com/Rainb0wJagu4r">Rainb0wJagu4r</a> from Mexico 🇲🇽</span>
+      </div>
+      <div class="footer-right">
+        <a href="#" class="external-link footer-link" data-url="https://github.com/Rainb0wJagu4r/MirageX" title="Repositorio oficial en GitHub">
+          <span class="footer-icon">⭐</span> GitHub Repo
+        </a>
+        <span class="footer-sep">•</span>
+        <a href="#" class="external-link footer-link" data-url="https://github.com/Rainb0wJagu4r/MirageX/releases" title="Releases y Descargas">
+          <span class="footer-icon">📦</span> Releases
+        </a>
+        <span class="footer-sep">•</span>
+        <a href="#" class="external-link footer-link" data-url="https://github.com/Rainb0wJagu4r/MirageX/issues" title="Reportar un problema o sugerencia">
+          <span class="footer-icon">🐞</span> Issues
+        </a>
+      </div>
+    </footer>
 
     <!-- Global Toast Container -->
     <div class="toast-container" id="toast-container"></div>
@@ -654,6 +889,82 @@
           <div style="display: flex; gap: 10px; margin-top: 15px;">
             <button type="button" class="btn-secondary" id="btn-cancel-keyfile-modal" style="flex: 1;">Cancelar</button>
             <button type="button" class="btn-primary" id="btn-save-keyfile-modal" style="flex: 2;">💾 Guardar Keyfile en Disco</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- In-App Updater & Changelog Modal -->
+    <div class="modal-overlay" id="modal-updater-changelog" style="display: none;">
+      <div class="modal-card modal-large">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="modal-icon">🚀</span>
+            <h3>SISTEMA DE ACTUALIZACIONES // CHANGELOG</h3>
+          </div>
+          <button class="modal-close" id="btn-close-updater-modal">&times;</button>
+        </div>
+
+        <div class="modal-body updater-modal-body">
+          <!-- Status Banner Card -->
+          <div class="updater-status-card">
+            <div class="updater-status-left">
+              <div class="updater-version-tag">
+                <span class="badge purple">VERSIÓN INSTALADA: <strong id="lbl-current-version">v4.0.1</strong></span>
+                <span class="badge green" id="badge-update-status">SISTEMA ACTUALIZADO</span>
+              </div>
+              <div class="updater-message" id="lbl-update-message">
+                Tu sistema cuenta con la última versión oficial de MirageX y todos los parches de seguridad post-cuántica.
+              </div>
+            </div>
+            <div class="updater-status-right" style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn-secondary" id="btn-check-updates-now">
+                🔍 Buscar Actualizaciones
+              </button>
+              <button type="button" class="btn-secondary external-link" data-url="https://github.com/Rainb0wJagu4r/MirageX/releases" title="Ver releases oficiales y descargas en GitHub">
+                🌐 Ver en GitHub
+              </button>
+            </div>
+          </div>
+
+          <!-- Update Action Box (visible when update is available) -->
+          <div class="updater-action-card" id="card-update-action" style="display: none;">
+            <div class="update-action-header">
+              <span class="badge pink">⚡ NUEVA VERSIÓN DETECTADA</span>
+              <h4 id="lbl-new-version-title">MirageX Disponible</h4>
+            </div>
+            <p id="lbl-new-version-summary" class="update-action-desc">
+              Hay una nueva versión disponible para tu sistema operativo con mejoras criptográficas y nuevas características.
+            </p>
+            
+            <!-- Progress Bar during download -->
+            <div class="update-progress-wrapper" id="wrapper-update-progress" style="display: none;">
+              <div class="update-progress-bar">
+                <div class="update-progress-fill" id="bar-update-progress" style="width: 0%;"></div>
+              </div>
+              <div class="update-progress-stats" id="lbl-update-progress-stats">Descargando... 0%</div>
+            </div>
+
+            <div class="update-action-buttons">
+              <button type="button" class="btn-primary" id="btn-execute-install-update">
+                🚀 DESCARGAR E INSTALAR ACTUALIZACIÓN
+              </button>
+              <button type="button" class="btn-primary highlight-pink" id="btn-execute-restart-app" style="display: none;">
+                🔄 REINICIAR MIRAGEX PARA APLICAR CAMBIOS
+              </button>
+            </div>
+          </div>
+
+          <!-- Changelog History Section -->
+          <div class="changelog-container">
+            <div class="changelog-header">
+              <h4>📜 HISTORIAL DE VERSIONES & NOVEDADES (CHANGELOG)</h4>
+              <span class="changelog-subtitle">Registro cronológico de características, parches y mejoras</span>
+            </div>
+
+            <div class="changelog-list" id="changelog-entries-list">
+              <!-- Dynamically populated from get_changelog_history_cmd() or updater response -->
+            </div>
           </div>
         </div>
       </div>

@@ -1080,3 +1080,48 @@ done</string>
     }
 }
 
+pub mod updater;
+pub use updater::{
+    check_app_update_cmd, get_changelog_history_cmd, install_app_update_cmd, restart_app_cmd,
+    ChangelogEntry, UpdateCheckResult, UpdateProgress,
+};
+
+#[tauri::command]
+pub fn open_external_url_cmd(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err("Solo se permiten URLs seguras con protocolo http o https".into());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        std::process::Command::new("cmd")
+            .args(&["/c", "start", "", &url])
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+
+
+

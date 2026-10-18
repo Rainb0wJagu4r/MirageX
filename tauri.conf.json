@@ -78,5 +78,13 @@
         "displayLanguageSelector": false
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3",
+      "endpoints": [
+        "https://github.com/Rainb0wJagu4r/MirageX/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

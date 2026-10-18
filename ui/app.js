@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDropzones();
   setupActions();
   setupTauriNativeEvents();
+  setupUpdaterLogic();
+  setupExternalLinks();
   checkInitialFilePayload();
 });
 
@@ -59,15 +61,36 @@ function setupTabs() {
   const tabs = document.querySelectorAll('.nav-tab');
   const contents = document.querySelectorAll('.tab-content');
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
+  function activateTab(tabName) {
+    const targetTab = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
+    const targetContent = document.getElementById(`tab-${tabName}`);
+    if (targetTab && targetContent) {
       tabs.forEach(t => t.classList.remove('active'));
       contents.forEach(c => c.classList.remove('active'));
+      targetTab.classList.add('active');
+      targetContent.classList.add('active');
+      const workspace = document.querySelector('.hud-workspace');
+      if (workspace) workspace.scrollTop = 0;
+    }
+  }
 
-      tab.classList.add('active');
-      const targetId = `tab-${tab.dataset.tab}`;
-      const targetEl = document.getElementById(targetId);
-      if (targetEl) targetEl.classList.add('active');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      activateTab(tab.dataset.tab);
+    });
+  });
+
+  const btnQuickGuide = document.getElementById('btn-quick-guide');
+  if (btnQuickGuide) {
+    btnQuickGuide.addEventListener('click', () => {
+      activateTab('guide');
+    });
+  }
+
+  document.querySelectorAll('.btn-guide-pill, .btn-case-cta').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.goto;
+      if (target) activateTab(target);
     });
   });
 
@@ -76,6 +99,24 @@ function setupTabs() {
       document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('active'));
       radio.closest('.radio-card').classList.add('active');
     });
+  });
+}
+
+// 1.1 External Links Handler (Cross-Platform Browser Launcher)
+function setupExternalLinks() {
+  document.addEventListener('click', async (e) => {
+    const linkEl = e.target.closest('.external-link');
+    if (!linkEl) return;
+    e.preventDefault();
+    const url = linkEl.dataset.url || linkEl.getAttribute('href');
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      try {
+        await invokeBackend('open_external_url_cmd', { url });
+      } catch (err) {
+        console.warn('Fallback al abrir navegador nativo:', err);
+        window.open(url, '_blank');
+      }
+    }
   });
 }
 
@@ -1323,3 +1364,298 @@ function filterVaultTable(query) {
   const filtered = vaultCachedEntries.filter(e => e.path.toLowerCase().includes(query));
   renderVaultTableRows(filtered);
 }
+
+// ==========================================================================
+// 8. In-App Updater & Changelog Logic (Windows, macOS & Linux Multiplatform)
+// ==========================================================================
+function setupUpdaterLogic() {
+  const modal = document.getElementById('modal-updater-changelog');
+  const btnOpen = document.getElementById('btn-open-updater');
+  const btnClose = document.getElementById('btn-close-updater-modal');
+  const btnGuideChangelog = document.getElementById('btn-guide-changelog');
+  const btnCheckNow = document.getElementById('btn-check-updates-now');
+  const btnInstall = document.getElementById('btn-execute-install-update');
+  const btnRestart = document.getElementById('btn-execute-restart-app');
+
+  const badgeDot = document.getElementById('updater-badge-dot');
+  const btnLabel = document.getElementById('updater-btn-label');
+  const lblCurrentVersion = document.getElementById('lbl-current-version');
+  const badgeStatus = document.getElementById('badge-update-status');
+  const lblMessage = document.getElementById('lbl-update-message');
+
+  const cardAction = document.getElementById('card-update-action');
+  const lblNewVerTitle = document.getElementById('lbl-new-version-title');
+  const lblNewVerSummary = document.getElementById('lbl-new-version-summary');
+
+  const progressWrapper = document.getElementById('wrapper-update-progress');
+  const progressBar = document.getElementById('bar-update-progress');
+  const progressStats = document.getElementById('lbl-update-progress-stats');
+  const changelogList = document.getElementById('changelog-entries-list');
+
+  function openModal() {
+    if (modal) {
+      modal.style.display = 'flex';
+      fetchChangelogAndCheckUpdates(false);
+    }
+  }
+
+  function closeModal() {
+    if (modal) modal.style.display = 'none';
+  }
+
+  if (btnOpen) btnOpen.addEventListener('click', openModal);
+  if (btnClose) btnClose.addEventListener('click', closeModal);
+  if (btnGuideChangelog) btnGuideChangelog.addEventListener('click', openModal);
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  if (btnCheckNow) {
+    btnCheckNow.addEventListener('click', () => {
+      fetchChangelogAndCheckUpdates(true);
+    });
+  }
+
+  // Listen to Tauri progress event
+  const tauri = window.__TAURI__;
+  let listen = null;
+  if (tauri) {
+    if (tauri.event && typeof tauri.event.listen === 'function') {
+      listen = tauri.event.listen;
+    } else if (tauri.core && typeof tauri.core.listen === 'function') {
+      listen = tauri.core.listen;
+    } else if (typeof tauri.listen === 'function') {
+      listen = tauri.listen;
+    }
+  }
+
+  if (listen) {
+    listen('update-download-progress', (event) => {
+      const payload = event.payload;
+      if (!payload) return;
+      if (progressWrapper) progressWrapper.style.display = 'flex';
+      const pct = payload.percent !== undefined && payload.percent !== null ? payload.percent : 50;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+      const downloadedMb = (payload.downloaded_bytes / (1024 * 1024)).toFixed(1);
+      const totalMb = payload.total ? (payload.total / (1024 * 1024)).toFixed(1) : '?';
+      if (progressStats) progressStats.textContent = `Descargando paquete oficial... ${pct}% (${downloadedMb} MB / ${totalMb} MB)`;
+    });
+
+    listen('update-download-finished', () => {
+      if (progressBar) progressBar.style.width = '100%';
+      if (progressStats) progressStats.textContent = `Descarga y validación criptográfica completada al 100%.`;
+      if (btnInstall) btnInstall.style.display = 'none';
+      if (btnRestart) btnRestart.style.display = 'inline-block';
+      showToast('Actualización lista. Reinicia MirageX para aplicar los cambios.', 'success');
+    });
+  }
+
+  if (btnInstall) {
+    btnInstall.addEventListener('click', async () => {
+      try {
+        btnInstall.disabled = true;
+        btnInstall.textContent = '⏳ Descargando e instalando...';
+        if (progressWrapper) progressWrapper.style.display = 'flex';
+        if (progressBar) progressBar.style.width = '10%';
+        if (progressStats) progressStats.textContent = 'Iniciando descarga segura en segundo plano...';
+
+        const res = await invokeBackend('install_app_update_cmd');
+        showToast(res || 'Actualización descargada correctamente.', 'success');
+        btnInstall.style.display = 'none';
+        btnRestart.style.display = 'inline-block';
+      } catch (err) {
+        btnInstall.disabled = false;
+        btnInstall.textContent = '🚀 REINTENTAR INSTALAR ACTUALIZACIÓN';
+        showToast(`Error al instalar actualización: ${err}`, 'error');
+      }
+    });
+  }
+
+  if (btnRestart) {
+    btnRestart.addEventListener('click', async () => {
+      try {
+        await invokeBackend('restart_app_cmd');
+      } catch (err) {
+        showToast(`Error al reiniciar: ${err}`, 'error');
+      }
+    });
+  }
+
+  async function fetchChangelogAndCheckUpdates(showUserFeedback = false) {
+    if (showUserFeedback) {
+      if (lblMessage) lblMessage.textContent = 'Conectando con el repositorio y verificando firmas criptográficas...';
+      if (btnCheckNow) {
+        btnCheckNow.disabled = true;
+        btnCheckNow.textContent = '⏳ Verificando...';
+      }
+    }
+
+    try {
+      // 1. Fetch Changelog History
+      let history = [];
+      try {
+        history = await invokeBackend('get_changelog_history_cmd');
+      } catch (e) {
+        console.warn('Fallback al leer changelog:', e);
+      }
+
+      // 2. Check for App Updates
+      let checkRes = null;
+      try {
+        checkRes = await invokeBackend('check_app_update_cmd');
+      } catch (e) {
+        console.warn('Error al verificar actualización:', e);
+      }
+
+      if (checkRes && checkRes.changelog_history && checkRes.changelog_history.length > 0) {
+        history = checkRes.changelog_history;
+      }
+
+      renderChangelogHistory(history);
+
+      if (checkRes) {
+        if (lblCurrentVersion) lblCurrentVersion.textContent = `v${checkRes.current_version}`;
+
+        if (checkRes.has_update) {
+          if (badgeDot) badgeDot.style.display = 'inline-block';
+          if (btnLabel) btnLabel.textContent = `ACTUALIZAR A v${checkRes.latest_version}`;
+          if (badgeStatus) {
+            badgeStatus.textContent = 'NUEVA VERSIÓN DISPONIBLE';
+            badgeStatus.className = 'badge pink';
+          }
+          if (lblMessage) {
+            lblMessage.textContent = `Se ha detectado la versión v${checkRes.latest_version}. Publicada con nuevas características y parches.`;
+          }
+          if (cardAction) cardAction.style.display = 'flex';
+          if (lblNewVerTitle) lblNewVerTitle.textContent = `MirageX v${checkRes.latest_version} Disponible`;
+          if (lblNewVerSummary) {
+            lblNewVerSummary.textContent = checkRes.release_notes || 'Esta versión incluye mejoras críticas en el motor criptográfico y nuevas herramientas.';
+          }
+          if (btnInstall) {
+            btnInstall.style.display = 'inline-block';
+            btnInstall.disabled = false;
+            btnInstall.textContent = `🚀 DESCARGAR E INSTALAR ACTUALIZACIÓN (v${checkRes.latest_version})`;
+          }
+          if (btnRestart) btnRestart.style.display = 'none';
+          if (showUserFeedback) showToast(`¡Nueva versión v${checkRes.latest_version} lista para instalar!`, 'info');
+        } else {
+          if (badgeDot) badgeDot.style.display = 'none';
+          if (btnLabel) btnLabel.textContent = 'UPDATES & CHANGELOG';
+          if (badgeStatus) {
+            badgeStatus.textContent = 'SISTEMA ACTUALIZADO';
+            badgeStatus.className = 'badge green';
+          }
+          if (lblMessage) {
+            if (checkRes.error) {
+              lblMessage.textContent = `Estás en la versión local v${checkRes.current_version}. (${checkRes.error})`;
+            } else {
+              lblMessage.textContent = `Tu versión v${checkRes.current_version} es la más reciente. Cuentas con la máxima protección post-cuántica.`;
+            }
+          }
+          if (cardAction) cardAction.style.display = 'none';
+          if (showUserFeedback) showToast('Tu aplicación ya está en la versión más reciente.', 'success');
+        }
+      }
+    } catch (err) {
+      if (showUserFeedback) showToast(`No se pudo verificar actualizaciones: ${err}`, 'error');
+    } finally {
+      if (btnCheckNow) {
+        btnCheckNow.disabled = false;
+        btnCheckNow.textContent = '🔍 Buscar Actualizaciones';
+      }
+    }
+  }
+
+  function renderChangelogHistory(entries) {
+    if (!changelogList) return;
+    changelogList.innerHTML = '';
+
+    if (!entries || entries.length === 0) {
+      changelogList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 10px;">No hay entradas de Changelog disponibles.</div>';
+      return;
+    }
+
+    entries.forEach(entry => {
+      const card = document.createElement('div');
+      card.className = `changelog-card ${entry.is_current ? 'current' : ''}`;
+
+      const top = document.createElement('div');
+      top.className = 'changelog-card-top';
+
+      const verDiv = document.createElement('div');
+      verDiv.className = 'changelog-card-version';
+
+      const badgeVer = document.createElement('span');
+      badgeVer.className = entry.is_current ? 'badge pink' : 'badge purple';
+      badgeVer.textContent = entry.version;
+      verDiv.appendChild(badgeVer);
+
+      if (entry.is_current) {
+        const badgeCurrent = document.createElement('span');
+        badgeCurrent.className = 'badge green';
+        badgeCurrent.textContent = 'VERSIÓN ACTUAL';
+        verDiv.appendChild(badgeCurrent);
+      }
+
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'changelog-date';
+      dateSpan.textContent = `📅 ${entry.date}`;
+
+      top.appendChild(verDiv);
+      top.appendChild(dateSpan);
+      card.appendChild(top);
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'changelog-ver-title';
+      titleEl.textContent = entry.title;
+      card.appendChild(titleEl);
+
+      // Highlights
+      if (entry.highlights && entry.highlights.length > 0) {
+        const secTitle = document.createElement('div');
+        secTitle.className = 'changelog-section-title';
+        secTitle.textContent = '✨ Novedades & Características:';
+        card.appendChild(secTitle);
+
+        const ul = document.createElement('ul');
+        ul.className = 'changelog-items-list';
+        entry.highlights.forEach(h => {
+          const li = document.createElement('li');
+          li.className = 'changelog-item';
+          li.textContent = h;
+          ul.appendChild(li);
+        });
+        card.appendChild(ul);
+      }
+
+      // Security notes
+      if (entry.security_notes && entry.security_notes.length > 0) {
+        const secTitle2 = document.createElement('div');
+        secTitle2.className = 'changelog-section-title';
+        secTitle2.textContent = '🛡️ Seguridad & Hardening Criptográfico:';
+        card.appendChild(secTitle2);
+
+        const ul2 = document.createElement('ul');
+        ul2.className = 'changelog-items-list';
+        entry.security_notes.forEach(s => {
+          const li = document.createElement('li');
+          li.className = 'changelog-sec-item';
+          li.textContent = s;
+          ul2.appendChild(li);
+        });
+        card.appendChild(ul2);
+      }
+
+      changelogList.appendChild(card);
+    });
+  }
+
+  // Silent check on app launch after 3 seconds
+  setTimeout(() => {
+    fetchChangelogAndCheckUpdates(false);
+  }, 3000);
+}
+

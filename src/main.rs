@@ -61,6 +61,7 @@ fn main() {
 
     // Otherwise launch native Tauri GUI with Single Instance support
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -133,6 +134,11 @@ fn main() {
             miragex::commands::extract_vault_entry_cmd,
             miragex::commands::extract_all_vault_cmd,
             miragex::commands::close_vault_cmd,
+            miragex::commands::updater::check_app_update_cmd,
+            miragex::commands::updater::install_app_update_cmd,
+            miragex::commands::updater::restart_app_cmd,
+            miragex::commands::updater::get_changelog_history_cmd,
+            miragex::commands::open_external_url_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running MirageX Tauri desktop application");
