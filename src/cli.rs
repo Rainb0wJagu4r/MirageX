@@ -66,7 +66,7 @@ pub fn run_cli() -> bool {
 fn print_help() {
     println!(r#"
 ╔═══════════════════════════════════════════════════════════════════╗
-║   MIRAGEX v4.0.1 — Post-Quantum Decoupled Encryption Engine     ║
+║   MIRAGEX v4.0.2 — Post-Quantum Decoupled Encryption Engine     ║
 ║   Container Format: WRAITH v4 (NIST FIPS 203 ML-KEM + AES-GCM)   ║
 ╚═══════════════════════════════════════════════════════════════════╝
 
