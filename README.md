@@ -10,89 +10,82 @@
 [![NIST SP 800-22](https://img.shields.io/badge/NIST%20SP%20800--22-PASS-brightgreen.svg)](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results)
 [![Security Audit v3](https://img.shields.io/badge/Audit%20Report-v3%20(100%25%20Remediated)-brightgreen.svg)](SECURITY_AUDIT_REPORT_V3.md)
 [![Tauri 2.0](https://img.shields.io/badge/Tauri-v2.0-blue.svg)](https://tauri.app/)
+[![License](https://img.shields.io/badge/License-Apache%202.0%20%2F%20MIT-blue.svg)](LICENSE)
 
 <br/>
 
-<p align="center">
-  <a href="README.md"><b>📖 Overview</b></a> •
-  <a href="SECURITY_AUDIT_REPORT_V3.md"><b>🛡️ Security Audit Report v3</b></a> •
-  <a href="SECURITY_AUDIT_REPORT_V2.md"><b>📋 Audit Report v2</b></a> •
-  <a href="THREAT_MODEL.md"><b>📜 Threat Model</b></a> •
-  <a href="SECURITY.md"><b>⚖️ Security Policy</b></a> •
-  <a href="RELEASE_NOTES.md"><b>📦 Release Notes</b></a>
-</p>
+[📖 Overview](#-overview) •
+[⚡ Key Features](#-key-architecture--features) •
+[💡 Guide & Cases](#-centro-de-orientación-criptográfica) •
+[📦 Installation](#-installation--build) •
+[💻 Usage](#-usage) •
+[🛡️ Security Audit v3](SECURITY_AUDIT_REPORT_V3.md) •
+[📜 Threat Model](THREAT_MODEL.md) •
+[📦 Releases](https://github.com/Rainb0wJagu4r/MirageX/releases)
 
-<br/>
+</div>
 
-**MirageX** is a quantum-resistant, decoupled file encryption engine and binary container architecture (**WRAITH v4**). Written in pure native **Rust** with a native **Tauri 2.0** cyber HUD desktop interface (zero local HTTP servers, 100% direct native IPC).
+---
 
-<br/>
+## 📖 Overview
+
+**MirageX** is a quantum-resistant, decoupled file encryption engine and binary container architecture (**WRAITH v4**). Written in pure native **Rust** with a native **Tauri 2.0** desktop interface (zero local HTTP servers, 100% direct native IPC, zero-knowledge, zero-network).
 
 > [!WARNING]
 > **Project Origin & Active Development Status**
-> - 🇲🇽 **Born in Mexico:** This project is proud to be born in Mexico.
-> - **In Active Development:** Software is under active research and implementation.
-> - **NIST FIPS 203 Cryptographic Library Notice:** Post-quantum encapsulation is powered by the RustCrypto `ml-kem` implementation (FIPS 203 standard). While mathematically compliant with NIST specifications, it has not undergone formal CMVP hardware module certification; community code reviews and third-party penetration tests are actively encouraged.
+> - 🇲🇽 **Born in Mexico:** This project is proud to be created in Mexico by Rainb0wJagu4r.
+> - **In Active Development:** Software is under active research and continuous implementation.
+> - **NIST FIPS 203 Cryptographic Library Notice:** Post-quantum encapsulation is powered by the RustCrypto `ml-kem` implementation (FIPS 203 standard, published August 2024). While mathematically compliant with NIST specifications, it has not undergone formal CMVP hardware module certification; community code reviews and third-party penetration tests are actively encouraged.
 > - **NIST SP 800-22 Statistical Audit:** The entropy and pseudorandomness of **MirageX Ultra (ML-KEM-1024 / Level 5 PQC)** WRAITH v4 envelopes have been audited across random binary, structured text, and all-zeroes payloads. All tests passed with zero correlation: [PROJECT-MIRAGE-NIST-Analyze-results](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results).
 > - **Open to Audits:** We welcome open cryptographic audits and code reviews to help us continue learning, developing, and contributing to post-quantum cybersecurity.
-
-<br/>
 
 ---
 
 ## ⚡ Key Architecture & Features
 
-<p align="center">
+- **Post-Quantum Cryptography (PQC)**:
+  - Official **NIST FIPS 203** standards: **ML-KEM-768** (Security Level 3) and **ML-KEM-1024** (Security Level 5).
+  - Hybrid quantum envelope architecture: `Argon2id (Dynamic Header Parameters) + ML-KEM Key Encapsulation -> HKDF-SHA512 -> AES-256-GCM DEK`.
+  - Protects files against *Harvest Now, Decrypt Later* (HNDL) adversarial threats.
 
-**Post-Quantum Cryptography (PQC)**<br/>
-Official **NIST FIPS 203** standards: **ML-KEM-768** (Security Level 3) and **ML-KEM-1024** (Security Level 5).<br/>
-Hybrid quantum envelope architecture: `Argon2id (Dynamic Header Parameters) + ML-KEM Key Encapsulation -> HKDF-SHA512 -> AES-256-GCM DEK`.<br/>
-Protects data against *Harvest Now, Decrypt Later* (HNDL) adversarial threats.
+- **Decoupled Storage Architecture**:
+  - The cryptographic engine is completely isolated from the storage medium.
+  - Encrypted `.wraith` files can reside in local NVMe/SSD/HDD, external USB drives, air-gapped cold storage, NAS (SMB/NFS), or cloud storage without third parties knowing keys or plaintext metadata.
 
-<br/>
+- **Deterministic & Cross-Platform WRAITH v4 Format**:
+  - Strict big-endian 80-byte header with embedded KDF parameter versioning (`m_cost`, `t_cost`, `p_cost`).
+  - NIST SP 800-38D deterministic 96-bit chunk nonces (`4-byte session salt || 8-byte chunk index`) guaranteeing zero nonce collision under identical DEK.
+  - Streaming authenticated chunking (16 MiB default) with constant memory footprint (<25 MB RAM for >100 GB files).
+  - Sequential AAD binding: `UUID || ChunkIndex || IsFinal || PayloadLen` prevents chunk reordering, truncation, or bit-flip tampering.
 
-**Decoupled Storage Architecture**<br/>
-The cryptographic engine is completely isolated from the storage medium.<br/>
-Files `.wraith` can reside in Local NVMe/SSD/HDD, external USB drives, air-gapped cold storage, NAS (SMB/NFS), or Zero-Knowledge cloud without the host knowing keys or plaintext metadata.
+- **VeraCrypt / Arcanum Compatible Keyfiles**:
+  - Two-factor (password + keyfile) or keyfile-only authentication using the same 64/128-byte CRC-32 IEEE 802.3 pool derivation as VeraCrypt and Arcanum, verified byte-for-byte against the official C implementation.
+  - Built-in CSPRNG keyfile generator (`OsRng` + mouse-entropy folding radar) with 64, 256, and 1024-byte presets.
 
-<br/>
+- **Portable Encrypted Vaults (`.wvault`)**:
+  - Driver-free multi-file containers that pack files and whole directory trees into a WRAITH v4 envelope, protected by password and/or keyfile.
+  - Built-in portable in-memory file explorer to browse the vault tree, search, extract individual entries or everything, and lock the vault with in-memory zeroization.
 
-**Deterministic & Cross-Platform WRAITH v4 Format**<br/>
-Strict big-endian 80-byte header with embedded KDF parameter versioning (`m_cost`, `t_cost`, `p_cost`).<br/>
-NIST SP 800-38D deterministic 96-bit chunk nonces (`4-byte session salt || 8-byte chunk index`) guaranteeing zero nonce collision under identical DEK.<br/>
-Streaming authenticated chunking (16 MiB default) with constant memory footprint (<25 MB RAM for >100 GB files).<br/>
-Sequential AAD binding: `UUID || ChunkIndex || IsFinal || PayloadLen` prevents chunk reordering, truncation, or bit-flip tampering.
+- **🔄 Multiplatform In-App Auto-Updates & Built-in Changelog**:
+  - Native in-app updater supporting Windows, macOS, and Linux powered by `tauri-plugin-updater` with Ed25519 digital signature verification.
+  - Real-time download progress bar, one-click restart, and a built-in interactive Changelog history viewer.
 
-<br/>
+- **📲 Zero-Network Ephemeral QR Password Share**:
+  - Share generated passwords locally via on-screen QR codes rendered 100% in client-side canvas with auto-destruct countdown timer.
 
-**Dual Mode Interface**<br/>
-**Native Desktop GUI**: Tauri 2.0 with Electric Purple Cyber HUD, Drag & Drop, native file dialogs (`rfd`), and real-time streaming telemetry.<br/>
-**High-Throughput CLI**: Automated headless batch encryption, decryption, inspection, and multi-pass CSPRNG shredding (DoD 5220.22-M for HDD & Wear-Leveling mitigation for SSD).
+---
 
-<br/>
+## 💡 Centro de Orientación Criptográfica ("¿Por dónde empiezo?")
 
-**Backwards Compatible Container Inspector**<br/>
-Instantly inspects `.wraith` containers and identifies whether they belong to the **MirageX v4 (PQC)** generation or legacy **Project Mirage v1 / v2 (Mirage-C4 / AES-GCM)** containers.
-
-<br/>
-
-**VeraCrypt / Arcanum Compatible Keyfiles**<br/>
-Two-factor (password + keyfile) or keyfile-only authentication using the same 64/128-byte CRC-32 IEEE 802.3 pool derivation as VeraCrypt and Arcanum, verified byte-for-byte against the official C implementation.<br/>
-Includes a built-in CSPRNG keyfile generator (`OsRng` + optional mouse-entropy folding) with 64, 256 and 1024-byte presets.
-
-<br/>
-
-**Portable Encrypted Vaults (`.wvault`)**<br/>
-Driver-free multi-file containers that pack files and whole folders into a WRAITH v4 envelope (ML-KEM + Argon2id + AES-256-GCM), protected by password and/or keyfile.<br/>
-The Cyber HUD includes an in-app explorer to browse the vault tree, search, extract individual entries or everything, and lock the vault with in-memory zeroization.
-
-</p>
+La aplicación incluye una sección dedicada para usuarios que no saben por dónde comenzar:
+- **Caso A (Enviar archivos por WhatsApp / Drive / Nube)**: Cifrado individual a contenedor `.wraith` ultra-rápido.
+- **Caso B (Múltiples carpetas y proyectos juntos)**: Bóveda `.wvault` con explorador integrado sin requerir drivers en el kernel.
+- **Caso C (Autenticación física de doble factor 2FA)**: Uso de Keyfiles estándar VeraCrypt/Arcanum guardados en una memoria USB.
+- **Caso D (Venta de PC / Borrado definitivo)**: Triturador seguro con mitigación wear-leveling (SSD/NVMe) o pasadas DoD (HDD).
 
 ---
 
 ## 🚀 Hardware Benchmarks (Apple Silicon M-Series / Release Mode)
-
-</div>
 
 ```text
 ══════════════════════════════════════════════════════
@@ -103,17 +96,11 @@ The Cyber HUD includes an in-app explorer to browse the vault tree, search, extr
 ══════════════════════════════════════════════════════
 ```
 
-<div align="center">
-
 ---
 
 ## 📦 Installation & Build
 
-<p align="center">
-<strong>Prerequisites:</strong> <a href="https://rustup.rs/">Rust 1.80+</a> on macOS, Linux, or Windows 10/11.
-</p>
-
-</div>
+**Prerequisites:** [Rust 1.80+](https://rustup.rs/) on macOS, Linux, or Windows 10/11.
 
 ```bash
 git clone https://github.com/Rainb0wJagu4r/MirageX.git
@@ -121,25 +108,17 @@ cd MirageX
 cargo build --release
 ```
 
-<div align="center">
-
 ---
 
 ## 💻 Usage
 
-### 1. Launch Desktop GUI (Electric Purple Cyber HUD)
-
-</div>
+### 1. Launch Desktop GUI (Velvet Neon Cyber HUD)
 
 ```bash
 cargo run --release
 ```
 
-<div align="center">
-
 ### 2. Command Line Interface (CLI)
-
-</div>
 
 #### Encrypt a file (MirageX Ultra / Level 5 PQC):
 ```bash
@@ -159,7 +138,7 @@ cargo run --release
 
 #### Securely wipe a sensitive file (CSPRNG Multi-Pass, Best-Effort on SSD/NVMe):
 ```bash
-./target/release/miragex shred sensitive_file.txt --passes 3
+./target/release/miragex shred sensitive_file.txt --passes 3 --mode ssd
 ```
 
 #### Generate a VeraCrypt / Arcanum-compatible keyfile:
@@ -183,18 +162,11 @@ cargo run --release
 ./target/release/miragex bench
 ```
 
-<div align="center">
-
 ---
 
 ## ⚛️ NIST SP 800-22 Empirical Entropy & Statistical Randomness Audit
 
-<p align="center">
-The <code>.wraith</code> v4 containers produced by <strong>MirageX Ultra (ML-KEM-1024 / NIST Level 5)</strong> were audited using the <strong>NIST SP 800-22</strong> statistical test suite across diverse payload profiles (random binary, structured repeated text, and all-zeroes <code>\x00</code> payloads).<br/>
-Full reports and CLI reproduction tools are hosted at <a href="https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results">PROJECT-MIRAGE-NIST-Analyze-results</a>.
-</p>
-
-</div>
+The `.wraith` v4 containers produced by **MirageX Ultra (ML-KEM-1024 / NIST Level 5)** were audited using the **NIST SP 800-22** statistical test suite across diverse payload profiles (random binary, structured repeated text, and all-zeroes `\x00` payloads). Full reports and CLI reproduction tools are hosted at [PROJECT-MIRAGE-NIST-Analyze-results](https://github.com/Rainb0wJagu4r/PROJECT-MIRAGE-NIST-Analyze-results).
 
 | NIST SP 800-22 Statistical Test | Random Binary Payload | Structured Text Payload | All-Zeroes `\x00` Payload | Statistical Status ($\alpha=0.01$) |
 | :--- | :---: | :---: | :---: | :---: |
@@ -212,8 +184,6 @@ Full reports and CLI reproduction tools are hosted at <a href="https://github.co
 | **Non-overlapping Template Matching** | `0.84219` | `0.23030` | `0.99140` | **PASS** |
 | **OVERALL VERDICT** | **NIST STS PASS** | **NIST STS PASS** | **NIST STS PASS** | **CRYPTOGRAPHIC RANDOM (PASS)** |
 
-<div align="center">
-
 ---
 
 ## ⚠️ Known Limitations
@@ -228,11 +198,14 @@ Full reports and CLI reproduction tools are hosted at <a href="https://github.co
 
 ## 📄 License
 
-Apache 2.0 / MIT.
+Licensed under either of:
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 ---
 
-**MirageX // Quantum-Resistant Decoupled Storage**  
-*Born in Mexico 🇲🇽*
+<div align="center">
+
+Made with love ❤️ by [Rainb0wJagu4r](https://github.com/Rainb0wJagu4r) from Mexico 🇲🇽
 
 </div>
