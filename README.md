@@ -74,6 +74,18 @@ Sequential AAD binding: `UUID || ChunkIndex || IsFinal || PayloadLen` prevents c
 **Backwards Compatible Container Inspector**<br/>
 Instantly inspects `.wraith` containers and identifies whether they belong to the **MirageX v4 (PQC)** generation or legacy **Project Mirage v1 / v2 (Mirage-C4 / AES-GCM)** containers.
 
+<br/>
+
+**VeraCrypt / Arcanum Compatible Keyfiles**<br/>
+Two-factor (password + keyfile) or keyfile-only authentication using the same 64/128-byte CRC-32 IEEE 802.3 pool derivation as VeraCrypt and Arcanum, verified byte-for-byte against the official C implementation.<br/>
+Includes a built-in CSPRNG keyfile generator (`OsRng` + optional mouse-entropy folding) with 64, 256 and 1024-byte presets.
+
+<br/>
+
+**Portable Encrypted Vaults (`.wvault`)**<br/>
+Driver-free multi-file containers that pack files and whole folders into a WRAITH v4 envelope (ML-KEM + Argon2id + AES-256-GCM), protected by password and/or keyfile.<br/>
+The Cyber HUD includes an in-app explorer to browse the vault tree, search, extract individual entries or everything, and lock the vault with in-memory zeroization.
+
 </p>
 
 ---
@@ -150,6 +162,22 @@ cargo run --release
 ./target/release/miragex shred sensitive_file.txt --passes 3
 ```
 
+#### Generate a VeraCrypt / Arcanum-compatible keyfile:
+```bash
+./target/release/miragex keyfile generate second_factor.key --size 64
+```
+
+#### Encrypt with password + keyfile (2FA) or keyfile only:
+```bash
+./target/release/miragex encrypt document.pdf -k second_factor.key
+# Press Enter at the password prompt to use keyfile-only authentication
+```
+
+#### Decrypt with the same keyfile:
+```bash
+./target/release/miragex decrypt document.pdf.wraith -k second_factor.key
+```
+
 #### Run hardware benchmark:
 ```bash
 ./target/release/miragex bench
@@ -185,6 +213,15 @@ Full reports and CLI reproduction tools are hosted at <a href="https://github.co
 | **OVERALL VERDICT** | **NIST STS PASS** | **NIST STS PASS** | **NIST STS PASS** | **CRYPTOGRAPHIC RANDOM (PASS)** |
 
 <div align="center">
+
+---
+
+## ⚠️ Known Limitations
+
+- **Vault memory usage:** `.wvault` archives are packed and decrypted in memory, so very large (multi-GB) vaults can exhaust RAM. Regular `.wraith` file containers keep using streaming with constant memory.
+- **Keyfile compatibility is not container compatibility:** keyfile derivation matches VeraCrypt/Arcanum, but MirageX does **not** mount or open VeraCrypt `.tc` / `.hc` / `.vc` volumes. Vaults use the MirageX `.wvault` format.
+- **Symlinks are rejected:** vault creation refuses symlinks and special files because following them could include data outside the selected tree or loop indefinitely. Add the real paths instead.
+- **Vault UI is desktop-only:** creating, browsing and extracting vaults is currently available in the Tauri GUI; the CLI covers keyfiles and `.wraith` file containers.
 
 ---
 

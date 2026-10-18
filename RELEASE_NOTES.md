@@ -69,6 +69,18 @@ Descifrado directo bloque a bloque hacia archivos temporales atómicos con reemp
 Soporte de contraseña interactiva oculta en terminal (`rpassword`) y lectura desde tuberías (`--password-stdin`).<br/>
 Sobrescritura física de claves intermedias y credenciales en memoria física mediante `zeroize::Zeroizing`.
 
+<br/>
+
+**6. Keyfiles Compatibles con VeraCrypt / Arcanum**<br/>
+Autenticación de dos factores (contraseña + keyfile) o solo-keyfile usando la misma derivación por pool de 64/128 bytes (CRC-32 IEEE 802.3) de VeraCrypt y Arcanum, verificada byte a byte contra el código C oficial.<br/>
+Generador nativo CSPRNG (`OsRng` + plegado de entropía del mouse) en la GUI y comando `miragex keyfile generate` en la CLI.
+
+<br/>
+
+**7. Bóvedas Cifradas Portables (`.wvault`) con Explorador In-App**<br/>
+Contenedores multi-archivo y multi-carpeta cifrados con WRAITH v4 (ML-KEM + Argon2id + AES-256-GCM), protegidos por contraseña y/o keyfile.<br/>
+Explorador integrado para listar, buscar, extraer entradas individuales o todo, y bloquear la bóveda con zeroización en memoria.
+
 </p>
 
 ---
@@ -106,6 +118,15 @@ open MirageX.app
 
 # Borrado seguro independiente (Modo HDD DoD 5220.22-M):
 ./miragex shred archivo_sensible.txt --mode hdd --passes 7
+
+# Generar un keyfile compatible con VeraCrypt / Arcanum (64 bytes):
+./miragex keyfile generate segundo_factor.key --size 64
+
+# Cifrar con contraseña + keyfile (deja la contraseña vacía para solo-keyfile):
+./miragex encrypt documento.pdf -k segundo_factor.key
+
+# Descifrar con el mismo keyfile:
+./miragex decrypt documento.pdf.wraith -k segundo_factor.key
 ```
 
 <div align="center">
@@ -117,6 +138,15 @@ open MirageX.app
 <p align="center">
 Los datos cifrados en contenedores <code>.wraith</code> v4 generados por <strong>MirageX Ultra (ML-KEM-1024 / Nivel 5)</strong> superaron con éxito la batería de pruebas estadísticas de aleatoriedad <strong>NIST SP 800-22</strong> con distribución uniforme de bits y cero sesgos detectables.
 </p>
+
+---
+
+## ⚠️ Limitaciones Conocidas
+
+- **Memoria de las bóvedas:** los `.wvault` se empaquetan y descifran en memoria; bóvedas de varios GB pueden agotar la RAM. Los contenedores individuales `.wraith` siguen usando streaming con memoria constante.
+- **Compatibilidad de keyfiles ≠ compatibilidad de contenedores:** la derivación de keyfiles coincide con VeraCrypt/Arcanum, pero MirageX **no** monta ni abre volúmenes VeraCrypt `.tc` / `.hc` / `.vc`. Las bóvedas usan el formato MirageX `.wvault`.
+- **Symlinks rechazados:** al crear una bóveda se rechazan symlinks y archivos especiales para evitar incluir datos fuera del árbol seleccionado o bucles infinitos.
+- **Bóvedas solo en GUI:** la creación, exploración y extracción de bóvedas está disponible en la interfaz Tauri; la CLI cubre keyfiles y contenedores `.wraith`.
 
 ---
 
