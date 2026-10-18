@@ -1550,7 +1550,7 @@ function setupUpdaterLogic() {
           }
           if (lblMessage) {
             if (checkRes.error) {
-              lblMessage.textContent = `Estás en la versión local v${checkRes.current_version}. (${checkRes.error})`;
+              lblMessage.textContent = `Estás en la versión local v${checkRes.current_version}. ${checkRes.error}`;
             } else {
               lblMessage.textContent = `Tu versión v${checkRes.current_version} es la más reciente. Cuentas con la máxima protección post-cuántica.`;
             }

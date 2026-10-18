@@ -27,6 +27,8 @@ fn register_windows_file_association() {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         let exe_str = exe_path.to_string_lossy().to_string();
+        let icon_path = miragex::commands::ensure_windows_nobug_icon();
+        let icon_str = icon_path.to_string_lossy().to_string();
 
         let run_reg = |args: &[&str]| {
             let _ = std::process::Command::new("reg")
@@ -37,8 +39,13 @@ fn register_windows_file_association() {
 
         run_reg(&["add", "HKCU\\Software\\Classes\\.wraith", "/ve", "/d", "MirageX.wraith", "/f"]);
         run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith", "/ve", "/d", "WRAITH Encrypted Container", "/f"]);
-        run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\DefaultIcon", "/ve", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+        run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\DefaultIcon", "/ve", "/d", &format!("\"{}\",0", icon_str), "/f"]);
         run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open\\command", "/ve", "/d", &format!("\"{}\" --gui-decrypt \"%1\"", exe_str), "/f"]);
+
+        let _ = std::process::Command::new("ie4uinit.exe")
+            .arg("-show")
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
     }
 }
 

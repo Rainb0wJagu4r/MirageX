@@ -126,8 +126,16 @@ pub async fn check_app_update_cmd(app: AppHandle) -> Result<UpdateCheckResult, S
                         error: None,
                     })
                 }
-                Err(e) => {
-                    // Fallback transparente: no pudimos conectar al servidor (offline o sin release nuevo)
+                Err(_e) => {
+                    // Fallback transparente: si el servidor no responde o estamos offline,
+                    // comprobamos si ya estamos en la versión más reciente del changelog
+                    let is_latest = history.first().map(|h| h.version == format!("v{}", current_version)).unwrap_or(true);
+                    let user_error = if is_latest {
+                        None
+                    } else {
+                        Some("No se pudo conectar al servidor de actualizaciones. Revisa tu conexión a Internet o visita GitHub Releases.".to_string())
+                    };
+
                     Ok(UpdateCheckResult {
                         has_update: false,
                         current_version: current_version.clone(),
@@ -135,12 +143,12 @@ pub async fn check_app_update_cmd(app: AppHandle) -> Result<UpdateCheckResult, S
                         release_date: None,
                         release_notes: String::new(),
                         changelog_history: history,
-                        error: Some(format!("No se pudo contactar el servidor de actualizaciones ({})", e)),
+                        error: user_error,
                     })
                 }
             }
         }
-        Err(e) => {
+        Err(_e) => {
             Ok(UpdateCheckResult {
                 has_update: false,
                 current_version: current_version.clone(),
@@ -148,7 +156,7 @@ pub async fn check_app_update_cmd(app: AppHandle) -> Result<UpdateCheckResult, S
                 release_date: None,
                 release_notes: String::new(),
                 changelog_history: history,
-                error: Some(format!("Error inicializando el actualizador ({})", e)),
+                error: None,
             })
         }
     }

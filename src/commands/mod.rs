@@ -891,6 +891,49 @@ pub fn get_initial_file_cmd() -> Result<Option<InitialFilePayload>, String> {
     }
 }
 
+#[cfg(windows)]
+pub fn ensure_windows_nobug_icon() -> std::path::PathBuf {
+    const NOBUG_ICO_BYTES: &[u8] = include_bytes!("../../icons/nobug.ico");
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            let candidate = parent.join("nobug.ico");
+            if candidate.exists() {
+                return candidate;
+            }
+            let candidate_res = parent.join("icons").join("nobug.ico");
+            if candidate_res.exists() {
+                return candidate_res;
+            }
+        }
+    }
+
+    let base_dir = std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::env::var_os("APPDATA")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| std::path::PathBuf::from("."))
+        });
+    let target_dir = base_dir.join("MirageX");
+    let _ = std::fs::create_dir_all(&target_dir);
+    let target_ico = target_dir.join("nobug.ico");
+
+    let should_write = match std::fs::metadata(&target_ico) {
+        Ok(meta) => meta.len() != NOBUG_ICO_BYTES.len() as u64,
+        Err(_) => true,
+    };
+    if should_write {
+        let _ = std::fs::write(&target_ico, NOBUG_ICO_BYTES);
+    }
+    target_ico
+}
+
+#[cfg(not(windows))]
+pub fn ensure_windows_nobug_icon() -> std::path::PathBuf {
+    std::path::PathBuf::from("icons/nobug.ico")
+}
+
 #[tauri::command]
 pub fn setup_context_menu_cmd() -> Result<String, String> {
     #[cfg(windows)]
@@ -899,6 +942,8 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
             use std::os::windows::process::CommandExt;
             const CREATE_NO_WINDOW: u32 = 0x08000000;
             let exe_str = exe_path.to_string_lossy().to_string();
+            let icon_path = ensure_windows_nobug_icon();
+            let icon_str = icon_path.to_string_lossy().to_string();
 
             let run_reg = |args: &[&str]| {
                 let _ = std::process::Command::new("reg")
@@ -917,14 +962,20 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
             run_reg(&["add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
             run_reg(&["add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt\\command", "/ve", "/d", &format!("\"{}\" --gui-encrypt \"%1\"", exe_str), "/f"]);
 
-            // 3. .wraith Context Menu (MirageX.wraith\shell)
+            // 3. .wraith Context Menu (MirageX.wraith\shell) -> Uses nobug.ico!
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\DefaultIcon", "/ve", "/d", &format!("\"{}\",0", icon_str), "/f"]);
             run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open", "/ve", "/d", "Descifrar con MirageX (Post-Quantum)", "/f"]);
-            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open", "/v", "Icon", "/d", &format!("\"{}\",0", icon_str), "/f"]);
             run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open\\command", "/ve", "/d", &format!("\"{}\" --gui-decrypt \"%1\"", exe_str), "/f"]);
 
             run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect", "/ve", "/d", "Inspeccionar Contenedor WRAITH", "/f"]);
-            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect", "/v", "Icon", "/d", &format!("\"{}\",0", icon_str), "/f"]);
             run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect\\command", "/ve", "/d", &format!("\"{}\" --gui-inspect \"%1\"", exe_str), "/f"]);
+
+            let _ = std::process::Command::new("ie4uinit.exe")
+                .arg("-show")
+                .creation_flags(CREATE_NO_WINDOW)
+                .output();
 
             Ok("Menú contextual de Windows Explorer registrado exitosamente.".into())
         } else {
