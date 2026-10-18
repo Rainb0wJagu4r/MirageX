@@ -30,11 +30,23 @@ let selectedDecryptPath = null;
 let selectedInspectPath = null;
 let selectedShredPath = null;
 
+let selectedEncryptKeyfilePath = null;
+let selectedDecryptKeyfilePath = null;
+let selectedVaultSources = [];
+let selectedVaultCreateKeyfilePath = null;
+let selectedVaultOpenPath = null;
+let selectedVaultOpenKeyfilePath = null;
+let currentVaultSession = null;
+let vaultCachedEntries = [];
+let collectedEntropyBytes = [];
+
 // DOM Initialization
 document.addEventListener('DOMContentLoaded', () => {
   setupTabs();
   setupPasswordLogic();
   setupQrModalLogic();
+  setupKeyfileLogic();
+  setupVaultLogic();
   setupDropzones();
   setupActions();
   setupTauriNativeEvents();
@@ -196,6 +208,38 @@ function setupDropzones() {
       console.error(e);
     }
   });
+
+  const vaultCreateDrop = document.getElementById('vault-create-dropzone');
+  if (vaultCreateDrop) {
+    vaultCreateDrop.addEventListener('click', async () => {
+      try {
+        const files = await invokeBackend('select_vault_sources_dialog');
+        if (files && files.length > 0) {
+          addVaultSources(files);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const vaultOpenDrop = document.getElementById('vault-open-dropzone');
+  if (vaultOpenDrop) {
+    vaultOpenDrop.addEventListener('click', async () => {
+      try {
+        const fileInfo = await invokeBackend('select_vault_dialog');
+        if (fileInfo) {
+          selectedVaultOpenPath = fileInfo.path;
+          document.getElementById('meta-vault-open-name').textContent = fileInfo.name;
+          document.getElementById('meta-vault-open-path').textContent = fileInfo.path;
+          document.getElementById('vault-open-meta').style.display = 'flex';
+          showToast(`Bóveda cargada: ${fileInfo.name}`, 'info');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
 }
 
 // 4. Password Logic
@@ -279,8 +323,8 @@ function setupActions() {
       return;
     }
     const password = document.getElementById('encrypt-password').value;
-    if (!password) {
-      showToast('Introduce una contraseña para el cifrado.', 'error');
+    if (!password && !selectedEncryptKeyfilePath) {
+      showToast('Introduce una contraseña o selecciona un keyfile para el cifrado.', 'error');
       return;
     }
 
@@ -300,6 +344,7 @@ function setupActions() {
         inputPath: selectedEncryptPath,
         outputPath: null,
         password: password,
+        keyfilePath: selectedEncryptKeyfilePath || null,
         suiteId: suiteId,
         chunkSizeMb: chunkSizeMb,
         shredSource: shredSource,
@@ -323,8 +368,8 @@ function setupActions() {
       return;
     }
     const password = document.getElementById('decrypt-password').value;
-    if (!password) {
-      showToast('Introduce la contraseña para desencapsular.', 'error');
+    if (!password && !selectedDecryptKeyfilePath) {
+      showToast('Introduce la contraseña o selecciona el keyfile para desencapsular.', 'error');
       return;
     }
 
@@ -340,6 +385,7 @@ function setupActions() {
         inputPath: selectedDecryptPath,
         outputPath: null,
         password: password,
+        keyfilePath: selectedDecryptKeyfilePath || null,
         shredSource: shredContainer,
         shredMode: shredContainer ? shredMode : null,
         shredPasses: shredContainer ? shredPasses : null,
@@ -662,3 +708,597 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// 9. Keyfile Logic & Interactive Generator (VeraCrypt/Arcanum Compatible)
+let activeKeyfileTarget = 'encrypt';
+
+function setupKeyfileLogic() {
+  // Encrypt Tab Keyfile
+  const btnSelectEncKf = document.getElementById('btn-select-keyfile-encrypt');
+  if (btnSelectEncKf) {
+    btnSelectEncKf.addEventListener('click', async () => {
+      try {
+        const fileInfo = await invokeBackend('select_keyfile_dialog');
+        if (fileInfo) {
+          selectedEncryptKeyfilePath = fileInfo.path;
+          document.getElementById('encrypt-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
+          document.getElementById('btn-clear-keyfile-encrypt').style.display = 'inline-block';
+          showToast(`Keyfile seleccionado: ${fileInfo.name}`, 'info');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const btnClearEncKf = document.getElementById('btn-clear-keyfile-encrypt');
+  if (btnClearEncKf) {
+    btnClearEncKf.addEventListener('click', () => {
+      selectedEncryptKeyfilePath = null;
+      document.getElementById('encrypt-keyfile-display').value = '';
+      btnClearEncKf.style.display = 'none';
+    });
+  }
+
+  // Decrypt Tab Keyfile
+  const btnSelectDecKf = document.getElementById('btn-select-keyfile-decrypt');
+  if (btnSelectDecKf) {
+    btnSelectDecKf.addEventListener('click', async () => {
+      try {
+        const fileInfo = await invokeBackend('select_keyfile_dialog');
+        if (fileInfo) {
+          selectedDecryptKeyfilePath = fileInfo.path;
+          document.getElementById('decrypt-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
+          document.getElementById('btn-clear-keyfile-decrypt').style.display = 'inline-block';
+          showToast(`Keyfile seleccionado: ${fileInfo.name}`, 'info');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const btnClearDecKf = document.getElementById('btn-clear-keyfile-decrypt');
+  if (btnClearDecKf) {
+    btnClearDecKf.addEventListener('click', () => {
+      selectedDecryptKeyfilePath = null;
+      document.getElementById('decrypt-keyfile-display').value = '';
+      btnClearDecKf.style.display = 'none';
+    });
+  }
+
+  // Vault Create Keyfile
+  const btnSelectVaultCreateKf = document.getElementById('btn-select-keyfile-vault-create');
+  if (btnSelectVaultCreateKf) {
+    btnSelectVaultCreateKf.addEventListener('click', async () => {
+      try {
+        const fileInfo = await invokeBackend('select_keyfile_dialog');
+        if (fileInfo) {
+          selectedVaultCreateKeyfilePath = fileInfo.path;
+          document.getElementById('vault-create-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
+          document.getElementById('btn-clear-keyfile-vault-create').style.display = 'inline-block';
+          showToast(`Keyfile para bóveda: ${fileInfo.name}`, 'info');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const btnClearVaultCreateKf = document.getElementById('btn-clear-keyfile-vault-create');
+  if (btnClearVaultCreateKf) {
+    btnClearVaultCreateKf.addEventListener('click', () => {
+      selectedVaultCreateKeyfilePath = null;
+      document.getElementById('vault-create-keyfile-display').value = '';
+      btnClearVaultCreateKf.style.display = 'none';
+    });
+  }
+
+  // Vault Open Keyfile
+  const btnSelectVaultOpenKf = document.getElementById('btn-select-keyfile-vault-open');
+  if (btnSelectVaultOpenKf) {
+    btnSelectVaultOpenKf.addEventListener('click', async () => {
+      try {
+        const fileInfo = await invokeBackend('select_keyfile_dialog');
+        if (fileInfo) {
+          selectedVaultOpenKeyfilePath = fileInfo.path;
+          document.getElementById('vault-open-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
+          document.getElementById('btn-clear-keyfile-vault-open').style.display = 'inline-block';
+          showToast(`Keyfile para desbloqueo: ${fileInfo.name}`, 'info');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const btnClearVaultOpenKf = document.getElementById('btn-clear-keyfile-vault-open');
+  if (btnClearVaultOpenKf) {
+    btnClearVaultOpenKf.addEventListener('click', () => {
+      selectedVaultOpenKeyfilePath = null;
+      document.getElementById('vault-open-keyfile-display').value = '';
+      btnClearVaultOpenKf.style.display = 'none';
+    });
+  }
+
+  // Open Generator Modal buttons
+  const btnOpenGenKf = document.getElementById('btn-open-gen-keyfile');
+  if (btnOpenGenKf) {
+    btnOpenGenKf.addEventListener('click', () => {
+      activeKeyfileTarget = 'encrypt';
+      openKeyfileModal();
+    });
+  }
+
+  const btnOpenGenKfVault = document.getElementById('btn-open-gen-keyfile-vault');
+  if (btnOpenGenKfVault) {
+    btnOpenGenKfVault.addEventListener('click', () => {
+      activeKeyfileTarget = 'vault-create';
+      openKeyfileModal();
+    });
+  }
+
+  const btnCloseKfModal = document.getElementById('btn-close-keyfile-modal');
+  if (btnCloseKfModal) btnCloseKfModal.addEventListener('click', closeKeyfileModal);
+
+  const btnCancelKfModal = document.getElementById('btn-cancel-keyfile-modal');
+  if (btnCancelKfModal) btnCancelKfModal.addEventListener('click', closeKeyfileModal);
+
+  // Setup canvas entropy tracking
+  setupEntropyRadar();
+
+  // Save Keyfile
+  const btnSaveKf = document.getElementById('btn-save-keyfile-modal');
+  if (btnSaveKf) {
+    btnSaveKf.addEventListener('click', async () => {
+      const sizeRadio = document.querySelector('input[name="keyfile-size-radio"]:checked');
+      const size = parseInt(sizeRadio ? sizeRadio.value : '64');
+      try {
+        const fileInfo = await invokeBackend('generate_keyfile_cmd', {
+          size,
+          entropy: collectedEntropyBytes,
+          defaultName: 'miragex.key'
+        });
+
+        if (fileInfo) {
+          showToast(`Keyfile generado y guardado: ${fileInfo.name}`, 'success');
+          if (activeKeyfileTarget === 'encrypt') {
+            selectedEncryptKeyfilePath = fileInfo.path;
+            document.getElementById('encrypt-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
+            document.getElementById('btn-clear-keyfile-encrypt').style.display = 'inline-block';
+          } else if (activeKeyfileTarget === 'vault-create') {
+            selectedVaultCreateKeyfilePath = fileInfo.path;
+            document.getElementById('vault-create-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
+            document.getElementById('btn-clear-keyfile-vault-create').style.display = 'inline-block';
+          }
+          closeKeyfileModal();
+        }
+      } catch (err) {
+        showToast(`Error al guardar keyfile: ${err}`, 'error');
+      }
+    });
+  }
+
+  // Radio button card styling for keyfile size
+  document.querySelectorAll('input[name="keyfile-size-radio"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.querySelectorAll('.keyfile-size-options .radio-card').forEach(c => c.classList.remove('active'));
+      radio.closest('.radio-card').classList.add('active');
+    });
+  });
+}
+
+function openKeyfileModal() {
+  const modal = document.getElementById('modal-keyfile-gen');
+  if (modal) modal.style.display = 'flex';
+  collectedEntropyBytes = [];
+  updateEntropyUI(0);
+  if (window.initEntropyCanvas) window.initEntropyCanvas();
+}
+
+function closeKeyfileModal() {
+  const modal = document.getElementById('modal-keyfile-gen');
+  if (modal) modal.style.display = 'none';
+}
+
+function setupEntropyRadar() {
+  const canvas = document.getElementById('entropy-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let points = [];
+
+  function addEntropyPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    points.push({ x, y, alpha: 1.0, r: Math.random() * 3 + 2 });
+    if (points.length > 50) points.shift();
+
+    if (collectedEntropyBytes.length < 256) {
+      collectedEntropyBytes.push((Math.floor(x) & 0xFF) ^ ((Math.floor(y) >> 2) & 0xFF));
+      collectedEntropyBytes.push((Date.now() & 0xFF) ^ ((e.movementX || 1) & 0xFF));
+      const pct = Math.min(100, Math.round((collectedEntropyBytes.length / 256) * 100));
+      updateEntropyUI(pct);
+    }
+
+    drawRadar();
+  }
+
+  canvas.addEventListener('mousemove', addEntropyPoint);
+  canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 0) addEntropyPoint(e.touches[0]);
+  }, { passive: true });
+
+  function drawRadar() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw radar grid
+    ctx.strokeStyle = 'rgba(176, 38, 255, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, 30, 0, Math.PI * 2);
+    ctx.arc(canvas.width / 2, canvas.height / 2, 60, 0, Math.PI * 2);
+    ctx.moveTo(canvas.width / 2, 0); ctx.lineTo(canvas.width / 2, canvas.height);
+    ctx.moveTo(0, canvas.height / 2); ctx.lineTo(canvas.width, canvas.height / 2);
+    ctx.stroke();
+
+    // Draw collected particle points
+    for (const p of points) {
+      ctx.fillStyle = `rgba(176, 38, 255, ${p.alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(16, 185, 129, ${p.alpha * 0.8})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      p.alpha *= 0.95;
+    }
+  }
+
+  window.initEntropyCanvas = () => {
+    points = [];
+    drawRadar();
+  };
+}
+
+function updateEntropyUI(pct) {
+  const bar = document.getElementById('entropy-bar-fill');
+  const text = document.getElementById('entropy-percent-text');
+  if (bar) bar.style.width = `${pct}%`;
+  if (text) text.textContent = `${pct}% ${pct >= 100 ? '✓ (Entropía Óptima)' : ''}`;
+}
+
+// 10. Vault Logic & In-App Portable File Explorer (Arcanum/VeraCrypt Style)
+function setupVaultLogic() {
+  const btnClearSources = document.getElementById('btn-clear-vault-sources');
+  if (btnClearSources) {
+    btnClearSources.addEventListener('click', () => {
+      selectedVaultSources = [];
+      renderVaultSourcesList();
+    });
+  }
+
+  // Add a whole folder as a vault source
+  const btnAddFolder = document.getElementById('btn-vault-add-folder');
+  if (btnAddFolder) {
+    btnAddFolder.addEventListener('click', async () => {
+      try {
+        const folder = await invokeBackend('select_vault_source_folder_dialog');
+        if (folder) {
+          folder.is_dir = true;
+          addVaultSources([folder]);
+        }
+      } catch (e) {
+        showToast(`Error al seleccionar la carpeta: ${e}`, 'error');
+      }
+    });
+  }
+
+  const btnGenPassVault = document.getElementById('btn-gen-pass-vault');
+  if (btnGenPassVault) {
+    btnGenPassVault.addEventListener('click', () => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*()_+=-[]{}';
+      let pass = '';
+      const arr = new Uint8Array(24);
+      window.crypto.getRandomValues(arr);
+      for (let i = 0; i < 24; i++) pass += chars[arr[i] % chars.length];
+      const input = document.getElementById('vault-create-password');
+      input.value = pass;
+      input.type = 'text';
+      showToast('Contraseña de alta entropía generada para la bóveda.', 'info');
+    });
+  }
+
+  const btnToggleCreatePass = document.getElementById('btn-toggle-vault-create-pass');
+  if (btnToggleCreatePass) {
+    btnToggleCreatePass.addEventListener('click', () => {
+      const input = document.getElementById('vault-create-password');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  }
+
+  const btnToggleOpenPass = document.getElementById('btn-toggle-vault-open-pass');
+  if (btnToggleOpenPass) {
+    btnToggleOpenPass.addEventListener('click', () => {
+      const input = document.getElementById('vault-open-password');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  }
+
+  // Create Vault Action
+  const btnCreateVault = document.getElementById('btn-execute-create-vault');
+  if (btnCreateVault) {
+    btnCreateVault.addEventListener('click', async () => {
+      if (selectedVaultSources.length === 0) {
+        showToast('Por favor añade al menos un archivo o carpeta a la bóveda.', 'error');
+        return;
+      }
+
+      const password = document.getElementById('vault-create-password').value;
+      if (!password && !selectedVaultCreateKeyfilePath) {
+        showToast('Introduce una contraseña o selecciona un keyfile para la bóveda.', 'error');
+        return;
+      }
+
+      try {
+        const outPath = await invokeBackend('create_vault_cmd', {
+          sourcePaths: selectedVaultSources.map(s => s.path),
+          outputPath: null,
+          password: password || null,
+          keyfilePath: selectedVaultCreateKeyfilePath || null,
+          suiteId: 1,
+        });
+
+        showToast(`¡Bóveda creada exitosamente!: ${outPath}`, 'success');
+        selectedVaultOpenPath = outPath;
+        const fileName = outPath.split('/').pop() || outPath.split('\\').pop() || outPath;
+        document.getElementById('meta-vault-open-name').textContent = fileName;
+        document.getElementById('meta-vault-open-path').textContent = outPath;
+        document.getElementById('vault-open-meta').style.display = 'flex';
+        if (password) document.getElementById('vault-open-password').value = password;
+        if (selectedVaultCreateKeyfilePath) {
+          selectedVaultOpenKeyfilePath = selectedVaultCreateKeyfilePath;
+          document.getElementById('vault-open-keyfile-display').value = document.getElementById('vault-create-keyfile-display').value;
+          document.getElementById('btn-clear-keyfile-vault-open').style.display = 'inline-block';
+        }
+      } catch (err) {
+        showToast(`Error al crear la bóveda: ${err}`, 'error');
+      }
+    });
+  }
+
+  // Open Vault Action
+  const btnOpenVault = document.getElementById('btn-execute-open-vault');
+  if (btnOpenVault) {
+    btnOpenVault.addEventListener('click', async () => {
+      if (!selectedVaultOpenPath) {
+        showToast('Por favor selecciona un archivo de bóveda .wvault o .wraith.', 'error');
+        return;
+      }
+
+      const password = document.getElementById('vault-open-password').value;
+      if (!password && !selectedVaultOpenKeyfilePath) {
+        showToast('Introduce la contraseña o keyfile para desbloquear la bóveda.', 'error');
+        return;
+      }
+
+      try {
+        const session = await invokeBackend('open_vault_cmd', {
+          vaultPath: selectedVaultOpenPath,
+          password: password || null,
+          keyfilePath: selectedVaultOpenKeyfilePath || null,
+        });
+
+        currentVaultSession = session;
+        vaultCachedEntries = session.entries;
+        showToast(`¡Bóveda desbloqueada! ${session.total_entries} elementos listos.`, 'success');
+        renderUnlockedVaultView();
+      } catch (err) {
+        showToast(`Fallo de desbloqueo: ${err}`, 'error');
+      }
+    });
+  }
+
+  // Close / Lock Vault Action
+  const btnCloseVault = document.getElementById('btn-close-lock-vault');
+  if (btnCloseVault) {
+    btnCloseVault.addEventListener('click', async () => {
+      if (!currentVaultSession) return;
+      try {
+        await invokeBackend('close_vault_cmd', { sessionId: currentVaultSession.session_id });
+        showToast('Bóveda bloqueada y memoria zeroizada de forma segura.', 'info');
+      } catch (e) {
+        console.warn(e);
+      }
+      currentVaultSession = null;
+      vaultCachedEntries = [];
+      document.getElementById('vault-unlocked-view').style.display = 'none';
+      document.getElementById('vault-locked-view').style.display = 'grid';
+    });
+  }
+
+  // Extract All Action
+  const btnExtractAll = document.getElementById('btn-extract-all-vault');
+  if (btnExtractAll) {
+    btnExtractAll.addEventListener('click', async () => {
+      if (!currentVaultSession) return;
+      try {
+        const count = await invokeBackend('extract_all_vault_cmd', {
+          sessionId: currentVaultSession.session_id,
+          destinationDir: null,
+        });
+        showToast(`Se han extraído ${count} archivos correctamente en la carpeta de destino.`, 'success');
+      } catch (err) {
+        showToast(`Error al extraer archivos: ${err}`, 'error');
+      }
+    });
+  }
+
+  // Real-time search in vault
+  const searchInput = document.getElementById('vault-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      filterVaultTable(query);
+    });
+  }
+}
+
+function addVaultSources(files) {
+  for (const f of files) {
+    if (!selectedVaultSources.some(s => s.path === f.path)) {
+      selectedVaultSources.push(f);
+    }
+  }
+  renderVaultSourcesList();
+}
+
+function renderVaultSourcesList() {
+  const box = document.getElementById('vault-sources-list-box');
+  const list = document.getElementById('vault-sources-items');
+  const count = document.getElementById('vault-sources-count');
+  if (!box || !list || !count) return;
+
+  if (selectedVaultSources.length === 0) {
+    box.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'flex';
+  count.textContent = selectedVaultSources.length;
+  list.textContent = '';
+
+  selectedVaultSources.forEach((item, idx) => {
+    const li = document.createElement('li');
+    const icon = item.is_dir ? '📁 ' : '📄 ';
+    const detail = item.is_dir ? 'Carpeta completa' : formatBytes(item.size);
+    li.textContent = `${icon}${item.name} (${detail})`;
+    if (item.is_dir) li.classList.add('vault-source-folder');
+
+    const rmBtn = document.createElement('button');
+    rmBtn.type = 'button';
+    rmBtn.textContent = '✕';
+    rmBtn.className = 'btn-icon';
+    rmBtn.style.padding = '2px 6px';
+    rmBtn.style.fontSize = '10px';
+    rmBtn.addEventListener('click', () => {
+      selectedVaultSources.splice(idx, 1);
+      renderVaultSourcesList();
+    });
+
+    li.appendChild(rmBtn);
+    list.appendChild(li);
+  });
+}
+
+function renderUnlockedVaultView() {
+  if (!currentVaultSession) return;
+  document.getElementById('vault-locked-view').style.display = 'none';
+  const unlockedView = document.getElementById('vault-unlocked-view');
+  unlockedView.style.display = 'block';
+
+  const fileName = currentVaultSession.vault_path.split('/').pop() || currentVaultSession.vault_path.split('\\').pop() || currentVaultSession.vault_path;
+  document.getElementById('vault-unlocked-name').textContent = `BÓVEDA: ${fileName}`;
+  document.getElementById('vault-unlocked-sub').textContent = `${currentVaultSession.total_entries} archivos // ${formatBytes(currentVaultSession.total_unpacked_size)} total`;
+
+  document.getElementById('vault-search-input').value = '';
+  renderVaultTableRows(vaultCachedEntries);
+}
+
+function getFileIcon(path, isDir) {
+  if (isDir) return '📁';
+  const ext = path.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'pdf': case 'doc': case 'docx': case 'txt': case 'md': return '📄';
+    case 'jpg': case 'jpeg': case 'png': case 'gif': case 'svg': case 'webp': return '🖼️';
+    case 'mp3': case 'wav': case 'flac': case 'ogg': return '🎵';
+    case 'mp4': case 'mkv': case 'avi': case 'mov': return '🎬';
+    case 'zip': case 'tar': case 'gz': case '7z': case 'rar': return '📦';
+    case 'rs': case 'js': case 'ts': case 'py': case 'cpp': case 'c': case 'html': return '⚙️';
+    default: return '💾';
+  }
+}
+
+function renderVaultTableRows(entries) {
+  const tbody = document.getElementById('vault-files-tbody');
+  if (!tbody) return;
+  tbody.textContent = '';
+
+  if (entries.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 4;
+    td.style.textAlign = 'center';
+    td.style.padding = '20px';
+    td.style.color = 'var(--text-muted)';
+    td.textContent = 'No se encontraron archivos en la bóveda.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  entries.forEach(entry => {
+    const tr = document.createElement('tr');
+
+    // Icon
+    const tdIcon = document.createElement('td');
+    tdIcon.textContent = getFileIcon(entry.path, entry.is_dir);
+    tdIcon.style.textAlign = 'center';
+
+    // Path / Name
+    const tdName = document.createElement('td');
+    tdName.textContent = entry.path;
+    if (entry.is_dir) {
+      const badge = document.createElement('span');
+      badge.className = 'vault-badge-dir';
+      badge.textContent = 'CARPETA';
+      badge.style.marginLeft = '8px';
+      tdName.appendChild(badge);
+    }
+
+    // Size
+    const tdSize = document.createElement('td');
+    tdSize.textContent = entry.is_dir ? '-' : formatBytes(entry.size);
+
+    // Actions
+    const tdAct = document.createElement('td');
+    tdAct.style.textAlign = 'right';
+    if (!entry.is_dir) {
+      const extBtn = document.createElement('button');
+      extBtn.type = 'button';
+      extBtn.className = 'btn-sm btn-secondary';
+      extBtn.textContent = '📥 Extraer';
+      extBtn.addEventListener('click', async () => {
+        try {
+          const savedPath = await invokeBackend('extract_vault_entry_cmd', {
+            sessionId: currentVaultSession.session_id,
+            entryPath: entry.path,
+            destinationDir: null,
+          });
+          showToast(`Archivo extraído: ${savedPath}`, 'success');
+        } catch (err) {
+          showToast(`Error al extraer: ${err}`, 'error');
+        }
+      });
+      tdAct.appendChild(extBtn);
+    }
+
+    tr.appendChild(tdIcon);
+    tr.appendChild(tdName);
+    tr.appendChild(tdSize);
+    tr.appendChild(tdAct);
+    tbody.appendChild(tr);
+  });
+}
+
+function filterVaultTable(query) {
+  if (!query) {
+    renderVaultTableRows(vaultCachedEntries);
+    return;
+  }
+  const filtered = vaultCachedEntries.filter(e => e.path.toLowerCase().includes(query));
+  renderVaultTableRows(filtered);
+}

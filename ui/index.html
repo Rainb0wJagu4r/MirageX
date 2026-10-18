@@ -41,6 +41,10 @@
         <span class="nav-icon">🔓</span>
         <span class="nav-text">DESCIFRAR</span>
       </button>
+      <button class="nav-tab" data-tab="vault">
+        <span class="nav-icon">📦</span>
+        <span class="nav-text">BÓVEDA</span>
+      </button>
       <button class="nav-tab" data-tab="inspect">
         <span class="nav-icon">🔍</span>
         <span class="nav-text">INSPECTOR</span>
@@ -99,6 +103,17 @@
                 <div class="meter-bar" id="pass-meter-bar"></div>
               </div>
               <div class="meter-label" id="pass-meter-text">Entropía: Esperando entrada...</div>
+            </div>
+
+            <div class="form-group keyfile-form-group">
+              <label>KEYFILE DE SEGURIDAD // ESTÁNDAR VERACRYPT & ARCANUM</label>
+              <div class="input-with-action">
+                <input type="text" id="encrypt-keyfile-display" placeholder="Sin keyfile (Opcional: 2FA o Solo-Keyfile)..." readonly>
+                <button type="button" class="btn-secondary" id="btn-select-keyfile-encrypt">📂 Examinar</button>
+                <button type="button" class="btn-secondary" id="btn-open-gen-keyfile">🎲 Generar Keyfile</button>
+                <button type="button" class="btn-icon" id="btn-clear-keyfile-encrypt" title="Quitar keyfile" style="display:none;">✕</button>
+              </div>
+              <div class="field-hint">Algoritmo de mezcla CRC-32 IEEE 802.3 y adición modular. Compatible con Arcanum y VeraCrypt.</div>
             </div>
           </div>
 
@@ -222,6 +237,15 @@
               </div>
             </div>
 
+            <div class="form-group keyfile-form-group">
+              <label>KEYFILE DE DESENCRIPTACIÓN (VERACRYPT / ARCANUM)</label>
+              <div class="input-with-action">
+                <input type="text" id="decrypt-keyfile-display" placeholder="Sin keyfile (Opcional si usaste keyfile al cifrar)..." readonly>
+                <button type="button" class="btn-secondary" id="btn-select-keyfile-decrypt">📂 Examinar</button>
+                <button type="button" class="btn-icon" id="btn-clear-keyfile-decrypt" title="Quitar keyfile" style="display:none;">✕</button>
+              </div>
+            </div>
+
             <div class="checkbox-group">
               <label class="checkbox-label">
                 <input type="checkbox" id="shred-container-chk">
@@ -266,6 +290,151 @@
                 <p>Esperando autenticación de contenedor para verificar integridad.</p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.5. VAULT PANEL (ARCANUM / VERACRYPT STYLE PORTABLE ENCRYPTED VAULT) -->
+      <section id="tab-vault" class="tab-content">
+        <!-- State 1: Locked / Setup View -->
+        <div id="vault-locked-view" class="panel-grid">
+          <!-- Col 1: Create New Vault -->
+          <div class="panel-card main-panel">
+            <div class="card-header">
+              <h3>CREAR NUEVA BÓVEDA CIFRADA</h3>
+              <span class="badge purple">MULTI-ARCHIVO .WVAULT</span>
+            </div>
+
+            <div class="dropzone" id="vault-create-dropzone">
+              <div class="dropzone-icon">📁</div>
+              <div class="dropzone-title" id="vault-create-drop-title">Seleccionar Archivos o Carpetas</div>
+              <div class="dropzone-sub">Empaqueta y cifra directorios completos con ML-KEM + AES-256-GCM</div>
+            </div>
+
+            <button type="button" class="btn-secondary vault-add-folder-btn" id="btn-vault-add-folder">
+              📁 Añadir carpeta completa
+            </button>
+
+            <div id="vault-sources-list-box" class="vault-sources-box" style="display:none;">
+              <div class="vault-sources-header">
+                <span>ELEMENTOS A INCLUIR EN LA BÓVEDA (<span id="vault-sources-count">0</span>):</span>
+                <button type="button" class="btn-sm btn-secondary" id="btn-clear-vault-sources">Limpiar</button>
+              </div>
+              <ul id="vault-sources-items" class="vault-items-list"></ul>
+            </div>
+
+            <div class="form-group mt-2">
+              <label for="vault-create-password">CONTRASEÑA DE LA BÓVEDA</label>
+              <div class="input-with-action">
+                <input type="password" id="vault-create-password" placeholder="Contraseña maestra de la bóveda..." autocomplete="off">
+                <button type="button" class="btn-secondary" id="btn-gen-pass-vault">🎲 Generar</button>
+                <button type="button" class="btn-icon" id="btn-toggle-vault-create-pass">👁️</button>
+              </div>
+            </div>
+
+            <div class="form-group keyfile-form-group">
+              <label>KEYFILE DE LA BÓVEDA (VERACRYPT / ARCANUM)</label>
+              <div class="input-with-action">
+                <input type="text" id="vault-create-keyfile-display" placeholder="Sin keyfile (Opcional: 2FA o Solo-Keyfile)..." readonly>
+                <button type="button" class="btn-secondary" id="btn-select-keyfile-vault-create">📂 Examinar</button>
+                <button type="button" class="btn-secondary" id="btn-open-gen-keyfile-vault">🎲 Generar</button>
+                <button type="button" class="btn-icon" id="btn-clear-keyfile-vault-create" title="Quitar keyfile" style="display:none;">✕</button>
+              </div>
+            </div>
+
+            <button class="btn-primary" id="btn-execute-create-vault">
+              📦 CREAR Y CIFRAR BÓVEDA EN DISCO
+            </button>
+          </div>
+
+          <!-- Col 2: Open / Unlock Existing Vault -->
+          <div class="panel-card side-panel">
+            <div class="card-header">
+              <h3>DESBLOQUEAR BÓVEDA EXISTENTE</h3>
+              <span class="badge green">EXPLORADOR IN-APP</span>
+            </div>
+
+            <div class="dropzone" id="vault-open-dropzone">
+              <div class="dropzone-icon">🔐</div>
+              <div class="dropzone-title" id="vault-open-file-title">Selecciona un archivo .wvault o .wraith</div>
+              <div class="dropzone-sub">Abre y explora el árbol de archivos sin drivers de kernel</div>
+            </div>
+
+            <div class="selected-file-info" id="vault-open-meta" style="display:none;">
+              <div class="meta-row">
+                <span class="meta-key">Bóveda:</span>
+                <span class="meta-val" id="meta-vault-open-name">-</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Ruta:</span>
+                <span class="meta-val" id="meta-vault-open-path">-</span>
+              </div>
+            </div>
+
+            <div class="form-group mt-2">
+              <label for="vault-open-password">CONTRASEÑA DE DESBLOQUEO</label>
+              <div class="input-with-action">
+                <input type="password" id="vault-open-password" placeholder="Contraseña de la bóveda..." autocomplete="off">
+                <button type="button" class="btn-icon" id="btn-toggle-vault-open-pass">👁️</button>
+              </div>
+            </div>
+
+            <div class="form-group keyfile-form-group">
+              <label>KEYFILE DE DESBLOQUEO</label>
+              <div class="input-with-action">
+                <input type="text" id="vault-open-keyfile-display" placeholder="Sin keyfile (Opcional)..." readonly>
+                <button type="button" class="btn-secondary" id="btn-select-keyfile-vault-open">📂 Examinar</button>
+                <button type="button" class="btn-icon" id="btn-clear-keyfile-vault-open" title="Quitar keyfile" style="display:none;">✕</button>
+              </div>
+            </div>
+
+            <button class="btn-primary" id="btn-execute-open-vault">
+              🔓 DESBLOQUEAR Y EXPLORAR BÓVEDA
+            </button>
+          </div>
+        </div>
+
+        <!-- State 2: Unlocked Vault In-App Explorer View -->
+        <div id="vault-unlocked-view" class="panel-card full-width" style="display:none;">
+          <div class="vault-explorer-header">
+            <div class="vault-active-info">
+              <span class="vault-status-indicator"></span>
+              <div>
+                <h3 id="vault-unlocked-name" class="vault-active-title">BÓVEDA DESBLOQUEADA</h3>
+                <div class="vault-active-sub" id="vault-unlocked-sub">0 archivos // 0 KB descomprimidos</div>
+              </div>
+            </div>
+            <div class="vault-header-actions">
+              <button type="button" class="btn-secondary" id="btn-extract-all-vault">
+                📁 Extraer Todo a Carpeta
+              </button>
+              <button type="button" class="btn-danger" id="btn-close-lock-vault">
+                🔒 Bloquear y Cerrar Bóveda
+              </button>
+            </div>
+          </div>
+
+          <div class="vault-toolbar">
+            <div class="vault-search-wrapper">
+              <span class="vault-search-icon">🔍</span>
+              <input type="text" id="vault-search-input" placeholder="Buscar archivos dentro de la bóveda..." autocomplete="off">
+            </div>
+          </div>
+
+          <div class="vault-table-container">
+            <table class="vault-files-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;"></th>
+                  <th>NOMBRE / RUTA INTERNA</th>
+                  <th style="width: 120px;">TAMAÑO</th>
+                  <th style="width: 160px; text-align: right;">ACCIÓN</th>
+                </tr>
+              </thead>
+              <tbody id="vault-files-tbody">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -423,6 +592,69 @@
             <div class="qr-timer-fill" id="qr-timer-fill" style="width: 100%;"></div>
           </div>
           <div class="qr-timer-label" id="qr-timer-label">Auto-cierre de seguridad en 30s</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyfile Generator Modal (VeraCrypt/Arcanum Standard + Cursor Entropy) -->
+    <div class="modal-overlay" id="modal-keyfile-gen" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="modal-icon">🎲</span>
+            <h3>GENERADOR DE KEYFILE CRIPTOGRÁFICO</h3>
+          </div>
+          <button class="modal-close" id="btn-close-keyfile-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="qr-notice">
+            <span>🛡️ <strong>CSPRNG + Entropía Física:</strong> Mueve el mouse sobre el sensor para cosechar entropía cuántica complementaria (estándar VeraCrypt / Arcanum).</span>
+          </div>
+
+          <div class="entropy-radar-container">
+            <canvas id="entropy-canvas" width="460" height="150"></canvas>
+            <div class="entropy-progress-wrap">
+              <div class="entropy-label">
+                <span>COSECHA DE ENTROPÍA DEL USUARIO:</span>
+                <span id="entropy-percent-text">0%</span>
+              </div>
+              <div class="entropy-bar-track">
+                <div id="entropy-bar-fill" class="entropy-bar-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px;">
+            <label>TAMAÑO DEL KEYFILE</label>
+            <div class="keyfile-size-options">
+              <label class="radio-card active">
+                <input type="radio" name="keyfile-size-radio" value="64" checked>
+                <div class="radio-info">
+                  <span class="radio-title">64 Bytes</span>
+                  <span class="radio-desc">Estándar VeraCrypt / Arcanum</span>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="keyfile-size-radio" value="256">
+                <div class="radio-info">
+                  <span class="radio-title">256 Bytes</span>
+                  <span class="radio-desc">Seguridad Extendida</span>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="keyfile-size-radio" value="1024">
+                <div class="radio-info">
+                  <span class="radio-title">1024 Bytes</span>
+                  <span class="radio-desc">Entropía Máxima (1 KiB)</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button type="button" class="btn-secondary" id="btn-cancel-keyfile-modal" style="flex: 1;">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn-save-keyfile-modal" style="flex: 2;">💾 Guardar Keyfile en Disco</button>
+          </div>
         </div>
       </div>
     </div>

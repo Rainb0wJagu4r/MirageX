@@ -178,6 +178,249 @@ pub fn select_wraith_dialog() -> Result<Option<SelectedFileInfo>, String> {
     }
 }
 
+#[tauri::command]
+pub fn select_keyfile_dialog() -> Result<Option<SelectedFileInfo>, String> {
+    if let Some(path) = rfd::FileDialog::new().pick_file() {
+        let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+        let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        Ok(Some(SelectedFileInfo {
+            path: path.to_string_lossy().to_string(),
+            name,
+            size: meta.len(),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn generate_keyfile_cmd(
+    size: usize,
+    entropy: Vec<u8>,
+    default_name: Option<String>,
+) -> Result<Option<SelectedFileInfo>, String> {
+    let filename = default_name.unwrap_or_else(|| "miragex.key".to_string());
+    if let Some(dest_path) = rfd::FileDialog::new()
+        .set_file_name(&filename)
+        .save_file()
+    {
+        let key_bytes = crate::crypto::keyfile::generate_keyfile(size, Some(&entropy))?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&dest_path)
+                .map_err(|e| e.to_string())?;
+            std::io::Write::write_all(&mut file, &key_bytes).map_err(|e| e.to_string())?;
+            file.sync_all().map_err(|e| e.to_string())?;
+        }
+        #[cfg(not(unix))]
+        {
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&dest_path)
+                .map_err(|e| e.to_string())?;
+            std::io::Write::write_all(&mut file, &key_bytes).map_err(|e| e.to_string())?;
+            file.sync_all().map_err(|e| e.to_string())?;
+        }
+
+        let meta = std::fs::metadata(&dest_path).map_err(|e| e.to_string())?;
+        let name = dest_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or(filename);
+
+        Ok(Some(SelectedFileInfo {
+            path: dest_path.to_string_lossy().to_string(),
+            name,
+            size: meta.len(),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn select_vault_sources_dialog() -> Result<Vec<SelectedFileInfo>, String> {
+    if let Some(paths) = rfd::FileDialog::new().pick_files() {
+        let mut list = Vec::new();
+        for p in paths {
+            let meta = std::fs::metadata(&p).map_err(|e| e.to_string())?;
+            let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            list.push(SelectedFileInfo {
+                path: p.to_string_lossy().to_string(),
+                name,
+                size: meta.len(),
+            });
+        }
+        Ok(list)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+#[tauri::command]
+pub fn select_vault_source_folder_dialog() -> Result<Option<SelectedFileInfo>, String> {
+    if let Some(path) = rfd::FileDialog::new().pick_folder() {
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.to_string_lossy().to_string());
+        Ok(Some(SelectedFileInfo {
+            path: path.to_string_lossy().to_string(),
+            name,
+            // Folder size is resolved during vault packaging; 0 = "not computed".
+            size: 0,
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn select_vault_dialog() -> Result<Option<SelectedFileInfo>, String> {
+    if let Some(path) = rfd::FileDialog::new()
+        .add_filter("MirageX Cyber Vault", &["wvault", "wraith"])
+        .pick_file()
+    {
+        let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+        let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        Ok(Some(SelectedFileInfo {
+            path: path.to_string_lossy().to_string(),
+            name,
+            size: meta.len(),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn create_vault_cmd(
+    source_paths: Vec<String>,
+    output_path: Option<String>,
+    password: Option<String>,
+    keyfile_path: Option<String>,
+    suite_id: Option<u8>,
+) -> Result<String, String> {
+    let pwd_str = password.unwrap_or_default();
+    let pwd_bytes = pwd_str.as_bytes();
+
+    let kf_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
+        Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
+        _ => Vec::new(),
+    };
+
+    if pwd_bytes.is_empty() && kf_paths.is_empty() {
+        return Err("A password or at least one keyfile must be provided".to_string());
+    }
+
+    let sources: Vec<PathBuf> = source_paths.into_iter().map(PathBuf::from).collect();
+    if sources.is_empty() {
+        return Err("No source files selected".to_string());
+    }
+
+    let out_p = match output_path {
+        Some(p) => PathBuf::from(p),
+        None => {
+            if let Some(dest) = rfd::FileDialog::new()
+                .set_file_name("secure_vault.wvault")
+                .add_filter("Cyber Vault", &["wvault", "wraith"])
+                .save_file()
+            {
+                dest
+            } else {
+                return Err("Vault creation cancelled: no destination picked".to_string());
+            }
+        }
+    };
+
+    let suite = match suite_id {
+        Some(id) => PqcSuite::from_u8(id).map_err(|e| e.to_string())?,
+        None => PqcSuite::MlKem768,
+    };
+
+    crate::vault::create_vault(&out_p, &sources, pwd_bytes, &kf_paths, suite)?;
+    Ok(out_p.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn open_vault_cmd(
+    vault_path: String,
+    password: Option<String>,
+    keyfile_path: Option<String>,
+) -> Result<crate::vault::VaultSessionInfo, String> {
+    let pwd_str = password.unwrap_or_default();
+    let pwd_bytes = pwd_str.as_bytes();
+
+    let kf_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
+        Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
+        _ => Vec::new(),
+    };
+
+    if pwd_bytes.is_empty() && kf_paths.is_empty() {
+        return Err("A password or keyfile must be provided".to_string());
+    }
+
+    let v_path = Path::new(&vault_path);
+    crate::vault::open_vault(v_path, pwd_bytes, &kf_paths)
+}
+
+#[tauri::command]
+pub fn list_vault_entries_cmd(session_id: String) -> Result<Vec<crate::vault::VaultEntryInfo>, String> {
+    crate::vault::list_vault_entries(&session_id)
+}
+
+#[tauri::command]
+pub fn extract_vault_entry_cmd(
+    session_id: String,
+    entry_path: String,
+    destination_dir: Option<String>,
+) -> Result<String, String> {
+    let dest = match destination_dir {
+        Some(d) => PathBuf::from(d),
+        None => {
+            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                folder
+            } else {
+                return Err("Extraction cancelled: no folder selected".to_string());
+            }
+        }
+    };
+    let res = crate::vault::extract_vault_entry(&session_id, &entry_path, &dest)?;
+    Ok(res.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn extract_all_vault_cmd(
+    session_id: String,
+    destination_dir: Option<String>,
+) -> Result<usize, String> {
+    let dest = match destination_dir {
+        Some(d) => PathBuf::from(d),
+        None => {
+            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                folder
+            } else {
+                return Err("Extraction cancelled: no folder selected".to_string());
+            }
+        }
+    };
+    crate::vault::extract_all_vault(&session_id, &dest)
+}
+
+#[tauri::command]
+pub fn close_vault_cmd(session_id: String) -> Result<(), String> {
+    crate::vault::close_vault(&session_id)
+}
+
 /// Atomically commits a temporary file to its final destination, falling back to copy+delete on cross-device links (EXDEV).
 fn commit_file_atomic(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
     if fs::rename(tmp_path, final_path).is_ok() {
@@ -194,14 +437,20 @@ pub fn encrypt_file_cmd(
     input_path: String,
     output_path: Option<String>,
     mut password: String,
+    keyfile_path: Option<String>,
     suite_id: Option<u8>,
     chunk_size_mb: Option<u32>,
     shred_source: bool,
     shred_mode: Option<String>,
     shred_passes: Option<u8>,
 ) -> Result<EncryptionResult, String> {
-    if password.is_empty() {
-        return Err("Password cannot be empty".to_string());
+    let keyfile_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
+        Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
+        _ => Vec::new(),
+    };
+
+    if password.is_empty() && keyfile_paths.is_empty() {
+        return Err("A password or at least one keyfile must be provided".to_string());
     }
 
     let in_p = Path::new(&input_path);
@@ -274,18 +523,18 @@ pub fn encrypt_file_cmd(
         .open(&tmp_out_path)
         .map_err(|e| e.to_string())?;
 
+    let effective_password = crate::crypto::keyfile::apply_keyfile_paths(password.as_bytes(), &keyfile_paths)?;
+    password.zeroize();
+
     let start = Instant::now();
     let total_encrypted_res = encrypt_stream(
         in_file,
         &mut tmp_file,
-        password.as_bytes(),
+        &effective_password,
         meta.size,
         options,
         |_| {},
     );
-
-    // Scrub password string
-    password.zeroize();
 
     let total_encrypted = match total_encrypted_res {
         Ok(bytes) => bytes,
@@ -351,12 +600,18 @@ pub fn decrypt_file_cmd(
     input_path: String,
     output_path: Option<String>,
     mut password: String,
+    keyfile_path: Option<String>,
     shred_source: bool,
     shred_mode: Option<String>,
     shred_passes: Option<u8>,
 ) -> Result<DecryptionResult, String> {
-    if password.is_empty() {
-        return Err("Password cannot be empty".to_string());
+    let keyfile_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
+        Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
+        _ => Vec::new(),
+    };
+
+    if password.is_empty() && keyfile_paths.is_empty() {
+        return Err("A password or at least one keyfile must be provided".to_string());
     }
 
     let in_p = Path::new(&input_path);
@@ -391,11 +646,14 @@ pub fn decrypt_file_cmd(
         .open(&tmp_out_path)
         .map_err(|e| e.to_string())?;
 
+    let effective_password = crate::crypto::keyfile::apply_keyfile_paths(password.as_bytes(), &keyfile_paths)?;
+    password.zeroize();
+
     let start = Instant::now();
     let decrypt_res: Result<Manifest, _> = decrypt_stream(
         in_file,
         &mut tmp_file,
-        password.as_bytes(),
+        &effective_password,
         DecryptOptions::default(),
         |_| {},
     );

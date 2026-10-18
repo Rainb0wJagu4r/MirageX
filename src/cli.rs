@@ -36,6 +36,10 @@ pub fn run_cli() -> bool {
             handle_shred(&args[2..]);
             true
         }
+        "keyfile" => {
+            handle_keyfile(&args[2..]);
+            true
+        }
         "bench" => {
             handle_bench();
             true
@@ -70,6 +74,7 @@ USAGE:
     miragex                               Launch Desktop GUI
     miragex encrypt <file> [options]
     miragex decrypt <file.wraith> [options]
+    miragex keyfile generate <output> [--size <bytes>]
     miragex inspect <file.wraith>
     miragex shred <file> [--passes <N>] [--mode <hdd|ssd>]
     miragex bench
@@ -77,6 +82,7 @@ USAGE:
 OPTIONS:
     -p, --password <PASS>      Password (visible in process list; prefer interactive prompt)
     --password-stdin           Read password securely from standard input
+    -k, --keyfile <PATH>       VeraCrypt/Arcanum compatible Keyfile for 2FA or keyfile-only auth
     -o, --output <PATH>        Custom output destination path
     --pqc <768|1024>           PQC Suite (default: 768)
     --chunk-size <MB>          Streaming chunk size in MB (default: 16)
@@ -87,7 +93,7 @@ OPTIONS:
 "#);
 }
 
-fn get_password(args: &mut [String], from_stdin: bool) -> String {
+fn get_password(args: &mut [String], from_stdin: bool, keyfile_present: bool) -> String {
     if from_stdin {
         let mut line = String::new();
         let stdin = io::stdin();
@@ -111,11 +117,72 @@ fn get_password(args: &mut [String], from_stdin: bool) -> String {
         i += 1;
     }
 
+    let prompt_msg = if keyfile_present {
+        "🔑 Enter master password (press Enter for keyfile-only): "
+    } else {
+        "🔑 Enter master password: "
+    };
+
     // Prompt interactively with hidden terminal input
-    match rpassword::prompt_password("🔑 Enter master password: ") {
+    match rpassword::prompt_password(prompt_msg) {
         Ok(pass) => pass,
         Err(e) => {
             eprintln!("Error reading password: {}", e);
+            process::exit(1);
+        }
+    }
+}
+
+fn handle_keyfile(args: &[String]) {
+    if args.is_empty() || args[0] != "generate" {
+        eprintln!("Usage: miragex keyfile generate <output_file> [--size <bytes>]");
+        process::exit(1);
+    }
+
+    let dest = if args.len() > 1 && !args[1].starts_with('-') {
+        args[1].clone()
+    } else {
+        "miragex.key".to_string()
+    };
+
+    let mut size = 64;
+    let mut i = 1;
+    while i < args.len() {
+        if (args[i] == "-s" || args[i] == "--size") && i + 1 < args.len() {
+            if let Ok(s) = args[i + 1].parse() {
+                size = s;
+            }
+            i += 1;
+        }
+        i += 1;
+    }
+
+    match crate::crypto::keyfile::generate_keyfile(size, None) {
+        Ok(bytes) => {
+            // Keyfiles are authentication factors: restrict to the owner (0600).
+            #[cfg(unix)]
+            let write_res = {
+                use std::io::Write;
+                use std::os::unix::fs::OpenOptionsExt;
+                std::fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .mode(0o600)
+                    .open(&dest)
+                    .and_then(|mut f| f.write_all(&bytes))
+            };
+            #[cfg(not(unix))]
+            let write_res = std::fs::write(&dest, &bytes);
+
+            if let Err(e) = write_res {
+                eprintln!("Failed to save keyfile: {}", e);
+                process::exit(1);
+            }
+            println!("🎲 Keyfile generated successfully: '{}' ({} bytes)", dest, size);
+        }
+        Err(e) => {
+            eprintln!("Keyfile generation failed: {}", e);
             process::exit(1);
         }
     }
@@ -129,6 +196,7 @@ fn handle_encrypt(args: &mut [String]) {
 
     let input_path = args[0].clone();
     let mut output_path = None;
+    let mut keyfile_path = None;
     let mut suite_id = Some(1u8); // Default 768
     let mut chunk_size_mb = Some(16u32);
     let mut shred = false;
@@ -140,6 +208,12 @@ fn handle_encrypt(args: &mut [String]) {
     while i < args.len() {
         match args[i].as_str() {
             "--password-stdin" => from_stdin = true,
+            "-k" | "--keyfile" => {
+                if i + 1 < args.len() {
+                    keyfile_path = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
             "-o" | "--output" => {
                 if i + 1 < args.len() {
                     output_path = Some(args[i + 1].clone());
@@ -180,14 +254,15 @@ fn handle_encrypt(args: &mut [String]) {
         i += 1;
     }
 
-    let password = get_password(args, from_stdin);
-    if password.is_empty() {
-        eprintln!("Error: Password cannot be empty.");
+    let keyfile_present = keyfile_path.is_some();
+    let password = get_password(args, from_stdin, keyfile_present);
+    if password.is_empty() && !keyfile_present {
+        eprintln!("Error: Password or keyfile is required.");
         process::exit(1);
     }
 
     println!("🔒 Encrypting '{}' using MirageX (WRAITH v4)...", input_path);
-    match encrypt_file_cmd(input_path, output_path, password, suite_id, chunk_size_mb, shred, shred_mode, shred_passes) {
+    match encrypt_file_cmd(input_path, output_path, password, keyfile_path, suite_id, chunk_size_mb, shred, shred_mode, shred_passes) {
         Ok(res) => {
             println!("✅ Encryption successful!");
             println!("   Output:         {}", res.output_path);
@@ -212,6 +287,7 @@ fn handle_decrypt(args: &mut [String]) {
 
     let input_path = args[0].clone();
     let mut output_path = None;
+    let mut keyfile_path = None;
     let mut shred = false;
     let mut shred_mode = None;
     let mut shred_passes = None;
@@ -221,6 +297,12 @@ fn handle_decrypt(args: &mut [String]) {
     while i < args.len() {
         match args[i].as_str() {
             "--password-stdin" => from_stdin = true,
+            "-k" | "--keyfile" => {
+                if i + 1 < args.len() {
+                    keyfile_path = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
             "-o" | "--output" => {
                 if i + 1 < args.len() {
                     output_path = Some(args[i + 1].clone());
@@ -245,14 +327,15 @@ fn handle_decrypt(args: &mut [String]) {
         i += 1;
     }
 
-    let password = get_password(args, from_stdin);
-    if password.is_empty() {
-        eprintln!("Error: Password cannot be empty.");
+    let keyfile_present = keyfile_path.is_some();
+    let password = get_password(args, from_stdin, keyfile_present);
+    if password.is_empty() && !keyfile_present {
+        eprintln!("Error: Password or keyfile is required.");
         process::exit(1);
     }
 
     println!("🔓 Decrypting and verifying WRAITH container '{}'...", input_path);
-    match decrypt_file_cmd(input_path, output_path, password, shred, shred_mode, shred_passes) {
+    match decrypt_file_cmd(input_path, output_path, password, keyfile_path, shred, shred_mode, shred_passes) {
         Ok(res) => {
             println!("✅ Decryption & Authenticity Verified!");
             println!("   Restored File: {}", res.output_path);

@@ -122,6 +122,17 @@ fn main() {
             miragex::commands::select_wraith_dialog,
             miragex::commands::get_initial_file_cmd,
             miragex::commands::setup_context_menu_cmd,
+            miragex::commands::select_keyfile_dialog,
+            miragex::commands::generate_keyfile_cmd,
+            miragex::commands::select_vault_sources_dialog,
+            miragex::commands::select_vault_source_folder_dialog,
+            miragex::commands::select_vault_dialog,
+            miragex::commands::create_vault_cmd,
+            miragex::commands::open_vault_cmd,
+            miragex::commands::list_vault_entries_cmd,
+            miragex::commands::extract_vault_entry_cmd,
+            miragex::commands::extract_all_vault_cmd,
+            miragex::commands::close_vault_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running MirageX Tauri desktop application");
