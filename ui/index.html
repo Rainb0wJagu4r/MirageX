@@ -68,6 +68,11 @@
         <span class="nav-icon">💡</span>
         <span class="nav-text">GUÍA & AYUDA</span>
       </button>
+      <button class="nav-tab beta-tab" data-tab="beta">
+        <span class="nav-icon">⚡</span>
+        <span class="nav-text">BETA LABS</span>
+        <span class="badge-beta-pill">NUEVO</span>
+      </button>
     </nav>
 
     <!-- Main Workspace -->
@@ -776,7 +781,362 @@
             </div>
           </div>
         </div>
-    </main>
+      </section>
+
+      <!-- 8. BETA LABS PANEL (FUNCIONES EXPERIMENTALES) -->
+      <section id="tab-beta" class="tab-content">
+        <div class="beta-scrollable">
+          <!-- Beta Hero Banner -->
+          <div class="beta-hero-card">
+            <div class="beta-hero-header">
+              <span class="badge pink">⚡ MIRAGEX EXPERIMENTAL LABS</span>
+              <span class="badge purple">STATUS: ACTIVE BETA</span>
+              <span class="badge navy">FIPS 203 POST-QUANTUM</span>
+            </div>
+            <h2 class="beta-hero-title">Funciones de Siguiente Generación // <span class="highlight-pink-text">BETA LABS</span></h2>
+            <p class="beta-hero-desc">
+              Herramientas avanzadas de automatización, integración con el sistema operativo y anonimización para respaldos remotos (Restic / Borg / rsync).
+            </p>
+          </div>
+
+          <!-- Feature 1: Carpeta Vigilada -->
+          <div class="beta-card">
+            <div class="beta-card-header">
+              <div class="beta-card-icon">📁</div>
+              <div>
+                <h3>1. CARPETA VIGILADA // AUTO-CIFRADO EN TIEMPO REAL</h3>
+                <p class="beta-card-subtitle">Cualquier archivo nuevo que caiga en esta carpeta se cifra automáticamente al instante y el original se tritura de forma segura.</p>
+              </div>
+              <div class="beta-status-indicator">
+                <span id="watcher-badge-status" class="badge gray">⚪ INACTIVO</span>
+              </div>
+            </div>
+
+            <div class="beta-card-body">
+              <div class="form-grid-2">
+                <div class="input-group">
+                  <label for="watch-folder-input">Directorio Vigilado (Carpeta Origen):</label>
+                  <div class="input-with-button">
+                    <input type="text" id="watch-folder-input" placeholder="Selecciona la carpeta a monitorear..." readonly>
+                    <button type="button" class="btn-secondary" id="btn-browse-watch-folder">📂 Explorar</button>
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label for="watch-output-input">Directorio de Salida Cifrada (.wraith):</label>
+                  <div class="input-with-button">
+                    <input type="text" id="watch-output-input" placeholder="Selecciona la carpeta de destino..." readonly>
+                    <button type="button" class="btn-secondary" id="btn-browse-watch-output">📂 Explorar</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-grid-3" style="margin-top: 12px;">
+                <div class="input-group">
+                  <label for="watch-password">Contraseña en Memoria (Sesión Activa):</label>
+                  <div class="input-with-button">
+                    <input type="password" id="watch-password" placeholder="Contraseña para auto-cifrar...">
+                    <button type="button" class="btn-icon" id="btn-toggle-watch-pass" title="Mostrar/ocultar">👁️</button>
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label>Keyfile Opcional (Arcanum/VeraCrypt):</label>
+                  <button type="button" class="btn-secondary full-width" id="btn-add-watch-keyfile">🔑 Seleccionar Keyfile</button>
+                  <div id="watch-keyfiles-chip" class="keyfile-chip-container" style="margin-top: 5px;"></div>
+                </div>
+
+                <div class="input-group">
+                  <label for="watch-suite-select">Algoritmo Post-Cuántico:</label>
+                  <select id="watch-suite-select" class="hud-select">
+                    <option value="768" selected>ML-KEM-768 (NIST Level 3 - Rápido)</option>
+                    <option value="1024">ML-KEM-1024 (NIST Level 5 - Máximo)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="beta-toggle-row" style="margin-top: 12px;">
+                <label class="hud-checkbox-label">
+                  <input type="checkbox" id="watch-shred-checkbox" checked>
+                  <span class="custom-checkbox"></span>
+                  <span><strong>Triturar de forma irrecuperable el archivo original</strong> tras cifrarlo (CSPRNG Wipe)</span>
+                </label>
+              </div>
+
+              <div class="beta-actions-row">
+                <button type="button" class="btn-primary" id="btn-start-watch">
+                  🟢 INICIAR VIGILANCIA EN SEGUNDO PLANO
+                </button>
+                <button type="button" class="btn-danger" id="btn-stop-watch" style="display: none;">
+                  ⏹️ DETENER VIGILANCIA
+                </button>
+              </div>
+
+              <!-- Terminal Event Console -->
+              <div class="beta-console-wrapper">
+                <div class="beta-console-header">
+                  <span>TERMINAL DE EVENTOS // AUTO-WATCHER</span>
+                  <span id="watcher-count-badge">Archivos procesados: 0</span>
+                </div>
+                <div class="beta-console-log" id="watcher-log-terminal">
+                  [SISTEMA] Watcher inicializado en espera de configuración...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature 2: Cifrar antes de Respaldar -->
+          <div class="beta-card">
+            <div class="beta-card-header">
+              <div class="beta-card-icon">🗄️</div>
+              <div>
+                <h3>2. CIFRAR ANTES DE RESPALDAR // RESTIC, BORG & RSYNC READY</h3>
+                <p class="beta-card-subtitle">Anonimiza nombres de archivo mediante hashes reproducibles ([sha256].wraith) con un manifiesto cifrado maestro. Sube respaldos a la nube sin filtrar metadatos y con deduplicación incremental intacta.</p>
+              </div>
+            </div>
+
+            <div class="beta-card-body">
+              <div class="beta-subtabs">
+                <button type="button" class="beta-subtab active" id="btn-subtab-backup-create">🔒 Crear Respaldo Cifrado</button>
+                <button type="button" class="beta-subtab" id="btn-subtab-backup-restore">🔓 Restaurar Respaldo</button>
+              </div>
+
+              <!-- Sub-view 1: Crear Respaldo -->
+              <div id="subview-backup-create">
+                <div class="form-grid-2" style="margin-top: 15px;">
+                  <div class="input-group">
+                    <label for="backup-src-input">Carpeta a Respaldar (Origen):</label>
+                    <div class="input-with-button">
+                      <input type="text" id="backup-src-input" placeholder="Carpeta de documentos / fotos / datos..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-backup-src">📂 Explorar</button>
+                    </div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="backup-dst-input">Directorio de Respaldo Cifrado (Destino):</label>
+                    <div class="input-with-button">
+                      <input type="text" id="backup-dst-input" placeholder="Carpeta donde se guardarán los .wraith anonimizados..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-backup-dst">📂 Explorar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-grid-2" style="margin-top: 12px;">
+                  <div class="input-group">
+                    <label for="backup-password">Contraseña de Protección del Respaldo:</label>
+                    <input type="password" id="backup-password" placeholder="Contraseña maestra del respaldo...">
+                  </div>
+
+                  <div class="input-group">
+                    <label>Keyfile Complementario (Opcional):</label>
+                    <button type="button" class="btn-secondary full-width" id="btn-add-backup-keyfile">🔑 Añadir Keyfile 2FA</button>
+                    <div id="backup-keyfiles-chip" class="keyfile-chip-container" style="margin-top: 5px;"></div>
+                  </div>
+                </div>
+
+                <div class="beta-feature-pill-banner" style="margin-top: 12px;">
+                  <span class="pill-dot pink"></span>
+                  <span><strong>Modo Blinded Hashes Activado:</strong> Los archivos reciben nombres criptográficos opacos como <code>d5b3a...7a.wraith</code>. Ni Google Drive, Dropbox, restic ni borg conocerán los nombres ni extensiones de tus documentos.</span>
+                </div>
+
+                <button type="button" class="btn-primary" id="btn-execute-backup" style="margin-top: 15px;">
+                  🚀 GENERAR RESPALDO CRIPTOGRÁFICO ANONIMIZADO
+                </button>
+
+                <div id="backup-result-card" class="result-box" style="display: none; margin-top: 15px;"></div>
+              </div>
+
+              <!-- Sub-view 2: Restaurar Respaldo -->
+              <div id="subview-backup-restore" style="display: none;">
+                <div class="form-grid-2" style="margin-top: 15px;">
+                  <div class="input-group">
+                    <label for="restore-src-input">Carpeta del Respaldo Cifrado:</label>
+                    <div class="input-with-button">
+                      <input type="text" id="restore-src-input" placeholder="Carpeta que contiene backup_manifest.wraith..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-restore-src">📂 Explorar</button>
+                    </div>
+                  </div>
+
+                  <div class="input-group">
+                    <label for="restore-dst-input">Directorio donde Restaurar Archivos:</label>
+                    <div class="input-with-button">
+                      <input type="text" id="restore-dst-input" placeholder="Carpeta de destino para los archivos descifrados..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-restore-dst">📂 Explorar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-grid-2" style="margin-top: 12px;">
+                  <div class="input-group">
+                    <label for="restore-password">Contraseña del Respaldo:</label>
+                    <input type="password" id="restore-password" placeholder="Contraseña usada al respaldar...">
+                  </div>
+
+                  <div class="input-group">
+                    <label>Keyfile del Respaldo (Si se utilizó):</label>
+                    <button type="button" class="btn-secondary full-width" id="btn-add-restore-keyfile">🔑 Cargar Keyfile</button>
+                    <div id="restore-keyfiles-chip" class="keyfile-chip-container" style="margin-top: 5px;"></div>
+                  </div>
+                </div>
+
+                <button type="button" class="btn-primary" id="btn-execute-restore" style="margin-top: 15px;">
+                  📥 RESTAURAR ÁRBOL ORIGINAL DE ARCHIVOS
+                </button>
+
+                <div id="restore-result-card" class="result-box" style="display: none; margin-top: 15px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature 3: Menú Contextual Multiplataforma -->
+          <div class="beta-card">
+            <div class="beta-card-header">
+              <div class="beta-card-icon">🖱️</div>
+              <div>
+                <h3>3. MENÚ CONTEXTUAL DEL EXPLORADOR // WINDOWS & MACOS</h3>
+                <p class="beta-card-subtitle">Clic derecho sobre cualquier archivo o carpeta para Cifrar, Descifrar o Inspeccionar directamente sin abrir la interfaz primero.</p>
+              </div>
+            </div>
+
+            <div class="beta-card-body">
+              <div class="context-features-list">
+                <div class="context-feature-item">
+                  <span class="step-check">✓</span>
+                  <div>
+                    <strong>En Windows Explorer:</strong> Clic derecho en archivos/carpetas &rarr; <em>Cifrar con MirageX (Post-Quantum)</em>. En archivos <code>.wraith</code> &rarr; <em>Descifrar</em> e <em>Inspeccionar</em> con icono oficial <code>nobug.ico</code>.
+                  </div>
+                </div>
+                <div class="context-feature-item">
+                  <span class="step-check">✓</span>
+                  <div>
+                    <strong>En macOS Finder:</strong> Acciones Rápidas y Servicios de Finder registrados para Cifrar, Descifrar e Inspeccionar contenedores WRAITH.
+                  </div>
+                </div>
+              </div>
+
+              <div class="beta-actions-row" style="margin-top: 15px;">
+                <button type="button" class="btn-primary" id="btn-install-context-menu">
+                  ⚡ INSTALAR / ACTUALIZAR EN EL EXPLORADOR O FINDER
+                </button>
+                <button type="button" class="btn-secondary" id="btn-uninstall-context-menu">
+                  🗑️ Desinstalar Menú Contextual
+                </button>
+                <button type="button" class="btn-secondary" id="btn-export-context-scripts">
+                  💾 Exportar Scripts (.bat / .reg / .sh)
+                </button>
+              </div>
+
+              <div id="context-scripts-container" class="beta-console-wrapper" style="display: none; margin-top: 15px;">
+                <div class="beta-console-header">
+                  <span>SCRIPTS DE REGISTRO PORTABLES</span>
+                  <button type="button" class="btn-icon-tiny" id="btn-close-context-scripts">&times;</button>
+                </div>
+                <div class="beta-scripts-tabs">
+                  <button type="button" class="btn-mini-tab active" id="tab-script-bat">register.bat (Windows)</button>
+                  <button type="button" class="btn-mini-tab" id="tab-script-reg">register.reg (Windows)</button>
+                  <button type="button" class="btn-mini-tab" id="tab-script-sh">register.sh (Linux)</button>
+                </div>
+                <pre class="beta-script-code" id="context-script-code"></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature 4: Vista Previa de la Cabecera -->
+          <div class="beta-card">
+            <div class="beta-card-header">
+              <div class="beta-card-icon">👁️</div>
+              <div>
+                <h3>4. VISTA PREVIA DE CABECERA // QUICK LOOK & EXPLORER</h3>
+                <p class="beta-card-subtitle">Inspecciona y verifica instantáneamente el nivel de seguridad PQC, versión WRAITH y parámetros Argon2id de cualquier archivo .wraith sin pedir contraseña.</p>
+              </div>
+            </div>
+
+            <div class="beta-card-body">
+              <div class="form-grid-2">
+                <div class="input-group">
+                  <label for="preview-file-input">Seleccionar o Arrastrar Contenedor .wraith:</label>
+                  <div class="input-with-button">
+                    <input type="text" id="preview-file-input" placeholder="Ruta a inspeccionar..." readonly>
+                    <button type="button" class="btn-secondary" id="btn-browse-preview-file">🔍 Buscar .wraith</button>
+                  </div>
+                </div>
+
+                <div class="input-group" style="display: flex; align-items: flex-end;">
+                  <button type="button" class="btn-secondary full-width" id="btn-install-quicklook-action">
+                    👁️ Registrar Acción Rápida Quick Look en macOS
+                  </button>
+                </div>
+              </div>
+
+              <!-- Preview Card Result -->
+              <div id="preview-display-card" class="preview-inspection-card" style="display: none; margin-top: 15px;">
+                <div class="preview-inspection-header">
+                  <div class="preview-title-box">
+                    <span class="preview-magic-badge" id="preview-badge-magic">WRAITH v4</span>
+                    <h4 id="preview-filename-title">archivo.wraith</h4>
+                  </div>
+                  <span class="badge green" id="preview-badge-security">NIST FIPS 203 VALIDADO</span>
+                </div>
+
+                <div class="preview-stats-grid">
+                  <div class="preview-stat-item">
+                    <span class="stat-label">SUITE POST-CUÁNTICA</span>
+                    <strong class="stat-value color-pink" id="preview-suite-val">ML-KEM-768</strong>
+                  </div>
+                  <div class="preview-stat-item">
+                    <span class="stat-label">KDF ARGON2ID</span>
+                    <strong class="stat-value" id="preview-argon-val">64 MB RAM (t=3, p=4)</strong>
+                  </div>
+                  <div class="preview-stat-item">
+                    <span class="stat-label">STREAMING CHUNKS</span>
+                    <strong class="stat-value" id="preview-chunk-val">16.0 MB (AEAD GCM)</strong>
+                  </div>
+                  <div class="preview-stat-item">
+                    <span class="stat-label">TAMAÑO ARCHIVO</span>
+                    <strong class="stat-value" id="preview-size-val">0.0 MB</strong>
+                  </div>
+                </div>
+
+                <pre class="preview-ascii-terminal" id="preview-ascii-box"></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature 5: Integración en Linux -->
+          <div class="beta-card">
+            <div class="beta-card-header">
+              <div class="beta-card-icon">🐧</div>
+              <div>
+                <h3>5. ASOCIACIÓN DE ARCHIVO & ICONOS EN LINUX</h3>
+                <p class="beta-card-subtitle">Registra el tipo MIME application/x-wraith, el acceso de escritorio miragex.desktop e instala el icono oficial nobug.png en el gestor de archivos de Linux.</p>
+              </div>
+            </div>
+
+            <div class="beta-card-body">
+              <div class="linux-info-banner">
+                <div class="linux-info-col">
+                  <strong>XML Tipo MIME:</strong> <code>~/.local/share/mime/packages/miragex-wraith.xml</code>
+                </div>
+                <div class="linux-info-col">
+                  <strong>Acceso Escritorio:</strong> <code>~/.local/share/applications/miragex.desktop</code>
+                </div>
+                <div class="linux-info-col">
+                  <strong>Icono Oficial:</strong> <code>~/.local/share/icons/hicolor/128x128/mimetypes/application-x-wraith.png</code>
+                </div>
+              </div>
+
+              <div class="beta-actions-row" style="margin-top: 15px;">
+                <button type="button" class="btn-primary" id="btn-install-linux-integration">
+                  🐧 INSTALAR ASOCIACIÓN MIME Y ESCRITORIO EN LINUX
+                </button>
+                <button type="button" class="btn-secondary" id="btn-export-linux-sh">
+                  📦 Exportar Script Instalador (install_linux_mime.sh)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
     <!-- Persistent Application Footer -->
     <footer class="hud-footer">

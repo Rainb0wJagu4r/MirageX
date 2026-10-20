@@ -146,6 +146,18 @@ fn main() {
             miragex::commands::updater::restart_app_cmd,
             miragex::commands::updater::get_changelog_history_cmd,
             miragex::commands::open_external_url_cmd,
+            miragex::commands::start_folder_watcher_cmd,
+            miragex::commands::stop_folder_watcher_cmd,
+            miragex::commands::get_watcher_status_cmd,
+            miragex::commands::create_backup_archive_cmd,
+            miragex::commands::restore_backup_archive_cmd,
+            miragex::commands::inspect_header_for_preview_cmd,
+            miragex::commands::setup_quicklook_preview_cmd,
+            miragex::commands::setup_linux_desktop_integration_cmd,
+            miragex::commands::get_linux_integration_status_cmd,
+            miragex::commands::remove_context_menu_cmd,
+            miragex::commands::export_context_menu_scripts_cmd,
+            miragex::commands::select_folder_dialog,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running MirageX Tauri desktop application");

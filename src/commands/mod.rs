@@ -1115,6 +1115,13 @@ done</string>
                 "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>"
             );
 
+            // 3. Inspeccionar Contenedor WRAITH
+            create_workflow(
+                "Inspeccionar Contenedor WRAITH",
+                "Inspeccionar Contenedor WRAITH",
+                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>"
+            );
+
             let _ = std::process::Command::new("/System/Library/CoreServices/pbs")
                 .arg("-flush")
                 .output();
@@ -1131,11 +1138,227 @@ done</string>
     }
 }
 
+pub mod linux_mime;
+pub mod preview;
 pub mod updater;
+
 pub use updater::{
     check_app_update_cmd, get_changelog_history_cmd, install_app_update_cmd, restart_app_cmd,
     ChangelogEntry, UpdateCheckResult, UpdateProgress,
 };
+
+#[tauri::command]
+pub fn start_folder_watcher_cmd(config: crate::watcher::WatcherConfig) -> Result<String, String> {
+    crate::watcher::start_folder_watcher(config)
+}
+
+#[tauri::command]
+pub fn stop_folder_watcher_cmd() -> Result<String, String> {
+    crate::watcher::stop_folder_watcher()
+}
+
+#[tauri::command]
+pub fn get_watcher_status_cmd() -> crate::watcher::WatcherStatus {
+    crate::watcher::get_watcher_status()
+}
+
+#[tauri::command]
+pub fn create_backup_archive_cmd(
+    source_path: String,
+    dest_path: String,
+    password: String,
+    keyfile_paths: Option<Vec<String>>,
+    suite: Option<String>,
+) -> Result<crate::backup::BackupResult, String> {
+    let pqc_suite = match suite.as_deref() {
+        Some("1024") => PqcSuite::MlKem1024,
+        _ => PqcSuite::MlKem768,
+    };
+    crate::backup::create_backup_archive(
+        &source_path,
+        &dest_path,
+        password,
+        &keyfile_paths.unwrap_or_default(),
+        pqc_suite,
+    )
+}
+
+#[tauri::command]
+pub fn restore_backup_archive_cmd(
+    backup_path: String,
+    restore_path: String,
+    password: String,
+    keyfile_paths: Option<Vec<String>>,
+) -> Result<crate::backup::RestoreResult, String> {
+    crate::backup::restore_backup_archive(
+        &backup_path,
+        &restore_path,
+        password,
+        &keyfile_paths.unwrap_or_default(),
+    )
+}
+
+#[tauri::command]
+pub fn inspect_header_for_preview_cmd(file_path: String) -> Result<preview::HeaderPreviewInfo, String> {
+    preview::inspect_header_for_preview(&file_path)
+}
+
+#[tauri::command]
+pub fn setup_quicklook_preview_cmd() -> Result<String, String> {
+    preview::setup_quicklook_preview()
+}
+
+#[tauri::command]
+pub fn setup_linux_desktop_integration_cmd() -> Result<String, String> {
+    linux_mime::setup_linux_desktop_integration()
+}
+
+#[tauri::command]
+pub fn get_linux_integration_status_cmd() -> linux_mime::LinuxIntegrationStatus {
+    linux_mime::get_linux_integration_status()
+}
+
+#[tauri::command]
+pub fn remove_context_menu_cmd() -> Result<String, String> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let run_reg = |args: &[&str]| {
+            let _ = std::process::Command::new("reg")
+                .args(args)
+                .creation_flags(CREATE_NO_WINDOW)
+                .output();
+        };
+
+        run_reg(&["delete", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt", "/f"]);
+        run_reg(&["delete", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt", "/f"]);
+        run_reg(&["delete", "HKCU\\Software\\Classes\\MirageX.wraith", "/f"]);
+        run_reg(&["delete", "HKCU\\Software\\Classes\\.wraith", "/f"]);
+
+        let _ = std::process::Command::new("ie4uinit.exe")
+            .arg("-show")
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
+
+        Ok("Menú contextual y asociación de .wraith desinstalados de Windows Explorer.".into())
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(home) = std::env::var_os("HOME") {
+            let services_dir = PathBuf::from(home).join("Library/Services");
+            let _ = fs::remove_dir_all(services_dir.join("Cifrar con MirageX (Post-Quantum).workflow"));
+            let _ = fs::remove_dir_all(services_dir.join("Descifrar con MirageX (Post-Quantum).workflow"));
+            let _ = fs::remove_dir_all(services_dir.join("Inspeccionar Contenedor WRAITH.workflow"));
+            let _ = fs::remove_dir_all(services_dir.join("Vista Previa Cabecera WRAITH.workflow"));
+
+            let _ = std::process::Command::new("/System/Library/CoreServices/pbs")
+                .arg("-flush")
+                .output();
+
+            Ok("Servicios y Acciones Rápidas de MirageX desinstalados de macOS Finder.".into())
+        } else {
+            Err("No se pudo resolver el directorio HOME.".into())
+        }
+    }
+
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        Ok("Desinstalación de integración completada.".into())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMenuScripts {
+    pub windows_bat: String,
+    pub windows_reg: String,
+    pub linux_sh: String,
+}
+
+#[tauri::command]
+pub fn export_context_menu_scripts_cmd() -> ContextMenuScripts {
+    let windows_bat = r#"@echo off
+title MirageX - Registro de Menu Contextual e Icono .wraith
+set "APP_DIR=%~dp0"
+set "EXE_PATH=%APP_DIR%miragex.exe"
+set "ICO_PATH=%APP_DIR%nobug.ico"
+
+echo [*] Registrando Menu Contextual de Cifrado MirageX...
+reg add "HKCU\Software\Classes\*\shell\MirageX.Encrypt" /ve /d "Cifrar con MirageX (Post-Quantum)" /f >nul
+reg add "HKCU\Software\Classes\*\shell\MirageX.Encrypt" /v "Icon" /d "\"%EXE_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\*\shell\MirageX.Encrypt\command" /ve /d "\"%EXE_PATH%\" --gui-encrypt \"%%1\"" /f >nul
+
+reg add "HKCU\Software\Classes\Directory\shell\MirageX.Encrypt" /ve /d "Cifrar con MirageX (Post-Quantum)" /f >nul
+reg add "HKCU\Software\Classes\Directory\shell\MirageX.Encrypt" /v "Icon" /d "\"%EXE_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\Directory\shell\MirageX.Encrypt\command" /ve /d "\"%EXE_PATH%\" --gui-encrypt \"%%1\"" /f >nul
+
+reg add "HKCU\Software\Classes\.wraith" /ve /d "MirageX.wraith" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith" /ve /d "WRAITH Encrypted Container" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\DefaultIcon" /ve /d "\"%ICO_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\open" /ve /d "Descifrar con MirageX (Post-Quantum)" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\open" /v "Icon" /d "\"%ICO_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\open\command" /ve /d "\"%EXE_PATH%\" --gui-decrypt \"%%1\"" /f >nul
+
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\inspect" /ve /d "Inspeccionar Contenedor WRAITH" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\inspect" /v "Icon" /d "\"%ICO_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\inspect\command" /ve /d "\"%EXE_PATH%\" --gui-inspect \"%%1\"" /f >nul
+
+ie4uinit.exe -show >nul 2>&1
+echo [OK] Menu contextual e icono de MirageX registrados con exito!
+pause
+"#.into();
+
+    let windows_reg = r#"Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\*\shell\MirageX.Encrypt]
+@="Cifrar con MirageX (Post-Quantum)"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\MirageX.Encrypt]
+@="Cifrar con MirageX (Post-Quantum)"
+
+[HKEY_CURRENT_USER\Software\Classes\.wraith]
+@="MirageX.wraith"
+
+[HKEY_CURRENT_USER\Software\Classes\MirageX.wraith]
+@="WRAITH Encrypted Container"
+"#.into();
+
+    let linux_sh = r#"#!/usr/bin/env bash
+set -e
+echo "[*] Instalando asociacion MIME y accesos de MirageX en Linux..."
+mkdir -p ~/.local/share/mime/packages ~/.local/share/applications ~/.local/share/icons/hicolor/128x128/mimetypes
+cat << 'EOF' > ~/.local/share/mime/packages/miragex-wraith.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <mime-type type="application/x-wraith">
+        <comment>Contenedor Cifrado Post-Cuantico WRAITH</comment>
+        <glob pattern="*.wraith"/>
+        <icon name="application-x-wraith"/>
+    </mime-type>
+</mime-info>
+EOF
+
+update-mime-database ~/.local/share/mime 2>/dev/null || true
+update-desktop-database ~/.local/share/applications 2>/dev/null || true
+echo "[OK] Integracion Linux completada con exito!"
+"#.into();
+
+    ContextMenuScripts {
+        windows_bat,
+        windows_reg,
+        linux_sh,
+    }
+}
+
+#[tauri::command]
+pub fn select_folder_dialog() -> Result<Option<String>, String> {
+    if let Some(path) = rfd::FileDialog::new().pick_folder() {
+        Ok(Some(path.to_string_lossy().to_string()))
+    } else {
+        Ok(None)
+    }
+}
 
 #[tauri::command]
 pub fn open_external_url_cmd(url: String) -> Result<(), String> {

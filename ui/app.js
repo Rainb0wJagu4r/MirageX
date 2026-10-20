@@ -1657,5 +1657,509 @@ function setupUpdaterLogic() {
   setTimeout(() => {
     fetchChangelogAndCheckUpdates(false);
   }, 3000);
+
+  // Initialize Experimental Beta Labs Features
+  initBetaLabs();
+}
+
+function initBetaLabs() {
+  // --- 1. CARPETA VIGILADA ---
+  const inpWatchFolder = document.getElementById('watch-folder-input');
+  const inpWatchOutput = document.getElementById('watch-output-input');
+  const btnBrowseWatchFolder = document.getElementById('btn-browse-watch-folder');
+  const btnBrowseWatchOutput = document.getElementById('btn-browse-watch-output');
+  const inpWatchPass = document.getElementById('watch-password');
+  const btnToggleWatchPass = document.getElementById('btn-toggle-watch-pass');
+  const btnAddWatchKeyfile = document.getElementById('btn-add-watch-keyfile');
+  const watchKeyfilesChip = document.getElementById('watch-keyfiles-chip');
+  const selectWatchSuite = document.getElementById('watch-suite-select');
+  const chkWatchShred = document.getElementById('watch-shred-checkbox');
+  const btnStartWatch = document.getElementById('btn-start-watch');
+  const btnStopWatch = document.getElementById('btn-stop-watch');
+  const badgeWatcherStatus = document.getElementById('watcher-badge-status');
+  const badgeWatcherCount = document.getElementById('watcher-count-badge');
+  const terminalWatcherLog = document.getElementById('watcher-log-terminal');
+
+  let watchKeyfiles = [];
+  let watcherInterval = null;
+
+  btnBrowseWatchFolder?.addEventListener('click', async () => {
+    try {
+      const folder = await invokeBackend('select_folder_dialog');
+      if (folder) inpWatchFolder.value = folder;
+    } catch (e) {
+      showToast(`Error seleccionando carpeta: ${e}`, 'error');
+    }
+  });
+
+  btnBrowseWatchOutput?.addEventListener('click', async () => {
+    try {
+      const folder = await invokeBackend('select_folder_dialog');
+      if (folder) inpWatchOutput.value = folder;
+    } catch (e) {
+      showToast(`Error seleccionando carpeta: ${e}`, 'error');
+    }
+  });
+
+  btnToggleWatchPass?.addEventListener('click', () => {
+    inpWatchPass.type = inpWatchPass.type === 'password' ? 'text' : 'password';
+  });
+
+  btnAddWatchKeyfile?.addEventListener('click', async () => {
+    try {
+      const kf = await invokeBackend('select_keyfile_dialog');
+      if (kf) {
+        watchKeyfiles.push(kf.path);
+        renderWatchKeyfiles();
+      }
+    } catch (e) {
+      showToast(`Error seleccionando keyfile: ${e}`, 'error');
+    }
+  });
+
+  function renderWatchKeyfiles() {
+    if (!watchKeyfilesChip) return;
+    watchKeyfilesChip.innerHTML = '';
+    watchKeyfiles.forEach((path, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'keyfile-chip';
+      const name = path.split('/').pop().split('\\').pop();
+      chip.innerHTML = `<span>🔑 ${name}</span><button type="button" class="chip-remove">&times;</button>`;
+      chip.querySelector('.chip-remove').onclick = () => {
+        watchKeyfiles.splice(idx, 1);
+        renderWatchKeyfiles();
+      };
+      watchKeyfilesChip.appendChild(chip);
+    });
+  }
+
+  btnStartWatch?.addEventListener('click', async () => {
+    const watchDir = inpWatchFolder.value.trim();
+    const outputDir = inpWatchOutput.value.trim();
+    const password = inpWatchPass.value;
+
+    if (!watchDir) {
+      showToast('Por favor selecciona la carpeta a vigilar.', 'warning');
+      return;
+    }
+    if (!outputDir) {
+      showToast('Por favor selecciona la carpeta de salida cifrada.', 'warning');
+      return;
+    }
+    if (!password && watchKeyfiles.length === 0) {
+      showToast('Ingresa una contraseña o keyfile para el auto-cifrado.', 'warning');
+      return;
+    }
+
+    try {
+      btnStartWatch.disabled = true;
+      const res = await invokeBackend('start_folder_watcher_cmd', {
+        config: {
+          watch_dir: watchDir,
+          output_dir: outputDir,
+          password: password,
+          keyfile_paths: watchKeyfiles,
+          suite: selectWatchSuite.value,
+          shred_source: chkWatchShred.checked,
+        }
+      });
+
+      showToast(res, 'success');
+      btnStartWatch.style.display = 'none';
+      btnStopWatch.style.display = 'inline-block';
+      badgeWatcherStatus.className = 'badge green';
+      badgeWatcherStatus.textContent = '🟢 VIGILANDO EN SEGUNDO PLANO';
+
+      appendWatcherLog(`[INICIADO] Vigilando: ${watchDir}`);
+      appendWatcherLog(`[DESTINO] Salida: ${outputDir}`);
+      appendWatcherLog(`[SEGURIDAD] Triturado automático: ${chkWatchShred.checked ? 'ACTIVADO (CSPRNG)' : 'DESACTIVADO'}`);
+
+      if (watcherInterval) clearInterval(watcherInterval);
+      watcherInterval = setInterval(pollWatcherStatus, 2000);
+    } catch (e) {
+      showToast(`Error iniciando vigilancia: ${e}`, 'error');
+    } finally {
+      btnStartWatch.disabled = false;
+    }
+  });
+
+  btnStopWatch?.addEventListener('click', async () => {
+    try {
+      btnStopWatch.disabled = true;
+      const res = await invokeBackend('stop_folder_watcher_cmd');
+      showToast(res, 'info');
+      btnStopWatch.style.display = 'none';
+      btnStartWatch.style.display = 'inline-block';
+      badgeWatcherStatus.className = 'badge gray';
+      badgeWatcherStatus.textContent = '⚪ INACTIVO';
+      appendWatcherLog(`[DETENIDO] Vigilancia pausada por el usuario.`);
+      if (watcherInterval) clearInterval(watcherInterval);
+    } catch (e) {
+      showToast(`Error deteniendo vigilancia: ${e}`, 'error');
+    } finally {
+      btnStopWatch.disabled = false;
+    }
+  });
+
+  async function pollWatcherStatus() {
+    try {
+      const st = await invokeBackend('get_watcher_status_cmd');
+      if (st) {
+        if (badgeWatcherCount) badgeWatcherCount.textContent = `Archivos procesados: ${st.processed_count}`;
+        if (st.last_event) {
+          appendWatcherLog(st.last_event);
+        }
+      }
+    } catch (_) {}
+  }
+
+  function appendWatcherLog(msg) {
+    if (!terminalWatcherLog) return;
+    const time = new Date().toLocaleTimeString();
+    const line = `[${time}] ${msg}`;
+    if (!terminalWatcherLog.textContent.includes(line)) {
+      terminalWatcherLog.textContent += `\n${line}`;
+      terminalWatcherLog.scrollTop = terminalWatcherLog.scrollHeight;
+    }
+  }
+
+  // --- 2. CIFRAR ANTES DE RESPALDAR (RESTIC / BORG / RSYNC) ---
+  const btnSubtabBackupCreate = document.getElementById('btn-subtab-backup-create');
+  const btnSubtabBackupRestore = document.getElementById('btn-subtab-backup-restore');
+  const subviewBackupCreate = document.getElementById('subview-backup-create');
+  const subviewBackupRestore = document.getElementById('subview-backup-restore');
+
+  btnSubtabBackupCreate?.addEventListener('click', () => {
+    btnSubtabBackupCreate.classList.add('active');
+    btnSubtabBackupRestore.classList.remove('active');
+    subviewBackupCreate.style.display = 'block';
+    subviewBackupRestore.style.display = 'none';
+  });
+
+  btnSubtabBackupRestore?.addEventListener('click', () => {
+    btnSubtabBackupRestore.classList.add('active');
+    btnSubtabBackupCreate.classList.remove('active');
+    subviewBackupRestore.style.display = 'block';
+    subviewBackupCreate.style.display = 'none';
+  });
+
+  const inpBackupSrc = document.getElementById('backup-src-input');
+  const inpBackupDst = document.getElementById('backup-dst-input');
+  const btnBrowseBackupSrc = document.getElementById('btn-browse-backup-src');
+  const btnBrowseBackupDst = document.getElementById('btn-browse-backup-dst');
+  const inpBackupPass = document.getElementById('backup-password');
+  const btnAddBackupKeyfile = document.getElementById('btn-add-backup-keyfile');
+  const backupKeyfilesChip = document.getElementById('backup-keyfiles-chip');
+  const btnExecuteBackup = document.getElementById('btn-execute-backup');
+  const backupResultCard = document.getElementById('backup-result-card');
+
+  let backupKeyfiles = [];
+
+  btnBrowseBackupSrc?.addEventListener('click', async () => {
+    const f = await invokeBackend('select_folder_dialog');
+    if (f) inpBackupSrc.value = f;
+  });
+
+  btnBrowseBackupDst?.addEventListener('click', async () => {
+    const f = await invokeBackend('select_folder_dialog');
+    if (f) inpBackupDst.value = f;
+  });
+
+  btnAddBackupKeyfile?.addEventListener('click', async () => {
+    const kf = await invokeBackend('select_keyfile_dialog');
+    if (kf) {
+      backupKeyfiles.push(kf.path);
+      renderBackupKeyfiles();
+    }
+  });
+
+  function renderBackupKeyfiles() {
+    if (!backupKeyfilesChip) return;
+    backupKeyfilesChip.innerHTML = '';
+    backupKeyfiles.forEach((p, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'keyfile-chip';
+      const name = p.split('/').pop().split('\\').pop();
+      chip.innerHTML = `<span>🔑 ${name}</span><button type="button" class="chip-remove">&times;</button>`;
+      chip.querySelector('.chip-remove').onclick = () => {
+        backupKeyfiles.splice(idx, 1);
+        renderBackupKeyfiles();
+      };
+      backupKeyfilesChip.appendChild(chip);
+    });
+  }
+
+  btnExecuteBackup?.addEventListener('click', async () => {
+    const src = inpBackupSrc.value.trim();
+    const dst = inpBackupDst.value.trim();
+    const pass = inpBackupPass.value;
+
+    if (!src || !dst) {
+      showToast('Por favor selecciona origen y destino del respaldo.', 'warning');
+      return;
+    }
+    if (!pass && backupKeyfiles.length === 0) {
+      showToast('Ingresa una contraseña para cifrar el respaldo.', 'warning');
+      return;
+    }
+
+    try {
+      btnExecuteBackup.disabled = true;
+      btnExecuteBackup.textContent = '⏳ Cifrando y anonimizando archivos...';
+
+      const res = await invokeBackend('create_backup_archive_cmd', {
+        sourcePath: src,
+        destPath: dst,
+        password: pass,
+        keyfilePaths: backupKeyfiles,
+        suite: '768'
+      });
+
+      backupResultCard.style.display = 'block';
+      backupResultCard.className = 'result-box success';
+      backupResultCard.innerHTML = `
+        <div style="font-weight: 800; color: #4ade80; margin-bottom: 6px;">✓ Respaldo Anonimizado Generado Exitosamente</div>
+        <div>• <strong>Archivos anonimizados:</strong> ${res.total_files}</div>
+        <div>• <strong>Total bytes protegidos:</strong> ${formatBytes(res.total_bytes)}</div>
+        <div>• <strong>Manifiesto Maestro:</strong> <code>${res.manifest_file}</code></div>
+        <div style="margin-top: 8px; font-size: 11px; color: var(--text-secondary);">
+          Listo para sincronizar con <code>rsync -avz</code>, <code>restic backup</code> o <code>borg create</code>. Tus datos y nombres están 100% blindados.
+        </div>
+      `;
+      showToast('¡Respaldo criptográfico completado con éxito!', 'success');
+    } catch (e) {
+      showToast(`Error en respaldo: ${e}`, 'error');
+    } finally {
+      btnExecuteBackup.disabled = false;
+      btnExecuteBackup.textContent = '🚀 GENERAR RESPALDO CRIPTOGRÁFICO ANONIMIZADO';
+    }
+  });
+
+  // Restore logic
+  const inpRestoreSrc = document.getElementById('restore-src-input');
+  const inpRestoreDst = document.getElementById('restore-dst-input');
+  const btnBrowseRestoreSrc = document.getElementById('btn-browse-restore-src');
+  const btnBrowseRestoreDst = document.getElementById('btn-browse-restore-dst');
+  const inpRestorePass = document.getElementById('restore-password');
+  const btnAddRestoreKeyfile = document.getElementById('btn-add-restore-keyfile');
+  const restoreKeyfilesChip = document.getElementById('restore-keyfiles-chip');
+  const btnExecuteRestore = document.getElementById('btn-execute-restore');
+  const restoreResultCard = document.getElementById('restore-result-card');
+
+  let restoreKeyfiles = [];
+
+  btnBrowseRestoreSrc?.addEventListener('click', async () => {
+    const f = await invokeBackend('select_folder_dialog');
+    if (f) inpRestoreSrc.value = f;
+  });
+
+  btnBrowseRestoreDst?.addEventListener('click', async () => {
+    const f = await invokeBackend('select_folder_dialog');
+    if (f) inpRestoreDst.value = f;
+  });
+
+  btnAddRestoreKeyfile?.addEventListener('click', async () => {
+    const kf = await invokeBackend('select_keyfile_dialog');
+    if (kf) {
+      restoreKeyfiles.push(kf.path);
+      renderRestoreKeyfiles();
+    }
+  });
+
+  function renderRestoreKeyfiles() {
+    if (!restoreKeyfilesChip) return;
+    restoreKeyfilesChip.innerHTML = '';
+    restoreKeyfiles.forEach((p, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'keyfile-chip';
+      const name = p.split('/').pop().split('\\').pop();
+      chip.innerHTML = `<span>🔑 ${name}</span><button type="button" class="chip-remove">&times;</button>`;
+      chip.querySelector('.chip-remove').onclick = () => {
+        restoreKeyfiles.splice(idx, 1);
+        renderRestoreKeyfiles();
+      };
+      restoreKeyfilesChip.appendChild(chip);
+    });
+  }
+
+  btnExecuteRestore?.addEventListener('click', async () => {
+    const bkp = inpRestoreSrc.value.trim();
+    const rst = inpRestoreDst.value.trim();
+    const pass = inpRestorePass.value;
+
+    if (!bkp || !rst) {
+      showToast('Por favor selecciona la carpeta de respaldo y destino de restauración.', 'warning');
+      return;
+    }
+
+    try {
+      btnExecuteRestore.disabled = true;
+      btnExecuteRestore.textContent = '⏳ Descifrando y verificando integridad...';
+
+      const res = await invokeBackend('restore_backup_archive_cmd', {
+        backupPath: bkp,
+        restorePath: rst,
+        password: pass,
+        keyfilePaths: restoreKeyfiles,
+      });
+
+      restoreResultCard.style.display = 'block';
+      restoreResultCard.className = 'result-box success';
+      restoreResultCard.innerHTML = `
+        <div style="font-weight: 800; color: #4ade80; margin-bottom: 6px;">✓ Respaldo Restaurado e Íntegro al 100%</div>
+        <div>• <strong>Archivos reconstruidos:</strong> ${res.restored_files}</div>
+        <div>• <strong>Bytes validados con SHA-256:</strong> ${formatBytes(res.restored_bytes)}</div>
+        <div>• <strong>Ubicación restaurada:</strong> <code>${res.restore_dir}</code></div>
+      `;
+      showToast('¡Restauración completada y verificada!', 'success');
+    } catch (e) {
+      showToast(`Error al restaurar: ${e}`, 'error');
+    } finally {
+      btnExecuteRestore.disabled = false;
+      btnExecuteRestore.textContent = '📥 RESTAURAR ÁRBOL ORIGINAL DE ARCHIVOS';
+    }
+  });
+
+  // --- 3. MENÚ CONTEXTUAL ---
+  const btnInstallContext = document.getElementById('btn-install-context-menu');
+  const btnUninstallContext = document.getElementById('btn-uninstall-context-menu');
+  const btnExportContextScripts = document.getElementById('btn-export-context-scripts');
+  const contextScriptsContainer = document.getElementById('context-scripts-container');
+  const btnCloseContextScripts = document.getElementById('btn-close-context-scripts');
+  const contextScriptCode = document.getElementById('context-script-code');
+  const tabScriptBat = document.getElementById('tab-script-bat');
+  const tabScriptReg = document.getElementById('tab-script-reg');
+  const tabScriptSh = document.getElementById('tab-script-sh');
+
+  let exportedScripts = null;
+
+  btnInstallContext?.addEventListener('click', async () => {
+    try {
+      const res = await invokeBackend('setup_context_menu_cmd');
+      showToast(res, 'success');
+    } catch (e) {
+      showToast(`Error registrando menú contextual: ${e}`, 'error');
+    }
+  });
+
+  btnUninstallContext?.addEventListener('click', async () => {
+    try {
+      const res = await invokeBackend('remove_context_menu_cmd');
+      showToast(res, 'info');
+    } catch (e) {
+      showToast(`Error al desinstalar: ${e}`, 'error');
+    }
+  });
+
+  btnExportContextScripts?.addEventListener('click', async () => {
+    try {
+      exportedScripts = await invokeBackend('export_context_menu_scripts_cmd');
+      contextScriptsContainer.style.display = 'block';
+      showScriptTab('bat');
+    } catch (e) {
+      showToast(`Error exportando scripts: ${e}`, 'error');
+    }
+  });
+
+  btnCloseContextScripts?.addEventListener('click', () => {
+    contextScriptsContainer.style.display = 'none';
+  });
+
+  tabScriptBat?.addEventListener('click', () => showScriptTab('bat'));
+  tabScriptReg?.addEventListener('click', () => showScriptTab('reg'));
+  tabScriptSh?.addEventListener('click', () => showScriptTab('sh'));
+
+  function showScriptTab(type) {
+    if (!exportedScripts) return;
+    [tabScriptBat, tabScriptReg, tabScriptSh].forEach(t => t?.classList.remove('active'));
+    if (type === 'bat') {
+      tabScriptBat?.classList.add('active');
+      contextScriptCode.textContent = exportedScripts.windows_bat;
+    } else if (type === 'reg') {
+      tabScriptReg?.classList.add('active');
+      contextScriptCode.textContent = exportedScripts.windows_reg;
+    } else {
+      tabScriptSh?.classList.add('active');
+      contextScriptCode.textContent = exportedScripts.linux_sh;
+    }
+  }
+
+  // --- 4. VISTA PREVIA DE CABECERA & QUICK LOOK ---
+  const inpPreviewFile = document.getElementById('preview-file-input');
+  const btnBrowsePreviewFile = document.getElementById('btn-browse-preview-file');
+  const previewDisplayCard = document.getElementById('preview-display-card');
+  const previewFilenameTitle = document.getElementById('preview-filename-title');
+  const previewSuiteVal = document.getElementById('preview-suite-val');
+  const previewArgonVal = document.getElementById('preview-argon-val');
+  const previewChunkVal = document.getElementById('preview-chunk-val');
+  const previewSizeVal = document.getElementById('preview-size-val');
+  const previewAsciiBox = document.getElementById('preview-ascii-box');
+  const btnInstallQuicklookAction = document.getElementById('btn-install-quicklook-action');
+
+  btnBrowsePreviewFile?.addEventListener('click', async () => {
+    try {
+      const f = await invokeBackend('select_wraith_dialog');
+      if (f) {
+        inpPreviewFile.value = f.path;
+        loadHeaderPreview(f.path);
+      }
+    } catch (e) {
+      showToast(`Error seleccionando archivo: ${e}`, 'error');
+    }
+  });
+
+  async function loadHeaderPreview(filePath) {
+    try {
+      const info = await invokeBackend('inspect_header_for_preview_cmd', { filePath });
+      previewDisplayCard.style.display = 'block';
+      previewFilenameTitle.textContent = info.file_name;
+      previewSuiteVal.textContent = info.suite_name;
+      previewArgonVal.textContent = info.argon2_summary;
+      previewChunkVal.textContent = `${info.chunk_size_mb.toFixed(1)} MB (AEAD GCM)`;
+      previewSizeVal.textContent = `${(info.file_size / (1024 * 1024)).toFixed(2)} MB`;
+      previewAsciiBox.textContent = info.summary_text;
+      showToast('Cabecera WRAITH verificada sin descifrar el contenido.', 'success');
+    } catch (e) {
+      showToast(`No se pudo leer cabecera WRAITH: ${e}`, 'error');
+    }
+  }
+
+  btnInstallQuicklookAction?.addEventListener('click', async () => {
+    try {
+      const res = await invokeBackend('setup_quicklook_preview_cmd');
+      showToast(res, 'success');
+    } catch (e) {
+      showToast(`Error registrando Quick Look: ${e}`, 'error');
+    }
+  });
+
+  // --- 5. INTEGRACIÓN EN LINUX ---
+  const btnInstallLinuxMime = document.getElementById('btn-install-linux-integration');
+  const btnExportLinuxSh = document.getElementById('btn-export-linux-sh');
+
+  btnInstallLinuxMime?.addEventListener('click', async () => {
+    try {
+      const res = await invokeBackend('setup_linux_desktop_integration_cmd');
+      showToast(res, 'success');
+    } catch (e) {
+      showToast(`Resultado: ${e}`, 'info');
+    }
+  });
+
+  btnExportLinuxSh?.addEventListener('click', async () => {
+    try {
+      const scripts = await invokeBackend('export_context_menu_scripts_cmd');
+      const blob = new Blob([scripts.linux_sh], { type: 'text/x-shellscript' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'install_miragex_linux.sh';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Script de instalación de Linux exportado.', 'success');
+    } catch (e) {
+      showToast(`Error exportando script: ${e}`, 'error');
+    }
+  });
 }
 
