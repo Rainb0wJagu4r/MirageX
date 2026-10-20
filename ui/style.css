@@ -218,7 +218,7 @@ body {
 
 .tab-content {
   display: none;
-  height: 100%;
+  min-height: 100%;
   animation: fadeIn 0.25s ease-in-out;
 }
 
@@ -1941,6 +1941,8 @@ input[type="password"]:focus, input[type="text"]:focus, .hud-select:focus {
   font-size: 11px;
   color: var(--text-secondary);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .footer-left {
