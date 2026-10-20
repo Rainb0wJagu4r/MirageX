@@ -203,6 +203,7 @@ function setupDropzones() {
         document.getElementById('meta-encrypt-name').textContent = fileInfo.name;
         document.getElementById('meta-encrypt-path').textContent = fileInfo.path;
         document.getElementById('meta-encrypt-size').textContent = formatBytes(fileInfo.size);
+        updateEncryptOutputPreview();
         document.getElementById('encrypt-file-meta').style.display = 'flex';
         showToast(`Archivo cargado: ${fileInfo.name}`, 'success');
       }
@@ -362,6 +363,11 @@ function setupActions() {
     });
   }
 
+  const nameFuzzingChk = document.getElementById('encrypt-name-fuzzing-chk');
+  if (nameFuzzingChk) {
+    nameFuzzingChk.addEventListener('change', updateEncryptOutputPreview);
+  }
+
   // Encrypt Button
   document.getElementById('btn-start-encrypt').addEventListener('click', async () => {
     const isBackupMode = document.getElementById('toggle-encrypt-backup-mode')?.checked;
@@ -418,6 +424,7 @@ function setupActions() {
     const shredSource = document.getElementById('shred-source-chk').checked;
     const shredMode = document.getElementById('encrypt-shred-media').value;
     const shredPasses = parseInt(document.getElementById('encrypt-shred-passes').value);
+    const isNameFuzzing = document.getElementById('encrypt-name-fuzzing-chk') ? document.getElementById('encrypt-name-fuzzing-chk').checked : true;
 
     const telemetryCard = document.getElementById('encrypt-telemetry');
     const progressFill = document.getElementById('encrypt-progress-fill');
@@ -435,11 +442,17 @@ function setupActions() {
         shredSource: shredSource,
         shredMode: shredSource ? shredMode : null,
         shredPasses: shredSource ? shredPasses : null,
+        nameFuzzing: isNameFuzzing,
       });
 
       progressFill.style.width = '100%';
       document.getElementById('encrypt-speed').textContent = `Listo en ${res.elapsed_ms} ms`;
-      showToast(`¡Cifrado MirageX exitoso! Creado: ${res.output_path}`, 'success');
+      const outName = res.output_path.split('/').pop().split('\\').pop();
+      if (res.name_fuzzed) {
+        showToast(`¡Cifrado con Name Fuzzing exitoso! Contenedor anonimizado: ${outName}`, 'success');
+      } else {
+        showToast(`¡Cifrado MirageX exitoso! Creado: ${outName}`, 'success');
+      }
     } catch (err) {
       showToast(`Error al cifrar: ${err}`, 'error');
       progressFill.style.width = '0%';
@@ -787,9 +800,29 @@ function handleIncomingFile(fullPath, fileName, fileSize, action) {
     document.getElementById('meta-encrypt-name').textContent = fileName;
     document.getElementById('meta-encrypt-path').textContent = fullPath;
     document.getElementById('meta-encrypt-size').textContent = fileSize ? formatBytes(fileSize) : 'Detectado por menú contextual';
+    updateEncryptOutputPreview();
     document.getElementById('encrypt-file-meta').style.display = 'flex';
     document.getElementById('encrypt-password').focus();
     showToast(`Archivo listo para cifrar desde menú contextual: ${fileName}`, 'success');
+  }
+}
+
+function updateEncryptOutputPreview() {
+  const preview = document.getElementById('meta-encrypt-out-preview');
+  if (!preview) return;
+  const isFuzzing = document.getElementById('encrypt-name-fuzzing-chk')?.checked;
+  if (!selectedEncryptPath) {
+    preview.textContent = isFuzzing ? '[sha256].wraith (Name Fuzzing Activo)' : 'nombre_archivo.wraith';
+    preview.style.color = isFuzzing ? 'var(--velvet-pink)' : 'var(--text-secondary)';
+    return;
+  }
+  const name = selectedEncryptPath.split('/').pop().split('\\').pop();
+  if (isFuzzing) {
+    preview.textContent = `[sha256].wraith (Anonimizado // Cero metadatos)`;
+    preview.style.color = 'var(--velvet-pink)';
+  } else {
+    preview.textContent = `${name}.wraith (Nombre legible sin anonimizar)`;
+    preview.style.color = 'var(--text-secondary)';
   }
 }
 

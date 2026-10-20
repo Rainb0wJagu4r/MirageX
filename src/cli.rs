@@ -261,11 +261,20 @@ fn handle_encrypt(args: &mut [String]) {
         process::exit(1);
     }
 
+    let name_fuzzing = if args.contains(&"--no-fuzz".to_string()) || args.contains(&"--no-name-fuzzing".to_string()) {
+        Some(false)
+    } else {
+        Some(true)
+    };
+
     println!("🔒 Encrypting '{}' using MirageX (WRAITH v4)...", input_path);
-    match encrypt_file_cmd(input_path, output_path, password, keyfile_path, suite_id, chunk_size_mb, shred, shred_mode, shred_passes) {
+    match encrypt_file_cmd(input_path, output_path, password, keyfile_path, suite_id, chunk_size_mb, shred, shred_mode, shred_passes, name_fuzzing) {
         Ok(res) => {
             println!("✅ Encryption successful!");
             println!("   Output:         {}", res.output_path);
+            if res.name_fuzzed {
+                println!("   Name Fuzzing:   ACTIVE ([sha256].wraith)");
+            }
             println!("   Suite:          {}", res.suite_name);
             println!("   Original Size:  {} bytes", res.original_size);
             println!("   Encrypted Size: {} bytes", res.encrypted_size);

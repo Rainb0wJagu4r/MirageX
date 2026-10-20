@@ -119,6 +119,10 @@
                   <span class="meta-key">Tamaño:</span>
                   <span class="meta-val" id="meta-encrypt-size">-</span>
                 </div>
+                <div class="meta-row">
+                  <span class="meta-key">Nombre en Disco:</span>
+                  <span class="meta-val" id="meta-encrypt-out-preview" style="color: var(--velvet-pink); font-family: var(--font-mono); font-size: 11px;">[sha256].wraith (Name Fuzzing Activo)</span>
+                </div>
               </div>
             </div>
 
@@ -207,6 +211,17 @@
                 <option value="16" selected>16 MiB (Estándar Óptimo WRAITH v4)</option>
                 <option value="64">64 MiB (Archivos masivos >10 GB)</option>
               </select>
+            </div>
+
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+              <label class="checkbox-label" title="Anonimiza el nombre del archivo en disco ([sha256].wraith) para evitar filtración de metadatos o extensiones. Al descifrar con MirageX se restaura el nombre real íntegro.">
+                <input type="checkbox" id="encrypt-name-fuzzing-chk" checked>
+                <span class="checkbox-custom"></span>
+                <span><strong>Name Fuzzing (Activo por defecto)</strong></span>
+              </label>
+              <div class="field-hint" style="font-size: 10px; margin-top: 3px; color: var(--text-secondary);">
+                🛡️ Cero fuga de nombres o extensiones (<code>[sha256].wraith</code>). Se restaura al descifrar.
+              </div>
             </div>
 
             <div class="checkbox-group">

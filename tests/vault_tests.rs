@@ -27,6 +27,7 @@ fn test_encrypt_decrypt_with_keyfile_only() {
         false,
         None,
         None,
+        None,
     )
     .unwrap();
 
@@ -100,6 +101,7 @@ fn test_encrypt_decrypt_with_password_and_keyfile_2fa() {
         Some(2), // ML-KEM-1024
         None,
         false,
+        None,
         None,
         None,
     )
@@ -279,6 +281,7 @@ fn test_decrypt_default_output_does_not_overwrite_existing_file() {
         false,
         None,
         None,
+        None,
     )
     .unwrap();
 
@@ -323,6 +326,7 @@ fn test_encrypt_default_output_does_not_overwrite_existing_container() {
         false,
         None,
         None,
+        Some(false),
     )
     .unwrap();
     let enc2 = encrypt_file_cmd(
@@ -335,6 +339,7 @@ fn test_encrypt_default_output_does_not_overwrite_existing_container() {
         false,
         None,
         None,
+        Some(false),
     )
     .unwrap();
 
@@ -342,6 +347,64 @@ fn test_encrypt_default_output_does_not_overwrite_existing_container() {
     assert!(enc2.output_path.contains("doc.txt (1).wraith"), "got {}", enc2.output_path);
     assert!(std::path::Path::new(&enc1.output_path).exists());
     assert!(std::path::Path::new(&enc2.output_path).exists());
+
+    let _ = fs::remove_dir_all(tmp);
+}
+
+#[test]
+fn test_encrypt_name_fuzzing_by_default_and_roundtrip() {
+    let tmp = std::env::temp_dir().join(format!("miragex_fuzz_{}", OsRng.next_u64()));
+    fs::create_dir_all(&tmp).unwrap();
+
+    let input = tmp.join("confidential_financial_report.xlsx");
+    fs::write(&input, b"top secret financial data").unwrap();
+
+    // Encrypt with default (name_fuzzing: None -> true)
+    let enc = encrypt_file_cmd(
+        input.to_string_lossy().to_string(),
+        None,
+        "pass123".to_string(),
+        None,
+        Some(1),
+        None,
+        false,
+        None,
+        None,
+        None,
+    )
+    .unwrap();
+
+    assert!(enc.success);
+    assert!(enc.name_fuzzed, "name_fuzzed should be true by default");
+
+    let enc_path = std::path::PathBuf::from(&enc.output_path);
+    let enc_filename = enc_path.file_name().unwrap().to_string_lossy();
+
+    // Verify filename on disk does NOT contain the original name or extension
+    assert!(!enc_filename.contains("confidential"), "Output filename leaked original name!");
+    assert!(!enc_filename.contains("xlsx"), "Output filename leaked original extension!");
+    assert!(enc_filename.ends_with(".wraith"), "Output filename must have .wraith extension");
+
+    // Decrypt without specifying output path (None) -> restores to parent dir with original name
+    fs::remove_file(&input).unwrap();
+
+    let dec = decrypt_file_cmd(
+        enc.output_path.clone(),
+        None,
+        "pass123".to_string(),
+        None,
+        false,
+        None,
+        None,
+    )
+    .unwrap();
+
+    assert!(dec.success);
+    assert_eq!(dec.original_filename, "confidential_financial_report.xlsx");
+
+    let restored_file = tmp.join("confidential_financial_report.xlsx");
+    assert!(restored_file.exists(), "Original file name must be restored on disk");
+    assert_eq!(fs::read(&restored_file).unwrap(), b"top secret financial data");
 
     let _ = fs::remove_dir_all(tmp);
 }
@@ -366,6 +429,7 @@ fn test_decrypt_rejects_symlink_output() {
         Some(1),
         None,
         false,
+        None,
         None,
         None,
     )

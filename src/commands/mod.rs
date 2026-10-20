@@ -5,6 +5,7 @@ use std::time::Instant;
 use rand::rngs::OsRng;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use zeroize::Zeroize;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +60,8 @@ pub struct EncryptionResult {
     pub suite_name: String,
     pub chunks_count: u64,
     pub elapsed_ms: u128,
+    #[serde(default)]
+    pub name_fuzzed: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -476,6 +479,14 @@ fn commit_file_atomic(tmp_path: &Path, final_path: &Path) -> Result<(), String> 
     Ok(())
 }
 
+pub fn compute_fuzzed_filename(orig_name: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(b"WRAITH_NAME_FUZZING_V1:");
+    hasher.update(orig_name.as_bytes());
+    let hash = hasher.finalize();
+    format!("{}.wraith", hex::encode(hash))
+}
+
 #[tauri::command]
 pub fn encrypt_file_cmd(
     input_path: String,
@@ -487,6 +498,7 @@ pub fn encrypt_file_cmd(
     shred_source: bool,
     shred_mode: Option<String>,
     shred_passes: Option<u8>,
+    name_fuzzing: Option<bool>,
 ) -> Result<EncryptionResult, String> {
     let keyfile_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
         Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
@@ -505,12 +517,19 @@ pub fn encrypt_file_cmd(
     let storage = LocalStorageAdapter::new();
     let meta = storage.stat(in_p).map_err(|e| e.to_string())?;
 
+    let is_name_fuzzing = name_fuzzing.unwrap_or(true);
+    let orig_name = in_p.file_name().unwrap_or_default().to_string_lossy();
+    let was_name_fuzzed = is_name_fuzzing && output_path.is_none();
+
     let out_p = match output_path {
         Some(p) => PathBuf::from(p),
         None => {
             let mut p = in_p.to_path_buf();
-            let orig_name = in_p.file_name().unwrap_or_default().to_string_lossy();
-            p.set_file_name(format!("{}.wraith", orig_name));
+            if is_name_fuzzing {
+                p.set_file_name(compute_fuzzed_filename(&orig_name));
+            } else {
+                p.set_file_name(format!("{}.wraith", orig_name));
+            }
             // Never silently overwrite an existing container when the user did
             // not choose an explicit destination.
             unique_output_path(&p)
@@ -638,6 +657,7 @@ pub fn encrypt_file_cmd(
         suite_name: suite.name().to_string(),
         chunks_count,
         elapsed_ms: elapsed,
+        name_fuzzed: was_name_fuzzed,
     })
 }
 
