@@ -36,10 +36,31 @@ pub struct UpdateProgress {
 pub fn get_changelog_entries() -> Vec<ChangelogEntry> {
     vec![
         ChangelogEntry {
+            version: "v4.1.0".to_string(),
+            title: "Motor Vigilante, Name Fuzzing por Defecto, Respaldo Cloud & Menús OS".to_string(),
+            date: "20 de Octubre, 2026".to_string(),
+            is_current: true,
+            highlights: vec![
+                "👁️ Nueva pestaña principal 'VIGILANTE': Auto-cifrado continuo en segundo plano con polling atómico (1500ms).".to_string(),
+                "🛡️ Name Fuzzing activo por defecto: anonimización criptográfica ([sha256].wraith) con restauración 100% íntegra del nombre original al descifrar.".to_string(),
+                "🗄️ Modo Respaldo Nube en CIFRAR/DESCIFRAR: Blinded Hashes reproducibles y manifiesto maestro cifrado para Restic, Borg y rsync.".to_string(),
+                "🖱️ Integración nativa de menús contextuales: Quick Actions en macOS Finder con banderas CLI (--args) y menú extendido con icono nobug.ico en Windows Explorer.".to_string(),
+                "🧹 Auto-bloqueo y purga de RAM por inactividad: Zeroize CSPRNG de claves en memoria tras 5-60 min sin archivos.".to_string(),
+                "📊 Registro de auditoría en vivo con exportación a formatos CSV y JSONL con hashes SHA-256.".to_string(),
+                "📐 Auto-dimensionamiento de la interfaz: Velvet Cyber HUD fluido con media queries responsivas y límites 1200x800 base.".to_string(),
+            ],
+            security_notes: vec![
+                "Name Fuzzing oculta nombres y extensiones a observadores y nubes sin filtrar metadatos.".to_string(),
+                "Purga de memoria de claves de sesión (Zeroize) para prevención de ataques Cold-Boot y volcados de memoria.".to_string(),
+                "Detección y sanitización contra inyecciones y desbordamientos en argumentos de menú contextual.".to_string(),
+            ],
+            raw_markdown: "### MirageX v4.1.0\n- Motor Vigilante permanente en tiempo real.\n- Name Fuzzing activo por defecto.\n- Modo Respaldo Nube Blinded Hashes.\n- Menú contextual nativo en macOS y Windows.\n- Auto-dimensionamiento responsivo Velvet HUD.".to_string(),
+        },
+        ChangelogEntry {
             version: "v4.0.2".to_string(),
             title: "Velvet HUD, In-App Auto-Updates, Bóvedas In-Memory & Centro de Orientación".to_string(),
             date: "18 de Octubre, 2026".to_string(),
-            is_current: true,
+            is_current: false,
             highlights: vec![
                 "💡 Centro de Orientación Criptográfica interactivo con casos de uso prácticos (WhatsApp, Nube, Borrado).".to_string(),
                 "🎨 Nueva paleta de diseño 'Velvet' (#313866, #50409A, #FF7BBF) conservando el morado neón (#b026ff) de MirageX.".to_string(),
