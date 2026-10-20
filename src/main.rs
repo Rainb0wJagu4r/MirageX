@@ -159,6 +159,33 @@ fn main() {
             miragex::commands::export_context_menu_scripts_cmd,
             miragex::commands::select_folder_dialog,
         ])
-        .run(tauri::generate_context!())
-        .expect("Error while running MirageX Tauri desktop application");
+        .build(tauri::generate_context!())
+        .expect("Error while running MirageX Tauri desktop application")
+        .run(|app_handle, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Opened { urls } = event {
+                for url in urls {
+                    if let Ok(file_path) = url.to_file_path() {
+                        let path_str = file_path.to_string_lossy().to_string();
+                        let name = file_path
+                            .file_name()
+                            .map(|n| n.to_string_lossy().to_string())
+                            .unwrap_or_else(|| path_str.clone());
+                        let size = std::fs::metadata(&file_path).map(|m| m.len()).unwrap_or(0);
+                        let action = if path_str.to_lowercase().ends_with(".wraith") {
+                            Some("decrypt".to_string())
+                        } else {
+                            Some("encrypt".to_string())
+                        };
+                        let payload = miragex::commands::InitialFilePayload {
+                            path: path_str,
+                            name,
+                            size,
+                            action,
+                        };
+                        let _ = app_handle.emit("open-file-payload", payload);
+                    }
+                }
+            }
+        });
 }

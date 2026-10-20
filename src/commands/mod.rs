@@ -989,8 +989,18 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
             let services_dir = PathBuf::from(home).join("Library/Services");
             let _ = fs::create_dir_all(&services_dir);
 
+            let exe_path_str = std::env::current_exe()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+
+            let target_bin = if exe_path_str.contains("/deps/") || exe_path_str.is_empty() {
+                "/Applications/MirageX.app/Contents/MacOS/miragex".to_string()
+            } else {
+                exe_path_str
+            };
+
             // Helper to generate automator workflow
-            let create_workflow = |name: &str, title: &str, send_types: &str| {
+            let create_workflow = |name: &str, title: &str, action_flag: &str, send_types: &str| {
                 let workflow_dir = services_dir.join(format!("{}.workflow", name));
                 let contents_dir = workflow_dir.join("Contents");
                 let _ = fs::create_dir_all(&contents_dir);
@@ -1029,7 +1039,19 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
 </dict>
 </plist>"#, title, send_types);
 
-                let doc_wflow = r#"<?xml version="1.0" encoding="UTF-8"?>
+                let command_script = format!(r#"EXE="{}"
+for f in "$@"
+do
+    if [ -x "$EXE" ]; then
+        "$EXE" {} "$f" >/dev/null 2>&1 &
+    elif [ -d "/Applications/MirageX.app" ]; then
+        open -n -a "/Applications/MirageX.app" --args {} "$f" 2>/dev/null
+    else
+        open -n -a "MirageX" --args {} "$f" 2>/dev/null
+    fi
+done"#, target_bin, action_flag, action_flag, action_flag);
+
+                let doc_wflow = format!(r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -1078,10 +1100,7 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
                 <key>ActionParameters</key>
                 <dict>
                     <key>COMMAND_STRING</key>
-                    <string>for f in "$@"
-do
-    open -a "MirageX" "$f" 2>/dev/null || open -a "/Applications/MirageX.app" "$f" 2>/dev/null
-done</string>
+                    <string>{}</string>
                     <key>inputMethod</key>
                     <integer>1</integer>
                     <key>shell</key>
@@ -1095,7 +1114,7 @@ done</string>
         </dict>
     </array>
 </dict>
-</plist>"#;
+</plist>"#, command_script);
 
                 let _ = fs::write(contents_dir.join("Info.plist"), info_plist);
                 let _ = fs::write(contents_dir.join("document.wflow"), doc_wflow);
@@ -1105,21 +1124,24 @@ done</string>
             create_workflow(
                 "Cifrar con MirageX (Post-Quantum)",
                 "Cifrar con MirageX (Post-Quantum)",
-                "<string>public.item</string>\n                <string>public.folder</string>"
+                "--gui-encrypt",
+                "<string>public.item</string>\n                <string>public.data</string>\n                <string>public.content</string>\n                <string>public.folder</string>"
             );
 
             // 2. Descifrar con MirageX
             create_workflow(
                 "Descifrar con MirageX (Post-Quantum)",
                 "Descifrar con MirageX (Post-Quantum)",
-                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>"
+                "--gui-decrypt",
+                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>\n                <string>public.item</string>"
             );
 
             // 3. Inspeccionar Contenedor WRAITH
             create_workflow(
                 "Inspeccionar Contenedor WRAITH",
                 "Inspeccionar Contenedor WRAITH",
-                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>"
+                "--gui-inspect",
+                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>\n                <string>public.item</string>"
             );
 
             let _ = std::process::Command::new("/System/Library/CoreServices/pbs")
