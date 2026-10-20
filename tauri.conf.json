@@ -12,8 +12,10 @@
       {
         "label": "main",
         "title": "MirageX // Post-Quantum Cryptographic Engine & WRAITH v4",
-        "width": 1050,
-        "height": 760,
+        "width": 1200,
+        "height": 800,
+        "minWidth": 980,
+        "minHeight": 650,
         "resizable": true,
         "fullscreen": false
       }
