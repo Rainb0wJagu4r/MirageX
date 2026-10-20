@@ -2400,6 +2400,94 @@ input[type="password"]:focus, input[type="text"]:focus, .hud-select:focus {
   cursor: pointer;
 }
 
+/* ==========================================================================
+   HUD SWITCH & VIGILANTE STYLING
+   ========================================================================== */
+
+.hud-switch-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.hud-switch-container:hover {
+  color: #fff;
+}
+
+.hud-switch-container input {
+  display: none;
+}
+
+.hud-switch-slider {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  background: rgba(80, 64, 154, 0.4);
+  border: 1px solid rgba(80, 64, 154, 0.6);
+  border-radius: 20px;
+  transition: all 0.25s ease;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.hud-switch-slider::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 2px;
+  top: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hud-switch-container input:checked + .hud-switch-slider {
+  background: var(--velvet-pink);
+  border-color: var(--velvet-pink);
+  box-shadow: 0 0 10px var(--pink-glow);
+}
+
+.hud-switch-container input:checked + .hud-switch-slider::before {
+  transform: translateX(16px);
+  background: #090c1a;
+}
+
+.hud-switch-text {
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.badge-watcher-live {
+  background: #00e676;
+  color: #05140b;
+  font-size: 8px;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(0, 230, 118, 0.6);
+  animation: pulse-live 1.5s infinite;
+  letter-spacing: 0.5px;
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.08); }
+}
+
+.backup-folder-pickers {
+  background: rgba(18, 13, 28, 0.5);
+  border: 1px solid rgba(80, 64, 154, 0.3);
+  border-radius: 10px;
+  padding: 16px;
+}
+
 
 
 

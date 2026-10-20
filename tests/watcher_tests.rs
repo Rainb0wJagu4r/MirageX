@@ -27,6 +27,11 @@ fn test_folder_watcher_auto_encryption_and_shred() {
         keyfile_paths: vec![],
         suite: "768".to_string(),
         shred_source: true,
+        recursive: true,
+        filter_mode: "all".to_string(),
+        filter_extensions: vec![],
+        inactivity_timeout_minutes: 0,
+        os_notifications: false,
     };
 
     let start_res = start_folder_watcher(config);
@@ -82,6 +87,14 @@ fn test_folder_watcher_auto_encryption_and_shred() {
     let final_status = get_watcher_status();
     assert!(!final_status.is_active, "Watcher should report inactive after stop");
     assert!(final_status.processed_count >= 1, "Processed count should be at least 1");
+    assert!(!final_status.audit_log.is_empty(), "Audit log should have recorded processed file");
+
+    let csv_export = miragex::watcher::export_watcher_audit_log("csv").expect("Export CSV");
+    assert!(csv_export.contains("confidential_document.txt"), "CSV should contain filename");
+    assert!(csv_export.contains("confidential_document.txt.wraith"), "CSV should contain encrypted filename");
+
+    let jsonl_export = miragex::watcher::export_watcher_audit_log("jsonl").expect("Export JSONL");
+    assert!(jsonl_export.contains("confidential_document.txt"), "JSONL should contain filename");
 
     // Cleanup
     let _ = fs::remove_dir_all(&temp_base);

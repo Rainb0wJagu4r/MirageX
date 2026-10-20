@@ -52,6 +52,11 @@
         <span class="nav-icon">📦</span>
         <span class="nav-text">BÓVEDA</span>
       </button>
+      <button class="nav-tab" data-tab="watcher">
+        <span class="nav-icon">👁️</span>
+        <span class="nav-text">VIGILANTE</span>
+        <span class="badge-watcher-live" id="nav-watcher-badge" style="display:none;">LIVE</span>
+      </button>
       <button class="nav-tab" data-tab="inspect">
         <span class="nav-icon">🔍</span>
         <span class="nav-text">INSPECTOR</span>
@@ -82,28 +87,64 @@
         <div class="panel-grid">
           <div class="panel-card main-panel">
             <div class="card-header">
-              <h3>ORIGEN DE DATOS & ARCHIVO</h3>
-              <span class="badge purple">LOCAL / SSD / USB</span>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <h3 id="lbl-encrypt-origin-title">ORIGEN DE DATOS & ARCHIVO</h3>
+                <span class="badge purple" id="badge-encrypt-origin">ARCHIVO INDIVIDUAL</span>
+              </div>
+              <label class="hud-switch-container" title="Alternar entre cifrado individual y modo respaldo anonimizado para la nube">
+                <input type="checkbox" id="toggle-encrypt-backup-mode">
+                <span class="hud-switch-slider"></span>
+                <span class="hud-switch-text">🗄️ Modo Respaldo Nube (Restic/Borg)</span>
+              </label>
             </div>
             
-            <div class="dropzone" id="encrypt-dropzone">
-              <div class="dropzone-icon">📥</div>
-              <div class="dropzone-title" id="encrypt-file-title">Arrastra tu archivo aquí</div>
-              <div class="dropzone-sub" id="encrypt-file-sub">o haz clic para abrir el selector nativo de macOS</div>
+            <!-- Standard Single File Section -->
+            <div id="encrypt-single-file-section">
+              <div class="dropzone" id="encrypt-dropzone">
+                <div class="dropzone-icon">📥</div>
+                <div class="dropzone-title" id="encrypt-file-title">Arrastra tu archivo aquí</div>
+                <div class="dropzone-sub" id="encrypt-file-sub">o haz clic para abrir el selector nativo de macOS</div>
+              </div>
+
+              <div class="selected-file-info" id="encrypt-file-meta" style="display:none;">
+                <div class="meta-row">
+                  <span class="meta-key">Archivo:</span>
+                  <span class="meta-val" id="meta-encrypt-name">-</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-key">Ruta Absoluta:</span>
+                  <span class="meta-val" id="meta-encrypt-path">-</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-key">Tamaño:</span>
+                  <span class="meta-val" id="meta-encrypt-size">-</span>
+                </div>
+              </div>
             </div>
 
-            <div class="selected-file-info" id="encrypt-file-meta" style="display:none;">
-              <div class="meta-row">
-                <span class="meta-key">Archivo:</span>
-                <span class="meta-val" id="meta-encrypt-name">-</span>
+            <!-- Backup Cloud Directory Mode Section -->
+            <div id="encrypt-backup-mode-section" style="display: none;">
+              <div class="backup-folder-pickers">
+                <div class="input-group">
+                  <label for="backup-main-src-input">Carpeta a Respaldar (Origen):</label>
+                  <div class="input-with-button">
+                    <input type="text" id="backup-main-src-input" placeholder="Selecciona la carpeta con tus archivos..." readonly>
+                    <button type="button" class="btn-secondary" id="btn-browse-backup-main-src">📂 Explorar</button>
+                  </div>
+                </div>
+
+                <div class="input-group" style="margin-top: 12px;">
+                  <label for="backup-main-dst-input">Directorio de Respaldo Cifrado (Destino):</label>
+                  <div class="input-with-button">
+                    <input type="text" id="backup-main-dst-input" placeholder="Carpeta de destino para los .wraith y el manifiesto..." readonly>
+                    <button type="button" class="btn-secondary" id="btn-browse-backup-main-dst">📂 Explorar</button>
+                  </div>
+                </div>
               </div>
-              <div class="meta-row">
-                <span class="meta-key">Ruta Absoluta:</span>
-                <span class="meta-val" id="meta-encrypt-path">-</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Tamaño:</span>
-                <span class="meta-val" id="meta-encrypt-size">-</span>
+
+              <div class="beta-feature-pill-banner" style="margin-top: 14px;">
+                <span class="pill-dot pink"></span>
+                <span><strong>Blinded Hashes Activado:</strong> Cada archivo recibe un hash opaco determinista (<code>[sha256].wraith</code>) preservando deduplicación incremental en Restic, Borg y rsync sin revelar nombres ni rutas. Se genera el manifiesto maestro cifrado <code>backup_manifest.wraith</code>.</span>
               </div>
             </div>
 
@@ -289,6 +330,27 @@
               </div>
             </div>
 
+            <!-- Cloud Backup Restore Banner -->
+            <div id="decrypt-backup-manifest-notice" style="display: none; margin-bottom: 15px;">
+              <div class="beta-feature-pill-banner" style="border-color: var(--pink);">
+                <span class="pill-dot pink"></span>
+                <div style="flex: 1;">
+                  <strong>¡Manifiesto de Respaldo Maestro Detectado! (<code>backup_manifest.wraith</code>)</strong>
+                  <p style="margin: 4px 0 8px 0; font-size: 11px;">Este archivo contiene el árbol completo de directorios y hashes para restaurar tu copia de seguridad de la nube (Restic / Borg / rsync).</p>
+                  <div class="input-group">
+                    <label for="restore-cloud-dest-input" style="font-size: 10px;">Carpeta donde restaurar archivos:</label>
+                    <div class="input-with-button">
+                      <input type="text" id="restore-cloud-dest-input" placeholder="Carpeta de destino de restauración..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-restore-cloud-dest">📂 Explorar</button>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-primary highlight-pink full-width" id="btn-execute-restore-cloud-main" style="margin-top: 10px;">
+                    🗄️ RESTAURAR ÁRBOL COMPLETO DE RESPALDO
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <button class="btn-primary" id="btn-start-decrypt">
               🔓 DESENCAPSULAR & VERIFICAR CON MIRAGEX
             </button>
@@ -451,6 +513,177 @@
                 <!-- Dynamically generated rows -->
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.7. VIGILANTE / CARPETA VIGILADA (AUTO-CIFRADO Y MONITORIZACIÓN CONTINUA) -->
+      <section id="tab-watcher" class="tab-content">
+        <div class="beta-scrollable">
+          <!-- Hero Banner -->
+          <div class="beta-hero-card">
+            <div class="beta-hero-header">
+              <span class="badge pink">👁️ MOTOR DE VIGILANCIA EN TIEMPO REAL</span>
+              <span class="badge gray" id="watcher-badge-status-top">⚪ INACTIVO</span>
+              <span class="badge navy">FIPS 203 ML-KEM + AES-256-GCM</span>
+              <span class="badge purple" id="watcher-badge-ram">🛡️ CLAVES EN RAM</span>
+            </div>
+            <h2 class="beta-hero-title">Carpeta Vigilada // <span class="highlight-pink-text">Auto-Cifrado Continuo</span></h2>
+            <p class="beta-hero-desc">
+              Todo archivo nuevo o modificado que se guarde en la carpeta vigilada es cifrado automáticamente en streaming como contenedor <code>.wraith</code>. Soporta filtrado de extensiones, modo recursivo, notificaciones de escritorio, triturado seguro y auto-bloqueo por inactividad.
+            </p>
+          </div>
+
+          <!-- Configuration & Rules Panels -->
+          <div class="panel-grid">
+            <!-- Col 1: Folders & Authentication -->
+            <div class="panel-card main-panel">
+              <div class="card-header">
+                <h3>DIRECTORIOS & SEGURIDAD DE SESIÓN</h3>
+                <span class="badge purple">POLLING ATÓMICO (1500 MS)</span>
+              </div>
+
+              <div class="input-group">
+                <label for="watch-folder-input">Directorio Vigilado (Carpeta Origen):</label>
+                <div class="input-with-button">
+                  <input type="text" id="watch-folder-input" placeholder="Selecciona la carpeta a monitorear..." readonly>
+                  <button type="button" class="btn-secondary" id="btn-browse-watch-folder">📂 Explorar</button>
+                </div>
+              </div>
+
+              <div class="input-group" style="margin-top: 12px;">
+                <label for="watch-output-input">Directorio de Salida Cifrada (.wraith):</label>
+                <div class="input-with-button">
+                  <input type="text" id="watch-output-input" placeholder="Selecciona la carpeta de destino..." readonly>
+                  <button type="button" class="btn-secondary" id="btn-browse-watch-output">📂 Explorar</button>
+                </div>
+              </div>
+
+              <div class="form-grid-2" style="margin-top: 12px;">
+                <div class="input-group">
+                  <label for="watch-password">Contraseña en Memoria (Sesión Activa):</label>
+                  <div class="input-with-button">
+                    <input type="password" id="watch-password" placeholder="Contraseña para auto-cifrar...">
+                    <button type="button" class="btn-icon" id="btn-toggle-watch-pass" title="Mostrar/ocultar">👁️</button>
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label for="watch-suite-select">Algoritmo Post-Cuántico:</label>
+                  <select id="watch-suite-select" class="hud-select">
+                    <option value="768" selected>ML-KEM-768 (NIST Level 3 - Rápido)</option>
+                    <option value="1024">ML-KEM-1024 (NIST Level 5 - Máximo)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="input-group" style="margin-top: 12px;">
+                <label>Keyfile Opcional (Arcanum / VeraCrypt 2FA):</label>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn-secondary full-width" id="btn-add-watch-keyfile">🔑 Seleccionar Keyfile</button>
+                  <button type="button" class="btn-icon" id="btn-clear-watch-keyfiles" title="Limpiar keyfiles" style="display:none;">✕</button>
+                </div>
+                <div id="watch-keyfiles-chip" class="keyfile-chip-container" style="margin-top: 5px;"></div>
+              </div>
+            </div>
+
+            <!-- Col 2: Rules & Triggers -->
+            <div class="panel-card side-panel">
+              <div class="card-header">
+                <h3>REGLAS & AUTOMATIZACIÓN</h3>
+                <span class="badge purple">POLÍTICAS ACTIVAS</span>
+              </div>
+
+              <!-- Extension Filter -->
+              <div class="input-group">
+                <label>Filtro de Archivos:</label>
+                <div class="radio-group" style="margin-bottom: 8px;">
+                  <label class="radio-card active" style="padding: 6px 10px;">
+                    <input type="radio" name="watch-filter-mode" value="all" checked>
+                    <span style="font-size: 11px; font-weight: 700;">Todos los archivos</span>
+                  </label>
+                  <label class="radio-card" style="padding: 6px 10px;">
+                    <input type="radio" name="watch-filter-mode" value="whitelist">
+                    <span style="font-size: 11px; font-weight: 700;">Whitelist de extensiones</span>
+                  </label>
+                </div>
+                <div id="watch-extensions-wrapper" style="display: none;">
+                  <input type="text" id="watch-filter-extensions-input" placeholder="pdf, docx, xlsx, png, jpg, zip" value="pdf, docx, xlsx, png, jpg, zip">
+                  <div class="field-hint" style="font-size: 10px; margin-top: 4px;">Separadas por coma. Se ignoran siempre archivos de sistema (.DS_Store, Thumbs.db, temporales).</div>
+                </div>
+              </div>
+
+              <!-- Timeout -->
+              <div class="input-group" style="margin-top: 10px;">
+                <label for="watch-timeout-select">Auto-Bloqueo de Seguridad por Inactividad:</label>
+                <select id="watch-timeout-select" class="hud-select">
+                  <option value="0">Desactivado (Mantener sesión abierta)</option>
+                  <option value="5">5 minutos sin nuevos archivos</option>
+                  <option value="15" selected>15 minutos (Recomendado)</option>
+                  <option value="30">30 minutos</option>
+                  <option value="60">1 hora</option>
+                </select>
+                <div class="field-hint" style="font-size: 10px; margin-top: 4px;">Purga criptográficamente la clave de la memoria RAM tras inactividad.</div>
+              </div>
+
+              <!-- Checkboxes -->
+              <div class="checkbox-group" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="watch-recursive-chk" checked>
+                  <span class="checkbox-custom"></span>
+                  <span>Vigilancia recursiva (Monitorear subcarpetas anidadas)</span>
+                </label>
+
+                <label class="checkbox-label">
+                  <input type="checkbox" id="watch-notify-chk" checked>
+                  <span class="checkbox-custom"></span>
+                  <span>Notificaciones nativas del sistema operativo</span>
+                </label>
+
+                <label class="checkbox-label">
+                  <input type="checkbox" id="watch-shred-source-chk">
+                  <span class="checkbox-custom"></span>
+                  <span>Triturado seguro del archivo original (CSPRNG 3 pases)</span>
+                </label>
+              </div>
+
+              <div class="beta-actions-row" style="margin-top: 16px;">
+                <button type="button" class="btn-primary" id="btn-start-watcher" style="flex: 1;">
+                  ▶️ INICIAR VIGILANCIA
+                </button>
+                <button type="button" class="btn-secondary" id="btn-stop-watcher" style="display: none; flex: 1;">
+                  ⏹️ DETENER VIGILANCIA
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audit Log & Live Console -->
+          <div class="beta-card" style="margin-top: 16px;">
+            <div class="card-header">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <h3>REGISTRO DE AUDITORÍA & EVENTOS EN VIVO</h3>
+                <span class="badge navy" id="watcher-badge-count">0 ARCHIVOS PROCESADOS</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-secondary" id="btn-export-audit-csv" title="Descargar log en formato CSV">
+                  📥 Exportar CSV
+                </button>
+                <button type="button" class="btn-secondary" id="btn-export-audit-jsonl" title="Descargar log en formato JSONL">
+                  📥 Exportar JSONL
+                </button>
+              </div>
+            </div>
+
+            <div class="beta-console-wrapper" style="margin-top: 12px;">
+              <div class="beta-console-header">
+                <span>CONSOLA EN TIEMPO REAL</span>
+                <span id="watcher-status-text">ESPERANDO CONFIGURACIÓN</span>
+              </div>
+              <div class="beta-console-log" id="watcher-log-terminal">
+                [SISTEMA] Vigilante inicializado. Esperando que configures los directorios y la clave.
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -799,192 +1032,31 @@
             </p>
           </div>
 
-          <!-- Feature 1: Carpeta Vigilada -->
+          <!-- Promo Card 1: Vigilante Promoted -->
           <div class="beta-card">
-            <div class="beta-card-header">
-              <div class="beta-card-icon">📁</div>
-              <div>
-                <h3>1. CARPETA VIGILADA // AUTO-CIFRADO EN TIEMPO REAL</h3>
-                <p class="beta-card-subtitle">Cualquier archivo nuevo que caiga en esta carpeta se cifra automáticamente al instante y el original se tritura de forma segura.</p>
+            <div class="beta-card-header" style="align-items: center;">
+              <div class="beta-card-icon">👁️</div>
+              <div style="flex: 1;">
+                <h3>1. CARPETA VIGILADA // PROMOVIDA A PESTAÑA PRINCIPAL</h3>
+                <p class="beta-card-subtitle">El motor de auto-cifrado en tiempo real ahora cuenta con su propia pestaña dedicada permanente en el HUD (<strong>VIGILANTE</strong>), con soporte para whitelist de extensiones, notificaciones de escritorio nativas, modo recursivo y auto-bloqueo de RAM por inactividad.</p>
               </div>
-              <div class="beta-status-indicator">
-                <span id="watcher-badge-status" class="badge gray">⚪ INACTIVO</span>
-              </div>
-            </div>
-
-            <div class="beta-card-body">
-              <div class="form-grid-2">
-                <div class="input-group">
-                  <label for="watch-folder-input">Directorio Vigilado (Carpeta Origen):</label>
-                  <div class="input-with-button">
-                    <input type="text" id="watch-folder-input" placeholder="Selecciona la carpeta a monitorear..." readonly>
-                    <button type="button" class="btn-secondary" id="btn-browse-watch-folder">📂 Explorar</button>
-                  </div>
-                </div>
-
-                <div class="input-group">
-                  <label for="watch-output-input">Directorio de Salida Cifrada (.wraith):</label>
-                  <div class="input-with-button">
-                    <input type="text" id="watch-output-input" placeholder="Selecciona la carpeta de destino..." readonly>
-                    <button type="button" class="btn-secondary" id="btn-browse-watch-output">📂 Explorar</button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-grid-3" style="margin-top: 12px;">
-                <div class="input-group">
-                  <label for="watch-password">Contraseña en Memoria (Sesión Activa):</label>
-                  <div class="input-with-button">
-                    <input type="password" id="watch-password" placeholder="Contraseña para auto-cifrar...">
-                    <button type="button" class="btn-icon" id="btn-toggle-watch-pass" title="Mostrar/ocultar">👁️</button>
-                  </div>
-                </div>
-
-                <div class="input-group">
-                  <label>Keyfile Opcional (Arcanum/VeraCrypt):</label>
-                  <button type="button" class="btn-secondary full-width" id="btn-add-watch-keyfile">🔑 Seleccionar Keyfile</button>
-                  <div id="watch-keyfiles-chip" class="keyfile-chip-container" style="margin-top: 5px;"></div>
-                </div>
-
-                <div class="input-group">
-                  <label for="watch-suite-select">Algoritmo Post-Cuántico:</label>
-                  <select id="watch-suite-select" class="hud-select">
-                    <option value="768" selected>ML-KEM-768 (NIST Level 3 - Rápido)</option>
-                    <option value="1024">ML-KEM-1024 (NIST Level 5 - Máximo)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="beta-toggle-row" style="margin-top: 12px;">
-                <label class="hud-checkbox-label">
-                  <input type="checkbox" id="watch-shred-checkbox" checked>
-                  <span class="custom-checkbox"></span>
-                  <span><strong>Triturar de forma irrecuperable el archivo original</strong> tras cifrarlo (CSPRNG Wipe)</span>
-                </label>
-              </div>
-
-              <div class="beta-actions-row">
-                <button type="button" class="btn-primary" id="btn-start-watch">
-                  🟢 INICIAR VIGILANCIA EN SEGUNDO PLANO
-                </button>
-                <button type="button" class="btn-danger" id="btn-stop-watch" style="display: none;">
-                  ⏹️ DETENER VIGILANCIA
-                </button>
-              </div>
-
-              <!-- Terminal Event Console -->
-              <div class="beta-console-wrapper">
-                <div class="beta-console-header">
-                  <span>TERMINAL DE EVENTOS // AUTO-WATCHER</span>
-                  <span id="watcher-count-badge">Archivos procesados: 0</span>
-                </div>
-                <div class="beta-console-log" id="watcher-log-terminal">
-                  [SISTEMA] Watcher inicializado en espera de configuración...
-                </div>
-              </div>
+              <button type="button" class="btn-primary highlight-pink" id="btn-goto-watcher-tab">
+                👁️ ABRIR VIGILANTE
+              </button>
             </div>
           </div>
 
-          <!-- Feature 2: Cifrar antes de Respaldar -->
+          <!-- Promo Card 2: Cloud Backup Promoted -->
           <div class="beta-card">
-            <div class="beta-card-header">
+            <div class="beta-card-header" style="align-items: center;">
               <div class="beta-card-icon">🗄️</div>
-              <div>
-                <h3>2. CIFRAR ANTES DE RESPALDAR // RESTIC, BORG & RSYNC READY</h3>
-                <p class="beta-card-subtitle">Anonimiza nombres de archivo mediante hashes reproducibles ([sha256].wraith) con un manifiesto cifrado maestro. Sube respaldos a la nube sin filtrar metadatos y con deduplicación incremental intacta.</p>
+              <div style="flex: 1;">
+                <h3>2. CIFRADO PARA RESPALDO EN LA NUBE // RESTIC, BORG & RSYNC READY</h3>
+                <p class="beta-card-subtitle">Anonimización mediante Blinded Hashes (<code>[sha256].wraith</code>) y manifiesto maestro cifrado integrada directamente en el formulario de la pestaña principal <strong>CIFRAR</strong> mediante el switch de modo respaldo.</p>
               </div>
-            </div>
-
-            <div class="beta-card-body">
-              <div class="beta-subtabs">
-                <button type="button" class="beta-subtab active" id="btn-subtab-backup-create">🔒 Crear Respaldo Cifrado</button>
-                <button type="button" class="beta-subtab" id="btn-subtab-backup-restore">🔓 Restaurar Respaldo</button>
-              </div>
-
-              <!-- Sub-view 1: Crear Respaldo -->
-              <div id="subview-backup-create">
-                <div class="form-grid-2" style="margin-top: 15px;">
-                  <div class="input-group">
-                    <label for="backup-src-input">Carpeta a Respaldar (Origen):</label>
-                    <div class="input-with-button">
-                      <input type="text" id="backup-src-input" placeholder="Carpeta de documentos / fotos / datos..." readonly>
-                      <button type="button" class="btn-secondary" id="btn-browse-backup-src">📂 Explorar</button>
-                    </div>
-                  </div>
-
-                  <div class="input-group">
-                    <label for="backup-dst-input">Directorio de Respaldo Cifrado (Destino):</label>
-                    <div class="input-with-button">
-                      <input type="text" id="backup-dst-input" placeholder="Carpeta donde se guardarán los .wraith anonimizados..." readonly>
-                      <button type="button" class="btn-secondary" id="btn-browse-backup-dst">📂 Explorar</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-grid-2" style="margin-top: 12px;">
-                  <div class="input-group">
-                    <label for="backup-password">Contraseña de Protección del Respaldo:</label>
-                    <input type="password" id="backup-password" placeholder="Contraseña maestra del respaldo...">
-                  </div>
-
-                  <div class="input-group">
-                    <label>Keyfile Complementario (Opcional):</label>
-                    <button type="button" class="btn-secondary full-width" id="btn-add-backup-keyfile">🔑 Añadir Keyfile 2FA</button>
-                    <div id="backup-keyfiles-chip" class="keyfile-chip-container" style="margin-top: 5px;"></div>
-                  </div>
-                </div>
-
-                <div class="beta-feature-pill-banner" style="margin-top: 12px;">
-                  <span class="pill-dot pink"></span>
-                  <span><strong>Modo Blinded Hashes Activado:</strong> Los archivos reciben nombres criptográficos opacos como <code>d5b3a...7a.wraith</code>. Ni Google Drive, Dropbox, restic ni borg conocerán los nombres ni extensiones de tus documentos.</span>
-                </div>
-
-                <button type="button" class="btn-primary" id="btn-execute-backup" style="margin-top: 15px;">
-                  🚀 GENERAR RESPALDO CRIPTOGRÁFICO ANONIMIZADO
-                </button>
-
-                <div id="backup-result-card" class="result-box" style="display: none; margin-top: 15px;"></div>
-              </div>
-
-              <!-- Sub-view 2: Restaurar Respaldo -->
-              <div id="subview-backup-restore" style="display: none;">
-                <div class="form-grid-2" style="margin-top: 15px;">
-                  <div class="input-group">
-                    <label for="restore-src-input">Carpeta del Respaldo Cifrado:</label>
-                    <div class="input-with-button">
-                      <input type="text" id="restore-src-input" placeholder="Carpeta que contiene backup_manifest.wraith..." readonly>
-                      <button type="button" class="btn-secondary" id="btn-browse-restore-src">📂 Explorar</button>
-                    </div>
-                  </div>
-
-                  <div class="input-group">
-                    <label for="restore-dst-input">Directorio donde Restaurar Archivos:</label>
-                    <div class="input-with-button">
-                      <input type="text" id="restore-dst-input" placeholder="Carpeta de destino para los archivos descifrados..." readonly>
-                      <button type="button" class="btn-secondary" id="btn-browse-restore-dst">📂 Explorar</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-grid-2" style="margin-top: 12px;">
-                  <div class="input-group">
-                    <label for="restore-password">Contraseña del Respaldo:</label>
-                    <input type="password" id="restore-password" placeholder="Contraseña usada al respaldar...">
-                  </div>
-
-                  <div class="input-group">
-                    <label>Keyfile del Respaldo (Si se utilizó):</label>
-                    <button type="button" class="btn-secondary full-width" id="btn-add-restore-keyfile">🔑 Cargar Keyfile</button>
-                    <div id="restore-keyfiles-chip" class="keyfile-chip-container" style="margin-top: 5px;"></div>
-                  </div>
-                </div>
-
-                <button type="button" class="btn-primary" id="btn-execute-restore" style="margin-top: 15px;">
-                  📥 RESTAURAR ÁRBOL ORIGINAL DE ARCHIVOS
-                </button>
-
-                <div id="restore-result-card" class="result-box" style="display: none; margin-top: 15px;"></div>
-              </div>
+              <button type="button" class="btn-primary" id="btn-goto-encrypt-tab">
+                🛡️ IR A CIFRAR CON RESPALDO
+              </button>
             </div>
           </div>
 

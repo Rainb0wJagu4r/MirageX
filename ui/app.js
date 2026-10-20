@@ -54,6 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupUpdaterLogic();
   setupExternalLinks();
   checkInitialFilePayload();
+  setupEncryptBackupMode();
+  initWatcherPanel();
+  initBetaLabs();
 });
 
 // 1. Navigation Tabs
@@ -217,6 +220,7 @@ function setupDropzones() {
         document.getElementById('meta-decrypt-name').textContent = fileInfo.name;
         document.getElementById('meta-decrypt-path').textContent = fileInfo.path;
         document.getElementById('decrypt-file-meta').style.display = 'flex';
+        checkDecryptManifestNotice(fileInfo.path);
         showToast(`Contenedor cargado: ${fileInfo.name}`, 'success');
       }
     } catch (e) {
@@ -360,6 +364,45 @@ function setupActions() {
 
   // Encrypt Button
   document.getElementById('btn-start-encrypt').addEventListener('click', async () => {
+    const isBackupMode = document.getElementById('toggle-encrypt-backup-mode')?.checked;
+    if (isBackupMode) {
+      const srcFolder = document.getElementById('backup-main-src-input')?.value.trim();
+      const dstFolder = document.getElementById('backup-main-dst-input')?.value.trim();
+      if (!srcFolder || !dstFolder) {
+        showToast('Selecciona la carpeta origen y el directorio destino para el respaldo.', 'warning');
+        return;
+      }
+      const password = document.getElementById('encrypt-password').value;
+      if (!password && !selectedEncryptKeyfilePath) {
+        showToast('Introduce una contraseña o keyfile para proteger el respaldo.', 'error');
+        return;
+      }
+      const suiteVal = document.querySelector('input[name="pqc-suite"]:checked')?.value === '2' ? '1024' : '768';
+
+      const telemetryCard = document.getElementById('encrypt-telemetry');
+      const progressFill = document.getElementById('encrypt-progress-fill');
+      telemetryCard.style.display = 'block';
+      progressFill.style.width = '30%';
+
+      try {
+        const res = await invokeBackend('create_backup_archive_cmd', {
+          sourcePath: srcFolder,
+          destPath: dstFolder,
+          password: password,
+          keyfilePaths: selectedEncryptKeyfilePath ? [selectedEncryptKeyfilePath] : [],
+          suite: suiteVal,
+        });
+
+        progressFill.style.width = '100%';
+        document.getElementById('encrypt-speed').textContent = `${res.total_files} archivos (${formatBytes(res.total_bytes)})`;
+        showToast(`¡Respaldo criptográfico completado! Creado: ${res.manifest_file}`, 'success');
+      } catch (err) {
+        showToast(`Error al generar respaldo: ${err}`, 'error');
+        progressFill.style.width = '0%';
+      }
+      return;
+    }
+
     if (!selectedEncryptPath) {
       showToast('Por favor selecciona un archivo a cifrar.', 'error');
       return;
@@ -734,6 +777,7 @@ function handleIncomingFile(fullPath, fileName, fileSize, action) {
     document.getElementById('meta-decrypt-name').textContent = fileName;
     document.getElementById('meta-decrypt-path').textContent = fullPath;
     document.getElementById('decrypt-file-meta').style.display = 'flex';
+    checkDecryptManifestNotice(fullPath);
     document.getElementById('decrypt-password').focus();
     showToast(`Contenedor cargado desde menú contextual: ${fileName}`, 'success');
   } else {
@@ -1661,24 +1705,172 @@ function setupUpdaterLogic() {
   // Initialize Experimental Beta Labs Features
   initBetaLabs();
 }
+// --------------------------------------------------------------------------
+// Decrypt Manifest Detection
+// --------------------------------------------------------------------------
+function checkDecryptManifestNotice(filePath) {
+  const notice = document.getElementById('decrypt-backup-manifest-notice');
+  if (!notice) return;
+  if (!filePath) {
+    notice.style.display = 'none';
+    return;
+  }
+  const fileName = (filePath.split('/').pop() || filePath.split('\\').pop() || '').toLowerCase();
+  if (fileName.includes('manifest') && fileName.endsWith('.wraith')) {
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
+}
 
-function initBetaLabs() {
-  // --- 1. CARPETA VIGILADA ---
+// --------------------------------------------------------------------------
+// Cloud Backup Mode Integration (CIFRAR & DESCIFRAR)
+// --------------------------------------------------------------------------
+function setupEncryptBackupMode() {
+  const toggleBackup = document.getElementById('toggle-encrypt-backup-mode');
+  const singleFileSection = document.getElementById('encrypt-single-file-section');
+  const backupModeSection = document.getElementById('encrypt-backup-mode-section');
+  const originTitle = document.getElementById('lbl-encrypt-origin-title');
+  const originBadge = document.getElementById('badge-encrypt-origin');
+  const btnStartEncrypt = document.getElementById('btn-start-encrypt');
+
+  toggleBackup?.addEventListener('change', () => {
+    if (toggleBackup.checked) {
+      if (singleFileSection) singleFileSection.style.display = 'none';
+      if (backupModeSection) backupModeSection.style.display = 'block';
+      if (originTitle) originTitle.textContent = 'RESPALDO CIFRADO PARA LA NUBE';
+      if (originBadge) originBadge.textContent = 'RESTIC / BORG / RSYNC';
+      if (btnStartEncrypt) btnStartEncrypt.textContent = '🚀 GENERAR RESPALDO CRIPTOGRÁFICO ANONIMIZADO';
+    } else {
+      if (singleFileSection) singleFileSection.style.display = 'block';
+      if (backupModeSection) backupModeSection.style.display = 'none';
+      if (originTitle) originTitle.textContent = 'ORIGEN DE DATOS & ARCHIVO';
+      if (originBadge) originBadge.textContent = 'ARCHIVO INDIVIDUAL';
+      if (btnStartEncrypt) btnStartEncrypt.textContent = '🔒 INICIAR CIFRADO MIRAGEX';
+    }
+  });
+
+  const btnBrowseSrc = document.getElementById('btn-browse-backup-main-src');
+  const inpBackupSrc = document.getElementById('backup-main-src-input');
+  btnBrowseSrc?.addEventListener('click', async () => {
+    try {
+      const folder = await invokeBackend('select_folder_dialog');
+      if (folder && inpBackupSrc) inpBackupSrc.value = folder;
+    } catch (e) {
+      showToast(`Error seleccionando carpeta origen: ${e}`, 'error');
+    }
+  });
+
+  const btnBrowseDst = document.getElementById('btn-browse-backup-main-dst');
+  const inpBackupDst = document.getElementById('backup-main-dst-input');
+  btnBrowseDst?.addEventListener('click', async () => {
+    try {
+      const folder = await invokeBackend('select_folder_dialog');
+      if (folder && inpBackupDst) inpBackupDst.value = folder;
+    } catch (e) {
+      showToast(`Error seleccionando carpeta destino: ${e}`, 'error');
+    }
+  });
+
+  // Decrypt backup manifest restore
+  const btnBrowseRestoreDest = document.getElementById('btn-browse-restore-cloud-dest');
+  const inpRestoreDest = document.getElementById('restore-cloud-dest-input');
+  btnBrowseRestoreDest?.addEventListener('click', async () => {
+    try {
+      const folder = await invokeBackend('select_folder_dialog');
+      if (folder && inpRestoreDest) inpRestoreDest.value = folder;
+    } catch (e) {
+      showToast(`Error seleccionando carpeta de destino: ${e}`, 'error');
+    }
+  });
+
+  const btnExecRestoreCloud = document.getElementById('btn-execute-restore-cloud-main');
+  btnExecRestoreCloud?.addEventListener('click', async () => {
+    if (!selectedDecryptPath) {
+      showToast('Selecciona el contenedor de manifiesto (backup_manifest.wraith)', 'warning');
+      return;
+    }
+    const destDir = inpRestoreDest?.value.trim();
+    if (!destDir) {
+      showToast('Selecciona la carpeta de destino para restaurar los archivos.', 'warning');
+      return;
+    }
+    const pass = document.getElementById('decrypt-password')?.value || '';
+    if (!pass && !selectedDecryptKeyfilePath) {
+      showToast('Introduce la contraseña o keyfile para restaurar el manifiesto.', 'warning');
+      return;
+    }
+
+    try {
+      btnExecRestoreCloud.disabled = true;
+      btnExecRestoreCloud.textContent = '⏳ Verificando hashes y restaurando archivos...';
+
+      const manifestPath = selectedDecryptPath;
+      const lastSlash = Math.max(manifestPath.lastIndexOf('/'), manifestPath.lastIndexOf('\\'));
+      const backupDir = lastSlash > 0 ? manifestPath.substring(0, lastSlash) : manifestPath;
+
+      const res = await invokeBackend('restore_backup_archive_cmd', {
+        backupPath: backupDir,
+        restorePath: destDir,
+        password: pass,
+        keyfilePaths: selectedDecryptKeyfilePath ? [selectedDecryptKeyfilePath] : [],
+      });
+
+      showToast(`¡Restauración exitosa! ${res.restored_files} archivos restaurados.`, 'success');
+      const resultBox = document.getElementById('decrypt-result-box');
+      if (resultBox) {
+        resultBox.innerHTML = `
+          <div class="result-box success" style="margin-top: 10px;">
+            <div style="font-weight: 800; color: #4ade80; margin-bottom: 6px;">✓ RESTAURACIÓN DE RESPALDO COMPLETA</div>
+            <div>• <strong>Archivos reconstruidos:</strong> ${res.restored_files}</div>
+            <div>• <strong>Bytes verificados con SHA-256:</strong> ${formatBytes(res.restored_bytes)}</div>
+            <div>• <strong>Destino:</strong> <code>${res.restore_dir}</code></div>
+          </div>
+        `;
+      }
+    } catch (e) {
+      showToast(`Error restaurando respaldo: ${e}`, 'error');
+    } finally {
+      btnExecRestoreCloud.disabled = false;
+      btnExecRestoreCloud.textContent = '🗄️ RESTAURAR ÁRBOL COMPLETO DE RESPALDO';
+    }
+  });
+}
+
+// --------------------------------------------------------------------------
+// Vigilante / Carpeta Vigilada (Auto-Cifrado en Tiempo Real)
+// --------------------------------------------------------------------------
+function initWatcherPanel() {
   const inpWatchFolder = document.getElementById('watch-folder-input');
   const inpWatchOutput = document.getElementById('watch-output-input');
   const btnBrowseWatchFolder = document.getElementById('btn-browse-watch-folder');
   const btnBrowseWatchOutput = document.getElementById('btn-browse-watch-output');
   const inpWatchPass = document.getElementById('watch-password');
   const btnToggleWatchPass = document.getElementById('btn-toggle-watch-pass');
-  const btnAddWatchKeyfile = document.getElementById('btn-add-watch-keyfile');
-  const watchKeyfilesChip = document.getElementById('watch-keyfiles-chip');
   const selectWatchSuite = document.getElementById('watch-suite-select');
-  const chkWatchShred = document.getElementById('watch-shred-checkbox');
-  const btnStartWatch = document.getElementById('btn-start-watch');
-  const btnStopWatch = document.getElementById('btn-stop-watch');
-  const badgeWatcherStatus = document.getElementById('watcher-badge-status');
-  const badgeWatcherCount = document.getElementById('watcher-count-badge');
-  const terminalWatcherLog = document.getElementById('watcher-log-terminal');
+  const btnAddWatchKeyfile = document.getElementById('btn-add-watch-keyfile');
+  const btnClearWatchKeyfiles = document.getElementById('btn-clear-watch-keyfiles');
+  const watchKeyfilesChip = document.getElementById('watch-keyfiles-chip');
+
+  const filterRadios = document.querySelectorAll('input[name="watch-filter-mode"]');
+  const watchExtWrapper = document.getElementById('watch-extensions-wrapper');
+  const inpWatchExt = document.getElementById('watch-filter-extensions-input');
+  const selectWatchTimeout = document.getElementById('watch-timeout-select');
+  const chkWatchRecursive = document.getElementById('watch-recursive-chk');
+  const chkWatchNotify = document.getElementById('watch-notify-chk');
+  const chkWatchShred = document.getElementById('watch-shred-source-chk');
+
+  const btnStartWatcher = document.getElementById('btn-start-watcher');
+  const btnStopWatcher = document.getElementById('btn-stop-watcher');
+  const badgeStatusTop = document.getElementById('watcher-badge-status-top');
+  const badgeRam = document.getElementById('watcher-badge-ram');
+  const badgeCount = document.getElementById('watcher-badge-count');
+  const statusText = document.getElementById('watcher-status-text');
+  const terminalLog = document.getElementById('watcher-log-terminal');
+  const navBadge = document.getElementById('nav-watcher-badge');
+
+  const btnExportCsv = document.getElementById('btn-export-audit-csv');
+  const btnExportJsonl = document.getElementById('btn-export-audit-jsonl');
 
   let watchKeyfiles = [];
   let watcherInterval = null;
@@ -1686,23 +1878,25 @@ function initBetaLabs() {
   btnBrowseWatchFolder?.addEventListener('click', async () => {
     try {
       const folder = await invokeBackend('select_folder_dialog');
-      if (folder) inpWatchFolder.value = folder;
+      if (folder && inpWatchFolder) inpWatchFolder.value = folder;
     } catch (e) {
-      showToast(`Error seleccionando carpeta: ${e}`, 'error');
+      showToast(`Error seleccionando carpeta origen: ${e}`, 'error');
     }
   });
 
   btnBrowseWatchOutput?.addEventListener('click', async () => {
     try {
       const folder = await invokeBackend('select_folder_dialog');
-      if (folder) inpWatchOutput.value = folder;
+      if (folder && inpWatchOutput) inpWatchOutput.value = folder;
     } catch (e) {
-      showToast(`Error seleccionando carpeta: ${e}`, 'error');
+      showToast(`Error seleccionando carpeta destino: ${e}`, 'error');
     }
   });
 
   btnToggleWatchPass?.addEventListener('click', () => {
-    inpWatchPass.type = inpWatchPass.type === 'password' ? 'text' : 'password';
+    if (inpWatchPass) {
+      inpWatchPass.type = inpWatchPass.type === 'password' ? 'text' : 'password';
+    }
   });
 
   btnAddWatchKeyfile?.addEventListener('click', async () => {
@@ -1717,9 +1911,17 @@ function initBetaLabs() {
     }
   });
 
+  btnClearWatchKeyfiles?.addEventListener('click', () => {
+    watchKeyfiles = [];
+    renderWatchKeyfiles();
+  });
+
   function renderWatchKeyfiles() {
     if (!watchKeyfilesChip) return;
     watchKeyfilesChip.innerHTML = '';
+    if (btnClearWatchKeyfiles) {
+      btnClearWatchKeyfiles.style.display = watchKeyfiles.length > 0 ? 'inline-block' : 'none';
+    }
     watchKeyfiles.forEach((path, idx) => {
       const chip = document.createElement('div');
       chip.className = 'keyfile-chip';
@@ -1733,17 +1935,27 @@ function initBetaLabs() {
     });
   }
 
-  btnStartWatch?.addEventListener('click', async () => {
-    const watchDir = inpWatchFolder.value.trim();
-    const outputDir = inpWatchOutput.value.trim();
-    const password = inpWatchPass.value;
+  filterRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      filterRadios.forEach(r => r.closest('.radio-card')?.classList.remove('active'));
+      radio.closest('.radio-card')?.classList.add('active');
+      if (watchExtWrapper) {
+        watchExtWrapper.style.display = radio.value === 'whitelist' ? 'block' : 'none';
+      }
+    });
+  });
+
+  btnStartWatcher?.addEventListener('click', async () => {
+    const watchDir = inpWatchFolder?.value.trim();
+    const outputDir = inpWatchOutput?.value.trim();
+    const password = inpWatchPass?.value || '';
 
     if (!watchDir) {
-      showToast('Por favor selecciona la carpeta a vigilar.', 'warning');
+      showToast('Selecciona la carpeta a vigilar.', 'warning');
       return;
     }
     if (!outputDir) {
-      showToast('Por favor selecciona la carpeta de salida cifrada.', 'warning');
+      showToast('Selecciona la carpeta de salida cifrada.', 'warning');
       return;
     }
     if (!password && watchKeyfiles.length === 0) {
@@ -1751,61 +1963,118 @@ function initBetaLabs() {
       return;
     }
 
+    const selectedFilterMode = document.querySelector('input[name="watch-filter-mode"]:checked')?.value || 'all';
+    const rawExtensions = inpWatchExt?.value || '';
+    const filterExtensions = selectedFilterMode === 'whitelist'
+      ? rawExtensions.split(',').map(s => s.trim().replace(/^\./, '').toLowerCase()).filter(Boolean)
+      : [];
+
+    const timeoutMinutes = parseInt(selectWatchTimeout?.value || '15', 10);
+    const suite = selectWatchSuite?.value || '768';
+    const isRecursive = chkWatchRecursive ? chkWatchRecursive.checked : true;
+    const isNotify = chkWatchNotify ? chkWatchNotify.checked : true;
+    const isShred = chkWatchShred ? chkWatchShred.checked : false;
+
     try {
-      btnStartWatch.disabled = true;
+      btnStartWatcher.disabled = true;
       const res = await invokeBackend('start_folder_watcher_cmd', {
         config: {
           watch_dir: watchDir,
           output_dir: outputDir,
           password: password,
           keyfile_paths: watchKeyfiles,
-          suite: selectWatchSuite.value,
-          shred_source: chkWatchShred.checked,
+          suite: suite,
+          shred_source: isShred,
+          recursive: isRecursive,
+          filter_mode: selectedFilterMode,
+          filter_extensions: filterExtensions,
+          inactivity_timeout_minutes: timeoutMinutes,
+          os_notifications: isNotify,
         }
       });
 
       showToast(res, 'success');
-      btnStartWatch.style.display = 'none';
-      btnStopWatch.style.display = 'inline-block';
-      badgeWatcherStatus.className = 'badge green';
-      badgeWatcherStatus.textContent = '🟢 VIGILANDO EN SEGUNDO PLANO';
+      btnStartWatcher.style.display = 'none';
+      if (btnStopWatcher) btnStopWatcher.style.display = 'block';
+      if (badgeStatusTop) {
+        badgeStatusTop.className = 'badge green';
+        badgeStatusTop.textContent = '🟢 VIGILANDO EN VIVO';
+      }
+      if (badgeRam) {
+        badgeRam.className = 'badge purple';
+        badgeRam.textContent = '🛡️ CLAVES EN RAM';
+      }
+      if (navBadge) {
+        navBadge.style.display = 'inline-block';
+      }
+      if (statusText) statusText.textContent = 'ACTIVO // POLLING CADA 1500 MS';
 
-      appendWatcherLog(`[INICIADO] Vigilando: ${watchDir}`);
-      appendWatcherLog(`[DESTINO] Salida: ${outputDir}`);
-      appendWatcherLog(`[SEGURIDAD] Triturado automático: ${chkWatchShred.checked ? 'ACTIVADO (CSPRNG)' : 'DESACTIVADO'}`);
+      appendWatcherLog(`[INICIADO] Motor de Vigilancia MirageX v4.1 activo`);
+      appendWatcherLog(`[ORIGEN] ${watchDir} ${isRecursive ? '(Recursivo)' : '(Directorio Raíz)'}`);
+      appendWatcherLog(`[DESTINO] ${outputDir}`);
+      appendWatcherLog(`[FILTRO] Modo: ${selectedFilterMode.toUpperCase()}${selectedFilterMode === 'whitelist' ? ' [' + filterExtensions.join(', ') + ']' : ''}`);
+      appendWatcherLog(`[AUTO-BLOQUEO] Inactividad RAM: ${timeoutMinutes > 0 ? timeoutMinutes + ' min' : 'Desactivado'}`);
+      appendWatcherLog(`[SEGURIDAD] Triturado: ${isShred ? 'ACTIVADO (CSPRNG 3 pases)' : 'Conservar original'}`);
 
       if (watcherInterval) clearInterval(watcherInterval);
-      watcherInterval = setInterval(pollWatcherStatus, 2000);
+      watcherInterval = setInterval(pollWatcherStatus, 1500);
     } catch (e) {
       showToast(`Error iniciando vigilancia: ${e}`, 'error');
     } finally {
-      btnStartWatch.disabled = false;
+      btnStartWatcher.disabled = false;
     }
   });
 
-  btnStopWatch?.addEventListener('click', async () => {
+  btnStopWatcher?.addEventListener('click', async () => {
     try {
-      btnStopWatch.disabled = true;
+      btnStopWatcher.disabled = true;
       const res = await invokeBackend('stop_folder_watcher_cmd');
       showToast(res, 'info');
-      btnStopWatch.style.display = 'none';
-      btnStartWatch.style.display = 'inline-block';
-      badgeWatcherStatus.className = 'badge gray';
-      badgeWatcherStatus.textContent = '⚪ INACTIVO';
+      setWatcherUIStopped(false);
       appendWatcherLog(`[DETENIDO] Vigilancia pausada por el usuario.`);
-      if (watcherInterval) clearInterval(watcherInterval);
     } catch (e) {
       showToast(`Error deteniendo vigilancia: ${e}`, 'error');
     } finally {
-      btnStopWatch.disabled = false;
+      btnStopWatcher.disabled = false;
     }
   });
+
+  function setWatcherUIStopped(wasAutoLocked = false) {
+    if (btnStopWatcher) btnStopWatcher.style.display = 'none';
+    if (btnStartWatcher) btnStartWatcher.style.display = 'block';
+    if (badgeStatusTop) {
+      badgeStatusTop.className = wasAutoLocked ? 'badge yellow' : 'badge gray';
+      badgeStatusTop.textContent = wasAutoLocked ? '🔒 BLOQUEADO POR INACTIVIDAD' : '⚪ INACTIVO';
+    }
+    if (badgeRam) {
+      badgeRam.className = wasAutoLocked ? 'badge red' : 'badge purple';
+      badgeRam.textContent = wasAutoLocked ? '🧹 RAM PURGADA (ZEROIZE)' : '🛡️ CLAVES EN RAM';
+    }
+    if (navBadge) {
+      navBadge.style.display = 'none';
+    }
+    if (statusText) statusText.textContent = wasAutoLocked ? 'BLOQUEADO' : 'INACTIVO';
+    if (watcherInterval) {
+      clearInterval(watcherInterval);
+      watcherInterval = null;
+    }
+  }
 
   async function pollWatcherStatus() {
     try {
       const st = await invokeBackend('get_watcher_status_cmd');
       if (st) {
-        if (badgeWatcherCount) badgeWatcherCount.textContent = `Archivos procesados: ${st.processed_count}`;
+        if (!st.is_active && watcherInterval) {
+          const autoLocked = st.auto_locked;
+          setWatcherUIStopped(autoLocked);
+          if (autoLocked) {
+            appendWatcherLog(`[AUTO-BLOQUEO] Clave purgada de RAM (zeroize) tras período de inactividad.`);
+            showToast('El vigilante se ha auto-bloqueado por inactividad para proteger la clave en memoria.', 'info');
+          }
+          return;
+        }
+
+        if (badgeCount) badgeCount.textContent = `${st.processed_count} ARCHIVOS PROCESADOS`;
         if (st.last_event) {
           appendWatcherLog(st.last_event);
         }
@@ -1814,209 +2083,67 @@ function initBetaLabs() {
   }
 
   function appendWatcherLog(msg) {
-    if (!terminalWatcherLog) return;
+    if (!terminalLog) return;
     const time = new Date().toLocaleTimeString();
     const line = `[${time}] ${msg}`;
-    if (!terminalWatcherLog.textContent.includes(line)) {
-      terminalWatcherLog.textContent += `\n${line}`;
-      terminalWatcherLog.scrollTop = terminalWatcherLog.scrollHeight;
+    if (!terminalLog.textContent.includes(line)) {
+      terminalLog.textContent += `
+${line}`;
+      terminalLog.scrollTop = terminalLog.scrollHeight;
     }
   }
 
-  // --- 2. CIFRAR ANTES DE RESPALDAR (RESTIC / BORG / RSYNC) ---
-  const btnSubtabBackupCreate = document.getElementById('btn-subtab-backup-create');
-  const btnSubtabBackupRestore = document.getElementById('btn-subtab-backup-restore');
-  const subviewBackupCreate = document.getElementById('subview-backup-create');
-  const subviewBackupRestore = document.getElementById('subview-backup-restore');
-
-  btnSubtabBackupCreate?.addEventListener('click', () => {
-    btnSubtabBackupCreate.classList.add('active');
-    btnSubtabBackupRestore.classList.remove('active');
-    subviewBackupCreate.style.display = 'block';
-    subviewBackupRestore.style.display = 'none';
-  });
-
-  btnSubtabBackupRestore?.addEventListener('click', () => {
-    btnSubtabBackupRestore.classList.add('active');
-    btnSubtabBackupCreate.classList.remove('active');
-    subviewBackupRestore.style.display = 'block';
-    subviewBackupCreate.style.display = 'none';
-  });
-
-  const inpBackupSrc = document.getElementById('backup-src-input');
-  const inpBackupDst = document.getElementById('backup-dst-input');
-  const btnBrowseBackupSrc = document.getElementById('btn-browse-backup-src');
-  const btnBrowseBackupDst = document.getElementById('btn-browse-backup-dst');
-  const inpBackupPass = document.getElementById('backup-password');
-  const btnAddBackupKeyfile = document.getElementById('btn-add-backup-keyfile');
-  const backupKeyfilesChip = document.getElementById('backup-keyfiles-chip');
-  const btnExecuteBackup = document.getElementById('btn-execute-backup');
-  const backupResultCard = document.getElementById('backup-result-card');
-
-  let backupKeyfiles = [];
-
-  btnBrowseBackupSrc?.addEventListener('click', async () => {
-    const f = await invokeBackend('select_folder_dialog');
-    if (f) inpBackupSrc.value = f;
-  });
-
-  btnBrowseBackupDst?.addEventListener('click', async () => {
-    const f = await invokeBackend('select_folder_dialog');
-    if (f) inpBackupDst.value = f;
-  });
-
-  btnAddBackupKeyfile?.addEventListener('click', async () => {
-    const kf = await invokeBackend('select_keyfile_dialog');
-    if (kf) {
-      backupKeyfiles.push(kf.path);
-      renderBackupKeyfiles();
-    }
-  });
-
-  function renderBackupKeyfiles() {
-    if (!backupKeyfilesChip) return;
-    backupKeyfilesChip.innerHTML = '';
-    backupKeyfiles.forEach((p, idx) => {
-      const chip = document.createElement('div');
-      chip.className = 'keyfile-chip';
-      const name = p.split('/').pop().split('\\').pop();
-      chip.innerHTML = `<span>🔑 ${name}</span><button type="button" class="chip-remove">&times;</button>`;
-      chip.querySelector('.chip-remove').onclick = () => {
-        backupKeyfiles.splice(idx, 1);
-        renderBackupKeyfiles();
-      };
-      backupKeyfilesChip.appendChild(chip);
-    });
-  }
-
-  btnExecuteBackup?.addEventListener('click', async () => {
-    const src = inpBackupSrc.value.trim();
-    const dst = inpBackupDst.value.trim();
-    const pass = inpBackupPass.value;
-
-    if (!src || !dst) {
-      showToast('Por favor selecciona origen y destino del respaldo.', 'warning');
-      return;
-    }
-    if (!pass && backupKeyfiles.length === 0) {
-      showToast('Ingresa una contraseña para cifrar el respaldo.', 'warning');
-      return;
-    }
-
+  // Audit Log Exports
+  btnExportCsv?.addEventListener('click', async () => {
     try {
-      btnExecuteBackup.disabled = true;
-      btnExecuteBackup.textContent = '⏳ Cifrando y anonimizando archivos...';
-
-      const res = await invokeBackend('create_backup_archive_cmd', {
-        sourcePath: src,
-        destPath: dst,
-        password: pass,
-        keyfilePaths: backupKeyfiles,
-        suite: '768'
-      });
-
-      backupResultCard.style.display = 'block';
-      backupResultCard.className = 'result-box success';
-      backupResultCard.innerHTML = `
-        <div style="font-weight: 800; color: #4ade80; margin-bottom: 6px;">✓ Respaldo Anonimizado Generado Exitosamente</div>
-        <div>• <strong>Archivos anonimizados:</strong> ${res.total_files}</div>
-        <div>• <strong>Total bytes protegidos:</strong> ${formatBytes(res.total_bytes)}</div>
-        <div>• <strong>Manifiesto Maestro:</strong> <code>${res.manifest_file}</code></div>
-        <div style="margin-top: 8px; font-size: 11px; color: var(--text-secondary);">
-          Listo para sincronizar con <code>rsync -avz</code>, <code>restic backup</code> o <code>borg create</code>. Tus datos y nombres están 100% blindados.
-        </div>
-      `;
-      showToast('¡Respaldo criptográfico completado con éxito!', 'success');
+      const csv = await invokeBackend('export_watcher_audit_log_cmd', { format: 'csv' });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `miragex_watcher_audit_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Registro de auditoría exportado en CSV.', 'success');
     } catch (e) {
-      showToast(`Error en respaldo: ${e}`, 'error');
-    } finally {
-      btnExecuteBackup.disabled = false;
-      btnExecuteBackup.textContent = '🚀 GENERAR RESPALDO CRIPTOGRÁFICO ANONIMIZADO';
+      showToast(`Error exportando CSV: ${e}`, 'error');
     }
   });
 
-  // Restore logic
-  const inpRestoreSrc = document.getElementById('restore-src-input');
-  const inpRestoreDst = document.getElementById('restore-dst-input');
-  const btnBrowseRestoreSrc = document.getElementById('btn-browse-restore-src');
-  const btnBrowseRestoreDst = document.getElementById('btn-browse-restore-dst');
-  const inpRestorePass = document.getElementById('restore-password');
-  const btnAddRestoreKeyfile = document.getElementById('btn-add-restore-keyfile');
-  const restoreKeyfilesChip = document.getElementById('restore-keyfiles-chip');
-  const btnExecuteRestore = document.getElementById('btn-execute-restore');
-  const restoreResultCard = document.getElementById('restore-result-card');
-
-  let restoreKeyfiles = [];
-
-  btnBrowseRestoreSrc?.addEventListener('click', async () => {
-    const f = await invokeBackend('select_folder_dialog');
-    if (f) inpRestoreSrc.value = f;
-  });
-
-  btnBrowseRestoreDst?.addEventListener('click', async () => {
-    const f = await invokeBackend('select_folder_dialog');
-    if (f) inpRestoreDst.value = f;
-  });
-
-  btnAddRestoreKeyfile?.addEventListener('click', async () => {
-    const kf = await invokeBackend('select_keyfile_dialog');
-    if (kf) {
-      restoreKeyfiles.push(kf.path);
-      renderRestoreKeyfiles();
-    }
-  });
-
-  function renderRestoreKeyfiles() {
-    if (!restoreKeyfilesChip) return;
-    restoreKeyfilesChip.innerHTML = '';
-    restoreKeyfiles.forEach((p, idx) => {
-      const chip = document.createElement('div');
-      chip.className = 'keyfile-chip';
-      const name = p.split('/').pop().split('\\').pop();
-      chip.innerHTML = `<span>🔑 ${name}</span><button type="button" class="chip-remove">&times;</button>`;
-      chip.querySelector('.chip-remove').onclick = () => {
-        restoreKeyfiles.splice(idx, 1);
-        renderRestoreKeyfiles();
-      };
-      restoreKeyfilesChip.appendChild(chip);
-    });
-  }
-
-  btnExecuteRestore?.addEventListener('click', async () => {
-    const bkp = inpRestoreSrc.value.trim();
-    const rst = inpRestoreDst.value.trim();
-    const pass = inpRestorePass.value;
-
-    if (!bkp || !rst) {
-      showToast('Por favor selecciona la carpeta de respaldo y destino de restauración.', 'warning');
-      return;
-    }
-
+  btnExportJsonl?.addEventListener('click', async () => {
     try {
-      btnExecuteRestore.disabled = true;
-      btnExecuteRestore.textContent = '⏳ Descifrando y verificando integridad...';
-
-      const res = await invokeBackend('restore_backup_archive_cmd', {
-        backupPath: bkp,
-        restorePath: rst,
-        password: pass,
-        keyfilePaths: restoreKeyfiles,
-      });
-
-      restoreResultCard.style.display = 'block';
-      restoreResultCard.className = 'result-box success';
-      restoreResultCard.innerHTML = `
-        <div style="font-weight: 800; color: #4ade80; margin-bottom: 6px;">✓ Respaldo Restaurado e Íntegro al 100%</div>
-        <div>• <strong>Archivos reconstruidos:</strong> ${res.restored_files}</div>
-        <div>• <strong>Bytes validados con SHA-256:</strong> ${formatBytes(res.restored_bytes)}</div>
-        <div>• <strong>Ubicación restaurada:</strong> <code>${res.restore_dir}</code></div>
-      `;
-      showToast('¡Restauración completada y verificada!', 'success');
+      const jsonl = await invokeBackend('export_watcher_audit_log_cmd', { format: 'jsonl' });
+      const blob = new Blob([jsonl], { type: 'application/x-ndjson;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `miragex_watcher_audit_${new Date().toISOString().slice(0, 10)}.jsonl`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Registro de auditoría exportado en JSONL.', 'success');
     } catch (e) {
-      showToast(`Error al restaurar: ${e}`, 'error');
-    } finally {
-      btnExecuteRestore.disabled = false;
-      btnExecuteRestore.textContent = '📥 RESTAURAR ÁRBOL ORIGINAL DE ARCHIVOS';
+      showToast(`Error exportando JSONL: ${e}`, 'error');
+    }
+  });
+}
+
+// --------------------------------------------------------------------------
+// Beta Labs (Integración de Sistema, Menú Contextual, QuickLook & Linux)
+// --------------------------------------------------------------------------
+function initBetaLabs() {
+  // Navigation shortcuts from Beta promo cards
+  const btnGotoWatcher = document.getElementById('btn-goto-watcher-tab');
+  btnGotoWatcher?.addEventListener('click', () => {
+    document.querySelector('.nav-tab[data-tab="watcher"]')?.click();
+  });
+
+  const btnGotoEncrypt = document.getElementById('btn-goto-encrypt-tab');
+  btnGotoEncrypt?.addEventListener('click', () => {
+    document.querySelector('.nav-tab[data-tab="encrypt"]')?.click();
+    const toggle = document.getElementById('toggle-encrypt-backup-mode');
+    if (toggle && !toggle.checked) {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change'));
     }
   });
 
@@ -2162,4 +2289,3 @@ function initBetaLabs() {
     }
   });
 }
-

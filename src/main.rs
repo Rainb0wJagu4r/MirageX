@@ -149,6 +149,7 @@ fn main() {
             miragex::commands::start_folder_watcher_cmd,
             miragex::commands::stop_folder_watcher_cmd,
             miragex::commands::get_watcher_status_cmd,
+            miragex::commands::export_watcher_audit_log_cmd,
             miragex::commands::create_backup_archive_cmd,
             miragex::commands::restore_backup_archive_cmd,
             miragex::commands::inspect_header_for_preview_cmd,

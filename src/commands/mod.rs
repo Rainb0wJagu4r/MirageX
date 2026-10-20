@@ -1185,6 +1185,11 @@ pub fn get_watcher_status_cmd() -> crate::watcher::WatcherStatus {
 }
 
 #[tauri::command]
+pub fn export_watcher_audit_log_cmd(format: String) -> Result<String, String> {
+    crate::watcher::export_watcher_audit_log(&format)
+}
+
+#[tauri::command]
 pub fn create_backup_archive_cmd(
     source_path: String,
     dest_path: String,
