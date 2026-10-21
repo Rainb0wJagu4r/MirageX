@@ -201,23 +201,33 @@ fn should_process_file(file_name: &str, filter_mode: &str, filter_extensions: &[
     true
 }
 
-fn collect_watch_files(dir: &Path, recursive: bool, base_dir: &Path) -> Vec<(PathBuf, String)> {
+fn collect_watch_files(dir: &Path, recursive: bool, base_dir: &Path, output_dir: &Path) -> Vec<(PathBuf, String)> {
     let mut files = Vec::new();
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             let file_name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
 
+            // Never traverse into or process files inside the output directory
+            // if output_dir is a separate folder or subfolder
+            if dir != output_dir && path == output_dir {
+                continue;
+            }
+
             if path.is_file() {
+                // Strict rule: .wraith containers are NEVER candidates for auto-encryption
+                if file_name.to_lowercase().ends_with(".wraith") {
+                    continue;
+                }
                 let rel_str = match path.strip_prefix(base_dir) {
                     Ok(rel) => rel.to_string_lossy().to_string(),
                     Err(_) => file_name,
                 };
                 files.push((path, rel_str));
             } else if path.is_dir() && recursive {
-                // Avoid recursing into hidden or system folders
-                if !file_name.starts_with('.') && file_name != "node_modules" && file_name != ".git" {
-                    let mut sub = collect_watch_files(&path, true, base_dir);
+                // Avoid recursing into output_dir, hidden or system folders
+                if path != output_dir && !file_name.starts_with('.') && file_name != "node_modules" && file_name != ".git" {
+                    let mut sub = collect_watch_files(&path, true, base_dir, output_dir);
                     files.append(&mut sub);
                 }
             }
@@ -272,6 +282,7 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
 
     let thread_handle = thread::spawn(move || {
         let mut file_candidates: HashMap<PathBuf, (u64, Instant)> = HashMap::new();
+        let mut processed_fingerprints: HashMap<PathBuf, (u64, SystemTime)> = HashMap::new();
         let mut last_activity = Instant::now();
 
         while !stop_clone.load(Ordering::Relaxed) {
@@ -297,7 +308,7 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
                 break;
             }
 
-            let candidates = collect_watch_files(&watch_p, recursive, &watch_p);
+            let candidates = collect_watch_files(&watch_p, recursive, &watch_p, &out_p);
 
             for (path, rel_path) in candidates {
                 let file_name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
@@ -308,6 +319,15 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
 
                 if let Ok(meta) = fs::metadata(&path) {
                     let size = meta.len();
+                    let mtime = meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+
+                    // Check if file was already encrypted and has not been modified since
+                    if let Some((p_size, p_mtime)) = processed_fingerprints.get(&path) {
+                        if *p_size == size && *p_mtime == mtime {
+                            continue;
+                        }
+                    }
+
                     let now = Instant::now();
 
                     // Check if file is stable (not still being written or copied)
@@ -368,6 +388,11 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
                                         if storage.shred_file_with_mode(&path, 3, ShredMode::Hdd).is_ok() {
                                             shredded = true;
                                         }
+                                        let _ = fs::remove_file(&path);
+                                        processed_fingerprints.remove(&path);
+                                    } else {
+                                        // Keep original file, but record fingerprint so it is never re-encrypted in a loop
+                                        processed_fingerprints.insert(path.clone(), (size, mtime));
                                     }
 
                                     let audit_entry = WatcherAuditEntry {
@@ -411,8 +436,9 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
                 }
             }
 
-            // Cleanup stale candidates that no longer exist
+            // Cleanup stale candidates and fingerprints that no longer exist
             file_candidates.retain(|p, _| p.exists());
+            processed_fingerprints.retain(|p, _| p.exists());
 
             // Sleep between polling checks (1500 ms)
             for _ in 0..15 {
@@ -433,6 +459,8 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
 
     manager.status.is_active = true;
     manager.status.auto_locked = false;
+    manager.status.processed_count = 0;
+    manager.status.audit_log.clear();
     manager.status.watch_dir = Some(config.watch_dir.clone());
     manager.status.output_dir = Some(config.output_dir.clone());
     manager.status.recursive = config.recursive;

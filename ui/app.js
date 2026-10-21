@@ -32,6 +32,7 @@ let selectedShredPath = null;
 
 let selectedEncryptKeyfilePath = null;
 let selectedDecryptKeyfilePath = null;
+let selectedWatchKeyfilePath = null;
 let selectedVaultSources = [];
 let selectedVaultCreateKeyfilePath = null;
 let selectedVaultOpenPath = null;
@@ -43,6 +44,7 @@ let clipboardClearTimer = null;
 
 // DOM Initialization
 document.addEventListener('DOMContentLoaded', () => {
+  setupLanguageLogic();
   setupTabs();
   setupPasswordLogic();
   setupQrModalLogic();
@@ -959,6 +961,33 @@ function setupKeyfileLogic() {
     });
   }
 
+  // Watcher Tab Keyfile
+  const btnSelectWatchKf = document.getElementById('btn-select-keyfile-watch');
+  if (btnSelectWatchKf) {
+    btnSelectWatchKf.addEventListener('click', async () => {
+      try {
+        const fileInfo = await invokeBackend('select_keyfile_dialog');
+        if (fileInfo) {
+          selectedWatchKeyfilePath = fileInfo.path;
+          document.getElementById('watch-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
+          document.getElementById('btn-clear-keyfile-watch').style.display = 'inline-block';
+          showToast(`Keyfile seleccionado: ${fileInfo.name}`, 'info');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const btnClearWatchKf = document.getElementById('btn-clear-keyfile-watch');
+  if (btnClearWatchKf) {
+    btnClearWatchKf.addEventListener('click', () => {
+      selectedWatchKeyfilePath = null;
+      document.getElementById('watch-keyfile-display').value = '';
+      btnClearWatchKf.style.display = 'none';
+    });
+  }
+
   // Open Generator Modal buttons
   const btnOpenGenKf = document.getElementById('btn-open-gen-keyfile');
   if (btnOpenGenKf) {
@@ -972,6 +1001,14 @@ function setupKeyfileLogic() {
   if (btnOpenGenKfVault) {
     btnOpenGenKfVault.addEventListener('click', () => {
       activeKeyfileTarget = 'vault-create';
+      openKeyfileModal();
+    });
+  }
+
+  const btnOpenGenKfWatch = document.getElementById('btn-open-gen-keyfile-watch');
+  if (btnOpenGenKfWatch) {
+    btnOpenGenKfWatch.addEventListener('click', () => {
+      activeKeyfileTarget = 'watcher';
       openKeyfileModal();
     });
   }
@@ -1008,6 +1045,10 @@ function setupKeyfileLogic() {
             selectedVaultCreateKeyfilePath = fileInfo.path;
             document.getElementById('vault-create-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
             document.getElementById('btn-clear-keyfile-vault-create').style.display = 'inline-block';
+          } else if (activeKeyfileTarget === 'watcher') {
+            selectedWatchKeyfilePath = fileInfo.path;
+            document.getElementById('watch-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
+            document.getElementById('btn-clear-keyfile-watch').style.display = 'inline-block';
           }
           closeKeyfileModal();
         }
@@ -1932,42 +1973,6 @@ function initWatcherPanel() {
     }
   });
 
-  btnAddWatchKeyfile?.addEventListener('click', async () => {
-    try {
-      const kf = await invokeBackend('select_keyfile_dialog');
-      if (kf) {
-        watchKeyfiles.push(kf.path);
-        renderWatchKeyfiles();
-      }
-    } catch (e) {
-      showToast(`Error seleccionando keyfile: ${e}`, 'error');
-    }
-  });
-
-  btnClearWatchKeyfiles?.addEventListener('click', () => {
-    watchKeyfiles = [];
-    renderWatchKeyfiles();
-  });
-
-  function renderWatchKeyfiles() {
-    if (!watchKeyfilesChip) return;
-    watchKeyfilesChip.innerHTML = '';
-    if (btnClearWatchKeyfiles) {
-      btnClearWatchKeyfiles.style.display = watchKeyfiles.length > 0 ? 'inline-block' : 'none';
-    }
-    watchKeyfiles.forEach((path, idx) => {
-      const chip = document.createElement('div');
-      chip.className = 'keyfile-chip';
-      const name = path.split('/').pop().split('\\').pop();
-      chip.innerHTML = `<span>🔑 ${name}</span><button type="button" class="chip-remove">&times;</button>`;
-      chip.querySelector('.chip-remove').onclick = () => {
-        watchKeyfiles.splice(idx, 1);
-        renderWatchKeyfiles();
-      };
-      watchKeyfilesChip.appendChild(chip);
-    });
-  }
-
   filterRadios.forEach(radio => {
     radio.addEventListener('change', () => {
       filterRadios.forEach(r => r.closest('.radio-card')?.classList.remove('active'));
@@ -1991,7 +1996,7 @@ function initWatcherPanel() {
       showToast('Selecciona la carpeta de salida cifrada.', 'warning');
       return;
     }
-    if (!password && watchKeyfiles.length === 0) {
+    if (!password && !selectedWatchKeyfilePath) {
       showToast('Ingresa una contraseña o keyfile para el auto-cifrado.', 'warning');
       return;
     }
@@ -2010,12 +2015,13 @@ function initWatcherPanel() {
 
     try {
       btnStartWatcher.disabled = true;
+      const keyfiles = selectedWatchKeyfilePath ? [selectedWatchKeyfilePath] : [];
       const res = await invokeBackend('start_folder_watcher_cmd', {
         config: {
           watch_dir: watchDir,
           output_dir: outputDir,
           password: password,
-          keyfile_paths: watchKeyfiles,
+          keyfile_paths: keyfiles,
           suite: suite,
           shred_source: isShred,
           recursive: isRecursive,
@@ -2321,4 +2327,380 @@ function initBetaLabs() {
       showToast(`Error exportando script: ${e}`, 'error');
     }
   });
+}
+
+// ==========================================
+// 15. BILINGUAL INTERNATIONALIZATION (i18n)
+// 🇲🇽 Español (MX) & 🇺🇸 English (US)
+// ==========================================
+let currentLang = 'es';
+
+const I18N = {
+  es: {
+    // Brand & HUD
+    brand_sub: "MOTOR CRIPTOGRÁFICO POST-CUÁNTICO // FORMATO WRAITH v4",
+    status_algo: "ALGORITMO: MIRAGEX (NIST FIPS 203)",
+    btn_quick_guide: "💡 ¿POR DÓNDE EMPIEZO?",
+    btn_updates: "🔄 UPDATES & CHANGELOG",
+    btn_context_menu: "🖱️ INTEGRACIÓN MENÚ OS",
+    status_zero_server: "ZERO-SERVER // IPC NATIVO",
+
+    // Navigation Tabs
+    nav_encrypt: "CIFRAR",
+    nav_decrypt: "DESCIFRAR",
+    nav_vault: "BÓVEDA",
+    nav_watcher: "VIGILANTE",
+    nav_inspect: "INSPECTOR",
+    nav_benchmark: "BENCHMARK",
+    nav_shred: "TRITURADOR",
+    nav_guide: "GUÍA & AYUDA",
+    nav_beta: "BETA LABS",
+    badge_new: "NUEVO",
+
+    // Common
+    btn_browse: "📂 Explorar",
+    btn_browse_kf: "📂 Examinar",
+    btn_gen_kf: "🎲 Generar Keyfile",
+    btn_remove_kf: "Quitar keyfile",
+    ph_kf: "Sin keyfile (Opcional: 2FA o Solo-Keyfile)...",
+
+    // Encrypt Tab
+    enc_origin_title: "ORIGEN DE DATOS & ARCHIVO",
+    badge_single_file: "ARCHIVO INDIVIDUAL",
+    lbl_cloud_backup_mode: "🗄️ Modo Respaldo Nube (Restic/Borg)",
+    drop_enc_title: "Arrastra tu archivo aquí",
+    drop_enc_sub: "o haz clic para abrir el selector nativo",
+    lbl_enc_pass: "CONTRASEÑA MAESTRA DE PROTECCIÓN",
+    ph_enc_pass: "Introduce una contraseña para el envelope MirageX...",
+    btn_gen: "🎲 Generar",
+    lbl_enc_kf: "KEYFILE DE SEGURIDAD // ESTÁNDAR VERACRYPT & ARCANUM",
+    hint_enc_kf: "Algoritmo de mezcla CRC-32 IEEE 802.3 y adición modular. Compatible con Arcanum y VeraCrypt.",
+    card_suite_title: "SUITE DEL ALGORITMO MIRAGEX",
+    lbl_security_mode: "MODO DE SEGURIDAD MIRAGEX",
+    lbl_chunk_size: "STREAMING CHUNK SIZE",
+    chk_name_fuzzing: "Name Fuzzing (Activo por defecto)",
+    hint_name_fuzzing: "🛡️ Cero fuga de nombres o extensiones ([sha256].wraith). Se restaura al descifrar.",
+    chk_shred_source: "Borrado seguro del archivo original tras cifrar",
+    lbl_disk_type: "TIPO DE DISCO",
+    lbl_passes: "PASADAS",
+    btn_start_encrypt: "🔒 INICIAR CIFRADO MIRAGEX",
+    telemetry_title: "TELEMETRÍA CRIPTOGRÁFICA MIRAGEX",
+
+    // Decrypt Tab
+    dec_card_title: "CONTENEDOR WRAITH (.wraith)",
+    drop_dec_title: "Arrastra tu archivo .wraith aquí",
+    drop_dec_sub: "o haz clic para examinar el disco",
+    lbl_dec_pass: "CONTRASEÑA DE AUTENTICACIÓN",
+    ph_dec_pass: "Contraseña de desencapsulado...",
+    lbl_dec_kf: "KEYFILE DE DESENCRIPTACIÓN",
+    chk_shred_container: "Borrado seguro del contenedor .wraith tras restauración",
+    btn_start_decrypt: "🔓 DESENCAPSULAR & VERIFICAR CON MIRAGEX",
+    dec_authenticity_title: "RESULTADO DE AUTENTICIDAD",
+    dec_empty_text: "Esperando autenticación de contenedor para verificar integridad.",
+
+    // Vault Tab
+    vault_create_title: "CREAR NUEVA BÓVEDA CIFRADA",
+    vault_create_drop: "Seleccionar Archivos para la Bóveda",
+    vault_create_drop_sub: "O usa «Añadir carpeta completa» para empaquetar un directorio entero con ML-KEM + AES-256-GCM",
+    btn_vault_add_folder: "📁 Añadir carpeta completa",
+    lbl_vault_create_pass: "CONTRASEÑA DE LA BÓVEDA",
+    ph_vault_create_pass: "Contraseña maestra de la bóveda...",
+    lbl_vault_create_kf: "KEYFILE DE LA BÓVEDA",
+    btn_execute_create_vault: "📦 CREAR Y CIFRAR BÓVEDA EN DISCO",
+    vault_open_title: "DESBLOQUEAR BÓVEDA EXISTENTE",
+    vault_open_drop: "Selecciona un archivo .wvault o .wraith",
+    vault_open_drop_sub: "Abre y explora el árbol de archivos sin drivers de kernel",
+    lbl_vault_open_pass: "CONTRASEÑA DE DESBLOQUEO",
+    ph_vault_open_pass: "Contraseña de la bóveda...",
+    lbl_vault_open_kf: "KEYFILE DE DESBLOQUEO",
+    btn_execute_open_vault: "🔓 DESBLOQUEAR Y EXPLORAR BÓVEDA",
+    btn_extract_all_vault: "📁 Extraer Todo a Carpeta",
+    btn_close_lock_vault: "🔒 Bloquear y Cerrar Bóveda",
+    ph_vault_search: "Buscar archivos dentro de la bóveda...",
+
+    // Watcher Tab
+    watcher_badge_top: "👁️ MOTOR DE VIGILANCIA EN TIEMPO REAL",
+    watcher_badge_inactive: "⚪ INACTIVO",
+    watcher_badge_active: "🟢 VIGILANDO EN VIVO",
+    watcher_badge_ram: "🛡️ CLAVES EN RAM",
+    watcher_hero_title: "Carpeta Vigilada // ",
+    watcher_hero_title_hl: "Auto-Cifrado Continuo",
+    watcher_hero_desc: "Todo archivo nuevo o modificado que se guarde en la carpeta vigilada es cifrado automáticamente en streaming como contenedor .wraith. Soporta filtrado de extensiones, modo recursivo, notificaciones de escritorio, triturado seguro y auto-bloqueo por inactividad.",
+    watcher_dirs_title: "DIRECTORIOS & SEGURIDAD DE SESIÓN",
+    watcher_lbl_watch_dir: "Directorio Vigilado (Carpeta Origen):",
+    watcher_ph_watch_dir: "Selecciona la carpeta a monitorear...",
+    watcher_lbl_output_dir: "Directorio de Salida Cifrada (.wraith):",
+    watcher_ph_output_dir: "Selecciona la carpeta de destino...",
+    watcher_lbl_pass: "Contraseña en Memoria (Sesión Activa):",
+    watcher_ph_pass: "Contraseña para auto-cifrar...",
+    watcher_lbl_algo: "Algoritmo Post-Cuántico:",
+    lbl_watch_keyfile: "KEYFILE DE SEGURIDAD",
+    hint_watch_keyfile: "Algoritmo de mezcla CRC-32 IEEE 802.3 y adición modular de 64 bytes.",
+    watcher_rules_title: "REGLAS & AUTOMATIZACIÓN",
+    watcher_lbl_filter: "Filtro de Archivos:",
+    watcher_filter_all: "Todos los archivos",
+    watcher_filter_whitelist: "Whitelist de extensiones",
+    watcher_lbl_timeout: "Auto-Bloqueo de Seguridad por Inactividad:",
+    watcher_timeout_0: "Desactivado (Mantener sesión abierta)",
+    watcher_timeout_5: "5 minutos sin nuevos archivos",
+    watcher_timeout_15: "15 minutos (Recomendado)",
+    watcher_timeout_30: "30 minutos",
+    watcher_timeout_60: "1 hora",
+    watcher_chk_recursive: "Vigilancia recursiva (Monitorear subcarpetas anidadas)",
+    watcher_chk_notify: "Notificaciones nativas del sistema operativo",
+    lbl_watch_shred: "Borrado seguro del archivo original tras cifrar (Activo por defecto)",
+    btn_start_watcher: "▶️ INICIAR VIGILANCIA",
+    btn_stop_watcher: "⏹️ DETENER VIGILANCIA",
+    watcher_audit_title: "REGISTRO DE AUDITORÍA & EVENTOS EN VIVO",
+    watcher_console_title: "CONSOLA EN TIEMPO REAL",
+    watcher_status_waiting: "ESPERANDO CONFIGURACIÓN",
+    btn_export_csv: "📥 Exportar CSV",
+    btn_export_jsonl: "📥 Exportar JSONL",
+
+    // Inspector Tab
+    inspect_card_title: "INSPECCIÓN ESTRUCTURAL DE CABECERAS WRAITH (CERO CONOCIMIENTO)",
+    drop_inspect_title: "Arrastra un archivo .wraith para inspección inmediata",
+    drop_inspect_sub: "Lee los metadatos de suite y UUID sin requerir la contraseña ni descifrar el contenido",
+
+    // Benchmark Tab
+    bench_card_title: "BENCHMARK DE RENDIMIENTO DEL ALGORITMO MIRAGEX",
+    btn_run_bench: "⚡ Ejecutar Test de Estrés",
+    bench_desc: "Evalúa la velocidad de encapsulación post-cuántica (FIPS 203), derivación de claves Argon2id y tasa de transferencia por aceleración de hardware AES-256-GCM.",
+
+    // Shredder Tab
+    shred_card_title: "TRITURADOR CRIPTOGRÁFICO CSPRNG (SECURE WIPE)",
+    drop_shred_title: "Arrastra o selecciona un archivo sensible para borrado seguro",
+    drop_shred_sub: "Sobreescritura multi-paso con CSPRNG + Patrones complementarios + Truncamiento (mitigación best-effort en memorias flash con wear-leveling)",
+    btn_execute_shred: "🌪️ EJECUTAR BORRADO SEGURO DEL ARCHIVO",
+
+    // Guide Tab
+    guide_hero_badge: "💡 GUÍA OFICIAL MIRAGEX",
+    guide_hero_title: "¿No sabes por dónde empezar? ",
+    guide_hero_title_hl: "Te guiamos paso a paso.",
+    guide_hero_desc: "MirageX está diseñado para que cualquier persona pueda proteger sus documentos más valiosos con seguridad de grado militar y resistencia post-cuántica (NIST FIPS 203). Aquí aprenderás qué herramienta usar según lo que necesites hacer.",
+
+    // Keyfile Modal
+    kf_modal_title: "GENERADOR DE KEYFILE CRIPTOGRÁFICO",
+    kf_modal_notice: "🛡️ CSPRNG + Entropía Física: Mueve el mouse sobre el sensor para cosechar entropía cuántica complementaria.",
+    kf_lbl_harvest: "COSECHA DE ENTROPÍA DEL USUARIO:",
+    kf_lbl_size: "TAMAÑO DEL KEYFILE",
+    btn_cancel: "Cancelar",
+    btn_save_kf: "💾 Guardar Keyfile en Disco",
+  },
+
+  en: {
+    // Brand & HUD
+    brand_sub: "POST-QUANTUM CRYPTOGRAPHIC ENGINE // WRAITH v4 FORMAT",
+    status_algo: "ALGORITHM: MIRAGEX (NIST FIPS 203)",
+    btn_quick_guide: "💡 QUICK START GUIDE",
+    btn_updates: "🔄 UPDATES & CHANGELOG",
+    btn_context_menu: "🖱️ OS CONTEXT MENU",
+    status_zero_server: "ZERO-SERVER // NATIVE IPC",
+
+    // Navigation Tabs
+    nav_encrypt: "ENCRYPT",
+    nav_decrypt: "DECRYPT",
+    nav_vault: "VAULT",
+    nav_watcher: "WATCHER",
+    nav_inspect: "INSPECTOR",
+    nav_benchmark: "BENCHMARK",
+    nav_shred: "SHREDDER",
+    nav_guide: "GUIDE & HELP",
+    nav_beta: "BETA LABS",
+    badge_new: "NEW",
+
+    // Common
+    btn_browse: "📂 Browse",
+    btn_browse_kf: "📂 Browse",
+    btn_gen_kf: "🎲 Generate Keyfile",
+    btn_remove_kf: "Remove keyfile",
+    ph_kf: "No keyfile (Optional: 2FA or Keyfile-only)...",
+
+    // Encrypt Tab
+    enc_origin_title: "DATA SOURCE & FILE",
+    badge_single_file: "SINGLE FILE",
+    lbl_cloud_backup_mode: "🗄️ Cloud Backup Mode (Restic/Borg)",
+    drop_enc_title: "Drag & drop your file here",
+    drop_enc_sub: "or click to open native file selector",
+    lbl_enc_pass: "MASTER PROTECTION PASSWORD",
+    ph_enc_pass: "Enter password for MirageX envelope...",
+    btn_gen: "🎲 Generate",
+    lbl_enc_kf: "SECURITY KEYFILE // VERACRYPT & ARCANUM STANDARD",
+    hint_enc_kf: "CRC-32 IEEE 802.3 and modular addition mixing algorithm. Compatible with Arcanum and VeraCrypt.",
+    card_suite_title: "MIRAGEX ALGORITHM SUITE",
+    lbl_security_mode: "MIRAGEX SECURITY MODE",
+    lbl_chunk_size: "STREAMING CHUNK SIZE",
+    chk_name_fuzzing: "Name Fuzzing (Active by default)",
+    hint_name_fuzzing: "🛡️ Zero metadata or filename leakage ([sha256].wraith). Restored upon decryption.",
+    chk_shred_source: "Securely shred original file after encryption",
+    lbl_disk_type: "STORAGE TYPE",
+    lbl_passes: "PASSES",
+    btn_start_encrypt: "🔒 START MIRAGEX ENCRYPTION",
+    telemetry_title: "MIRAGEX CRYPTOGRAPHIC TELEMETRY",
+
+    // Decrypt Tab
+    dec_card_title: "WRAITH CONTAINER (.wraith)",
+    drop_dec_title: "Drag & drop your .wraith file here",
+    drop_dec_sub: "or click to browse disk",
+    lbl_dec_pass: "AUTHENTICATION PASSWORD",
+    ph_dec_pass: "Container decryption password...",
+    lbl_dec_kf: "DECRYPTION KEYFILE",
+    chk_shred_container: "Securely shred .wraith container after restoration",
+    btn_start_decrypt: "🔓 DECAPSULATE & VERIFY WITH MIRAGEX",
+    dec_authenticity_title: "AUTHENTICITY RESULT",
+    dec_empty_text: "Waiting for container authentication to verify integrity.",
+
+    // Vault Tab
+    vault_create_title: "CREATE NEW ENCRYPTED VAULT",
+    vault_create_drop: "Select Files for Vault",
+    vault_create_drop_sub: "Or click «Add entire folder» to bundle a whole directory with ML-KEM + AES-256-GCM",
+    btn_vault_add_folder: "📁 Add entire folder",
+    lbl_vault_create_pass: "VAULT MASTER PASSWORD",
+    ph_vault_create_pass: "Vault master password...",
+    lbl_vault_create_kf: "VAULT KEYFILE",
+    btn_execute_create_vault: "📦 CREATE & ENCRYPT VAULT ON DISK",
+    vault_open_title: "UNLOCK EXISTING VAULT",
+    vault_open_drop: "Select a .wvault or .wraith file",
+    vault_open_drop_sub: "Open and browse the file tree without kernel drivers",
+    lbl_vault_open_pass: "UNLOCK PASSWORD",
+    ph_vault_open_pass: "Vault password...",
+    lbl_vault_open_kf: "UNLOCK KEYFILE",
+    btn_execute_open_vault: "🔓 UNLOCK & EXPLORE VAULT",
+    btn_extract_all_vault: "📁 Extract All to Folder",
+    btn_close_lock_vault: "🔒 Lock & Close Vault",
+    ph_vault_search: "Search files inside vault...",
+
+    // Watcher Tab
+    watcher_badge_top: "👁️ REAL-TIME SURVEILLANCE ENGINE",
+    watcher_badge_inactive: "⚪ INACTIVE",
+    watcher_badge_active: "🟢 MONITORING LIVE",
+    watcher_badge_ram: "🛡️ KEYS IN RAM",
+    watcher_hero_title: "Watched Folder // ",
+    watcher_hero_title_hl: "Continuous Auto-Encryption",
+    watcher_hero_desc: "Every new or modified file saved in the watched folder is automatically streaming-encrypted into a .wraith container. Supports extension filtering, recursive mode, OS desktop notifications, secure shredding, and inactivity auto-lock.",
+    watcher_dirs_title: "DIRECTORIES & SESSION SECURITY",
+    watcher_lbl_watch_dir: "Watched Directory (Source Folder):",
+    watcher_ph_watch_dir: "Select folder to monitor...",
+    watcher_lbl_output_dir: "Encrypted Output Directory (.wraith):",
+    watcher_ph_output_dir: "Select destination folder...",
+    watcher_lbl_pass: "Password in Memory (Active Session):",
+    watcher_ph_pass: "Password for auto-encryption...",
+    watcher_lbl_algo: "Post-Quantum Algorithm:",
+    lbl_watch_keyfile: "SECURITY KEYFILE",
+    hint_watch_keyfile: "CRC-32 IEEE 802.3 and 64-byte modular addition mixing algorithm.",
+    watcher_rules_title: "RULES & AUTOMATION",
+    watcher_lbl_filter: "File Filter:",
+    watcher_filter_all: "All files",
+    watcher_filter_whitelist: "Extensions whitelist",
+    watcher_lbl_timeout: "Inactivity Security Auto-Lock:",
+    watcher_timeout_0: "Disabled (Keep session open)",
+    watcher_timeout_5: "5 minutes without new files",
+    watcher_timeout_15: "15 minutes (Recommended)",
+    watcher_timeout_30: "30 minutes",
+    watcher_timeout_60: "1 hour",
+    watcher_chk_recursive: "Recursive surveillance (Monitor nested subfolders)",
+    watcher_chk_notify: "Native OS desktop notifications",
+    lbl_watch_shred: "Secure shredding of original file after encryption (Active by default)",
+    btn_start_watcher: "▶️ START SURVEILLANCE",
+    btn_stop_watcher: "⏹️ STOP SURVEILLANCE",
+    watcher_audit_title: "AUDIT LOG & LIVE EVENTS",
+    watcher_console_title: "REAL-TIME CONSOLE",
+    watcher_status_waiting: "WAITING FOR CONFIGURATION",
+    btn_export_csv: "📥 Export CSV",
+    btn_export_jsonl: "📥 Export JSONL",
+
+    // Inspector Tab
+    inspect_card_title: "STRUCTURAL INSPECTION OF WRAITH HEADERS (ZERO-KNOWLEDGE)",
+    drop_inspect_title: "Drag & drop a .wraith file for immediate inspection",
+    drop_inspect_sub: "Reads suite metadata and UUID without requiring password or decrypting content",
+
+    // Benchmark Tab
+    bench_card_title: "MIRAGEX ALGORITHM PERFORMANCE BENCHMARK",
+    btn_run_bench: "⚡ Run Stress Benchmark",
+    bench_desc: "Evaluates post-quantum encapsulation speed (FIPS 203), Argon2id key derivation, and hardware-accelerated AES-256-GCM throughput.",
+
+    // Shredder Tab
+    shred_card_title: "CSPRNG CRYPTOGRAPHIC SHREDDER (SECURE WIPE)",
+    drop_shred_title: "Drag or select a sensitive file for secure shredding",
+    drop_shred_sub: "Multi-pass overwrite with CSPRNG + Complementary patterns + Truncation (best-effort mitigation on wear-leveling flash drives)",
+    btn_execute_shred: "🌪️ SECURELY SHRED & DESTROY FILE",
+
+    // Guide Tab
+    guide_hero_badge: "💡 OFFICIAL MIRAGEX GUIDE",
+    guide_hero_title: "Not sure where to start? ",
+    guide_hero_title_hl: "We will guide you step by step.",
+    guide_hero_desc: "MirageX is designed so anyone can protect their most valuable documents with military-grade security and post-quantum resistance (NIST FIPS 203). Here you will learn which tool to use for each need.",
+
+    // Keyfile Modal
+    kf_modal_title: "CRYPTOGRAPHIC KEYFILE GENERATOR",
+    kf_modal_notice: "🛡️ CSPRNG + Physical Entropy: Move the mouse over the sensor to harvest complementary quantum entropy.",
+    kf_lbl_harvest: "USER ENTROPY HARVEST:",
+    kf_lbl_size: "KEYFILE SIZE",
+    btn_cancel: "Cancel",
+    btn_save_kf: "💾 Save Keyfile to Disk",
+  }
+};
+
+function applyLanguage(lang) {
+  const dict = I18N[lang] || I18N.es;
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) {
+      el.textContent = dict[key];
+    }
+  });
+
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key] !== undefined) {
+      el.placeholder = dict[key];
+    }
+  });
+
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (dict[key] !== undefined) {
+      el.title = dict[key];
+    }
+  });
+
+  const flagEl = document.getElementById('lang-flag');
+  const textEl = document.getElementById('lang-text');
+  if (flagEl && textEl) {
+    if (lang === 'en') {
+      flagEl.textContent = '🇺🇸';
+      textEl.textContent = 'English';
+    } else {
+      flagEl.textContent = '🇲🇽';
+      textEl.textContent = 'Español';
+    }
+  }
+}
+
+function setupLanguageLogic() {
+  try {
+    const saved = localStorage.getItem('miragex_lang');
+    if (saved === 'en' || saved === 'es') {
+      currentLang = saved;
+    }
+  } catch (e) {
+    console.warn('localStorage read error', e);
+  }
+
+  applyLanguage(currentLang);
+
+  const btnToggle = document.getElementById('btn-lang-toggle');
+  if (btnToggle) {
+    btnToggle.addEventListener('click', () => {
+      currentLang = (currentLang === 'es') ? 'en' : 'es';
+      try {
+        localStorage.setItem('miragex_lang', currentLang);
+      } catch (e) {
+        console.warn('localStorage write error', e);
+      }
+      applyLanguage(currentLang);
+    });
+  }
 }
