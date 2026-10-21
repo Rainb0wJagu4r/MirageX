@@ -37,10 +37,29 @@ pub struct UpdateProgress {
 pub fn get_changelog_entries() -> Vec<ChangelogEntry> {
     vec![
         ChangelogEntry {
+            version: "v4.1.1".to_string(),
+            title: "Vigilante Loop Fix, Name Fuzzing por Defecto, Keyfiles & Selector Bilingüe".to_string(),
+            date: "20 de Octubre, 2026".to_string(),
+            is_current: true,
+            highlights: vec![
+                "👁️ Fix crítico en Vigilante: resolución del bucle infinito cuando el origen y destino coinciden, con shredding seguro del original tras cifrar.".to_string(),
+                "🛡️ Name Fuzzing activo por defecto en Vigilante: anonimización criptográfica inmediata ([sha256].wraith) preservando la integridad del nombre al descifrar.".to_string(),
+                "🔑 Generador de Keyfiles integrado en Vigilante: creación asistida de archivos de clave con radar de entropía física del cursor.".to_string(),
+                "🌐 Selector bilingüe en HUD: alternancia fluida entre Español (🇲🇽) e Inglés (🇺🇸) con traducciones dinámicas en toda la aplicación.".to_string(),
+                "🧹 Purga completa de referencias de marcas externas en Vigilante.".to_string(),
+                "🚀 Actualizador resiliente: fallback transparente con descarga directa del instalador nativo (.exe / .msi / .dmg / .AppImage).".to_string(),
+            ],
+            security_notes: vec![
+                "Prevención de condiciones de carrera y auto-cifrado recursivo en carpetas vigiladas.".to_string(),
+                "Aislamiento de claves de sesión en memoria con Zeroize CSPRNG.".to_string(),
+            ],
+            raw_markdown: "### MirageX v4.1.1\n- Fix de bucle en Vigilante.\n- Name Fuzzing por defecto en Vigilante.\n- Keyfiles en Vigilante.\n- Selector bilingüe 🇲🇽/🇺🇸.\n- Actualizador resiliente.".to_string(),
+        },
+        ChangelogEntry {
             version: "v4.1.0".to_string(),
             title: "Motor Vigilante, Name Fuzzing por Defecto, Respaldo Cloud & Menús OS".to_string(),
             date: "20 de Octubre, 2026".to_string(),
-            is_current: true,
+            is_current: false,
             highlights: vec![
                 "👁️ Nueva pestaña principal 'VIGILANTE': Auto-cifrado continuo en segundo plano con polling atómico (1500ms).".to_string(),
                 "🛡️ Name Fuzzing activo por defecto: anonimización criptográfica ([sha256].wraith) con restauración 100% íntegra del nombre original al descifrar.".to_string(),
