@@ -22,6 +22,7 @@ pub struct UpdateCheckResult {
     pub release_notes: String,
     pub changelog_history: Vec<ChangelogEntry>,
     pub error: Option<String>,
+    pub download_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,6 +122,16 @@ pub fn get_changelog_history_cmd() -> Vec<ChangelogEntry> {
 pub async fn check_app_update_cmd(app: AppHandle) -> Result<UpdateCheckResult, String> {
     let current_version = env!("CARGO_PKG_VERSION").to_string();
     let history = get_changelog_entries();
+    let latest_changelog_ver = history.first().map(|h| h.version.trim_start_matches('v').to_string()).unwrap_or_else(|| current_version.clone());
+
+    #[cfg(target_os = "windows")]
+    let platform_installer = format!("https://github.com/Rainb0wJagu4r/MirageX/releases/download/v{}/MirageX_{}_x64-setup.exe", latest_changelog_ver, latest_changelog_ver);
+    #[cfg(target_os = "macos")]
+    let platform_installer = format!("https://github.com/Rainb0wJagu4r/MirageX/releases/download/v{}/MirageX_{}_x64.dmg", latest_changelog_ver, latest_changelog_ver);
+    #[cfg(target_os = "linux")]
+    let platform_installer = format!("https://github.com/Rainb0wJagu4r/MirageX/releases/download/v{}/MirageX_{}_amd64.AppImage", latest_changelog_ver, latest_changelog_ver);
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    let platform_installer = format!("https://github.com/Rainb0wJagu4r/MirageX/releases/tag/v{}", latest_changelog_ver);
 
     match app.updater() {
         Ok(updater) => {
@@ -134,50 +145,52 @@ pub async fn check_app_update_cmd(app: AppHandle) -> Result<UpdateCheckResult, S
                         release_notes: update.body.unwrap_or_else(|| "Nuevas mejoras de seguridad y correcciones incluidas en esta versión.".to_string()),
                         changelog_history: history,
                         error: None,
+                        download_url: Some(platform_installer),
                     })
                 }
                 Ok(None) => {
+                    let is_newer = latest_changelog_ver != current_version;
                     Ok(UpdateCheckResult {
-                        has_update: false,
+                        has_update: is_newer,
                         current_version: current_version.clone(),
-                        latest_version: current_version,
-                        release_date: None,
-                        release_notes: String::new(),
+                        latest_version: if is_newer { latest_changelog_ver } else { current_version },
+                        release_date: if is_newer { history.first().map(|h| h.date.clone()) } else { None },
+                        release_notes: if is_newer { history.first().map(|h| h.highlights.join("\n")).unwrap_or_default() } else { String::new() },
                         changelog_history: history,
                         error: None,
+                        download_url: if is_newer { Some(platform_installer) } else { None },
                     })
                 }
-                Err(_e) => {
-                    // Fallback transparente: si el servidor no responde o estamos offline,
-                    // comprobamos si ya estamos en la versión más reciente del changelog
-                    let is_latest = history.first().map(|h| h.version == format!("v{}", current_version)).unwrap_or(true);
-                    let user_error = if is_latest {
-                        None
-                    } else {
-                        Some("No se pudo conectar al servidor de actualizaciones. Revisa tu conexión a Internet o visita GitHub Releases.".to_string())
-                    };
-
+                Err(e) => {
+                    let is_newer = latest_changelog_ver != current_version;
                     Ok(UpdateCheckResult {
-                        has_update: false,
+                        has_update: is_newer,
                         current_version: current_version.clone(),
-                        latest_version: current_version,
-                        release_date: None,
-                        release_notes: String::new(),
+                        latest_version: if is_newer { latest_changelog_ver } else { current_version },
+                        release_date: if is_newer { history.first().map(|h| h.date.clone()) } else { None },
+                        release_notes: if is_newer { history.first().map(|h| h.highlights.join("\n")).unwrap_or_default() } else { String::new() },
                         changelog_history: history,
-                        error: user_error,
+                        error: if is_newer {
+                            Some("Actualización detectada. Si el auto-reemplazo en caliente no procede debido a políticas de firma, puedes usar la descarga directa del instalador.".to_string())
+                        } else {
+                            Some(format!("No se pudo contactar el servidor de actualizaciones ({})", e))
+                        },
+                        download_url: if is_newer { Some(platform_installer) } else { None },
                     })
                 }
             }
         }
-        Err(_e) => {
+        Err(e) => {
+            let is_newer = latest_changelog_ver != current_version;
             Ok(UpdateCheckResult {
-                has_update: false,
+                has_update: is_newer,
                 current_version: current_version.clone(),
-                latest_version: current_version,
-                release_date: None,
-                release_notes: String::new(),
+                latest_version: if is_newer { latest_changelog_ver } else { current_version },
+                release_date: if is_newer { history.first().map(|h| h.date.clone()) } else { None },
+                release_notes: if is_newer { history.first().map(|h| h.highlights.join("\n")).unwrap_or_default() } else { String::new() },
                 changelog_history: history,
-                error: None,
+                error: Some(format!("Error inicializando actualizador ({})", e)),
+                download_url: if is_newer { Some(platform_installer) } else { None },
             })
         }
     }

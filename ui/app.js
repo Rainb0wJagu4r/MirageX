@@ -1493,7 +1493,10 @@ function setupUpdaterLogic() {
   const btnGuideChangelog = document.getElementById('btn-guide-changelog');
   const btnCheckNow = document.getElementById('btn-check-updates-now');
   const btnInstall = document.getElementById('btn-execute-install-update');
+  const btnDirectDownload = document.getElementById('btn-direct-download-installer');
   const btnRestart = document.getElementById('btn-execute-restart-app');
+
+  let currentDownloadUrl = null;
 
   const badgeDot = document.getElementById('updater-badge-dot');
   const btnLabel = document.getElementById('updater-btn-label');
@@ -1602,6 +1605,18 @@ function setupUpdaterLogic() {
     });
   }
 
+  if (btnDirectDownload) {
+    btnDirectDownload.addEventListener('click', async () => {
+      const url = currentDownloadUrl || 'https://github.com/Rainb0wJagu4r/MirageX/releases';
+      try {
+        await invokeBackend('open_external_url_cmd', { url });
+        showToast('Abriendo enlace de descarga oficial en tu navegador...', 'info');
+      } catch (e) {
+        window.open(url, '_blank');
+      }
+    });
+  }
+
   async function fetchChangelogAndCheckUpdates(showUserFeedback = false) {
     if (showUserFeedback) {
       if (lblMessage) lblMessage.textContent = 'Conectando con el repositorio y verificando firmas criptográficas...';
@@ -1638,6 +1653,7 @@ function setupUpdaterLogic() {
         if (lblCurrentVersion) lblCurrentVersion.textContent = `v${checkRes.current_version}`;
 
         if (checkRes.has_update) {
+          currentDownloadUrl = checkRes.download_url || null;
           if (badgeDot) badgeDot.style.display = 'inline-block';
           if (btnLabel) btnLabel.textContent = `ACTUALIZAR A v${checkRes.latest_version}`;
           if (badgeStatus) {
@@ -1645,7 +1661,7 @@ function setupUpdaterLogic() {
             badgeStatus.className = 'badge pink';
           }
           if (lblMessage) {
-            lblMessage.textContent = `Se ha detectado la versión v${checkRes.latest_version}. Publicada con nuevas características y parches.`;
+            lblMessage.textContent = checkRes.error || `Se ha detectado la versión v${checkRes.latest_version}. Publicada con nuevas características y parches.`;
           }
           if (cardAction) cardAction.style.display = 'flex';
           if (lblNewVerTitle) lblNewVerTitle.textContent = `MirageX v${checkRes.latest_version} Disponible`;
@@ -1655,11 +1671,17 @@ function setupUpdaterLogic() {
           if (btnInstall) {
             btnInstall.style.display = 'inline-block';
             btnInstall.disabled = false;
-            btnInstall.textContent = `🚀 DESCARGAR E INSTALAR ACTUALIZACIÓN (v${checkRes.latest_version})`;
+            btnInstall.textContent = `🚀 AUTO-ACTUALIZAR EN SEGUNDO PLANO (v${checkRes.latest_version})`;
+          }
+          if (btnDirectDownload) {
+            btnDirectDownload.style.display = currentDownloadUrl ? 'inline-block' : 'none';
+            btnDirectDownload.textContent = `🌐 DESCARGAR INSTALADOR OFICIAL (v${checkRes.latest_version})`;
           }
           if (btnRestart) btnRestart.style.display = 'none';
           if (showUserFeedback) showToast(`¡Nueva versión v${checkRes.latest_version} lista para instalar!`, 'info');
         } else {
+          currentDownloadUrl = null;
+          if (btnDirectDownload) btnDirectDownload.style.display = 'none';
           if (badgeDot) badgeDot.style.display = 'none';
           if (btnLabel) btnLabel.textContent = 'UPDATES & CHANGELOG';
           if (badgeStatus) {

@@ -29,3 +29,23 @@ fn test_changelog_highlights_cover_core_features() {
     assert!(all_text.contains("Name Fuzzing") || all_text.contains("fuzzing"));
     assert!(all_text.contains("Respaldo"));
 }
+
+#[test]
+fn test_update_check_result_serialization() {
+    use miragex::commands::updater::UpdateCheckResult;
+
+    let res = UpdateCheckResult {
+        has_update: true,
+        current_version: "4.0.2".to_string(),
+        latest_version: "4.1.0".to_string(),
+        release_date: Some("2026-10-20".to_string()),
+        release_notes: "Vigilante update".to_string(),
+        changelog_history: vec![],
+        error: None,
+        download_url: Some("https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/MirageX_4.1.0_x64-setup.exe".to_string()),
+    };
+
+    let serialized = serde_json::to_string(&res).expect("serialization failed");
+    assert!(serialized.contains("MirageX_4.1.0_x64-setup.exe"));
+    assert!(serialized.contains("4.1.0"));
+}
