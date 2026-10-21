@@ -31,6 +31,7 @@ fn test_folder_watcher_auto_encryption_and_shred() {
         password: password.clone(),
         keyfile_paths: vec![],
         suite: "768".to_string(),
+        name_fuzzing: false,
         shred_source: true,
         recursive: true,
         filter_mode: "all".to_string(),
@@ -121,6 +122,7 @@ fn test_folder_watcher_same_folder_no_loop() {
         password: password.clone(),
         keyfile_paths: vec![],
         suite: "768".to_string(),
+        name_fuzzing: false,
         shred_source: true,
         recursive: false,
         filter_mode: "all".to_string(),
@@ -158,6 +160,77 @@ fn test_folder_watcher_same_folder_no_loop() {
 
     let status = get_watcher_status();
     assert_eq!(status.processed_count, 1, "Processed count must remain exactly 1 (no loop)");
+
+    let stop_res = stop_folder_watcher();
+    assert!(stop_res.is_ok());
+
+    let _ = fs::remove_dir_all(&temp_base);
+}
+
+#[test]
+fn test_folder_watcher_name_fuzzing_by_default_and_roundtrip() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let temp_base = std::env::temp_dir().join(format!("miragex_watch_fuzz_{}", OsRng.next_u64()));
+    let watch_dir = temp_base.join("incoming");
+    let output_dir = temp_base.join("vault_out");
+    fs::create_dir_all(&watch_dir).expect("Create incoming dir");
+    fs::create_dir_all(&output_dir).expect("Create vault_out dir");
+
+    let password = "NameFuzzingSecretKey999!".to_string();
+
+    let config = WatcherConfig {
+        watch_dir: watch_dir.to_string_lossy().to_string(),
+        output_dir: output_dir.to_string_lossy().to_string(),
+        password: password.clone(),
+        keyfile_paths: vec![],
+        suite: "768".to_string(),
+        name_fuzzing: true, // Name fuzzing enabled
+        shred_source: true,
+        recursive: false,
+        filter_mode: "all".to_string(),
+        filter_extensions: vec![],
+        inactivity_timeout_minutes: 0,
+        os_notifications: false,
+    };
+
+    let start_res = start_folder_watcher(config);
+    assert!(start_res.is_ok(), "Watcher with name fuzzing should start");
+
+    let file_name = "classified_intel.docx";
+    let test_file = watch_dir.join(file_name);
+    let original_bytes = b"TOP_SECRET_DOCX_PAYLOAD_FUZZED_TEST_2026";
+    fs::write(&test_file, original_bytes).expect("Write test file");
+
+    let expected_fuzzed_name = miragex::commands::compute_fuzzed_filename(file_name);
+    let expected_fuzzed_path = output_dir.join(&expected_fuzzed_name);
+
+    // Wait up to 5 seconds for processing
+    let start_time = Instant::now();
+    let mut encrypted_found = false;
+    while start_time.elapsed() < Duration::from_secs(5) {
+        if expected_fuzzed_path.exists() && !test_file.exists() {
+            encrypted_found = true;
+            break;
+        }
+        thread::sleep(Duration::from_millis(200));
+    }
+
+    assert!(encrypted_found, "File must be fuzzed as [sha256].wraith and source shredded");
+    assert!(!output_dir.join(format!("{}.wraith", file_name)).exists(), "Plain filename.wraith must NOT exist on disk");
+
+    // Decrypt the fuzzed .wraith file and verify original filename metadata is recovered
+    let mut enc_file = File::open(&expected_fuzzed_path).expect("Open encrypted container");
+    let mut decrypted_bytes = Vec::new();
+    let dec_res = decrypt_stream(
+        &mut enc_file,
+        &mut decrypted_bytes,
+        password.as_bytes(),
+        DecryptOptions::default(),
+        |_| {},
+    ).expect("Decryption of fuzzed container must succeed");
+
+    assert_eq!(decrypted_bytes, original_bytes, "Decrypted content must match original payload");
+    assert_eq!(dec_res.original_filename, file_name, "Header must preserve original filename for restoration");
 
     let stop_res = stop_folder_watcher();
     assert!(stop_res.is_ok());

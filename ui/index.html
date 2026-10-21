@@ -648,6 +648,15 @@
 
               <!-- Checkboxes -->
               <div class="checkbox-group" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                <label class="checkbox-label" title="Anonimiza el nombre del archivo en disco ([sha256].wraith) para evitar filtración de metadatos o extensiones. Al descifrar con MirageX se restaura el nombre real íntegro.">
+                  <input type="checkbox" id="watch-name-fuzzing-chk" checked>
+                  <span class="checkbox-custom"></span>
+                  <span data-i18n="chk_name_fuzzing"><strong>Name Fuzzing (Activo por defecto)</strong></span>
+                </label>
+                <div class="field-hint" style="font-size: 10px; margin-top: -3px; margin-bottom: 2px; color: var(--text-secondary);" data-i18n="hint_name_fuzzing">
+                  🛡️ Cero fuga de nombres o extensiones (<code>[sha256].wraith</code>). Se restaura al descifrar.
+                </div>
+
                 <label class="checkbox-label">
                   <input type="checkbox" id="watch-recursive-chk" checked>
                   <span class="checkbox-custom"></span>

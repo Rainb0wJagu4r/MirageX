@@ -36,6 +36,8 @@ pub struct WatcherConfig {
     pub keyfile_paths: Vec<String>,
     #[serde(default = "default_suite")]
     pub suite: String,
+    #[serde(default = "default_true")]
+    pub name_fuzzing: bool,
     #[serde(default)]
     pub shred_source: bool,
     #[serde(default)]
@@ -71,6 +73,7 @@ pub struct WatcherStatus {
     pub audit_log: Vec<WatcherAuditEntry>,
     pub auto_locked: bool,
     pub recursive: bool,
+    pub name_fuzzing: bool,
     pub filter_mode: String,
     pub filter_extensions: Vec<String>,
     pub inactivity_timeout_minutes: u32,
@@ -101,6 +104,7 @@ fn get_manager() -> &'static Arc<Mutex<WatcherManager>> {
                 audit_log: Vec::new(),
                 auto_locked: false,
                 recursive: false,
+                name_fuzzing: true,
                 filter_mode: "all".into(),
                 filter_extensions: Vec::new(),
                 inactivity_timeout_minutes: 0,
@@ -275,6 +279,7 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
     };
     let shred_source = config.shred_source;
     let recursive = config.recursive;
+    let name_fuzzing = config.name_fuzzing;
     let filter_mode = config.filter_mode.clone();
     let filter_extensions = config.filter_extensions.clone();
     let inactivity_minutes = config.inactivity_timeout_minutes;
@@ -334,7 +339,11 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
                     if let Some((prev_size, first_seen)) = file_candidates.get(&path) {
                         if *prev_size == size && first_seen.elapsed() >= Duration::from_millis(500) {
                             // File is stable! Proceed with auto-encryption
-                            let out_file_name = format!("{}.wraith", file_name);
+                            let out_file_name = if name_fuzzing {
+                                crate::commands::compute_fuzzed_filename(&file_name)
+                            } else {
+                                format!("{}.wraith", file_name)
+                            };
                             let target_dest_dir = if recursive {
                                 if let Some(parent) = Path::new(&rel_path).parent() {
                                     out_p.join(parent)
@@ -461,6 +470,7 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
     manager.status.auto_locked = false;
     manager.status.processed_count = 0;
     manager.status.audit_log.clear();
+    manager.status.name_fuzzing = config.name_fuzzing;
     manager.status.watch_dir = Some(config.watch_dir.clone());
     manager.status.output_dir = Some(config.output_dir.clone());
     manager.status.recursive = config.recursive;
@@ -503,6 +513,7 @@ pub fn get_watcher_status() -> WatcherStatus {
             audit_log: Vec::new(),
             auto_locked: false,
             recursive: false,
+            name_fuzzing: true,
             filter_mode: "all".into(),
             filter_extensions: Vec::new(),
             inactivity_timeout_minutes: 0,

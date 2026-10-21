@@ -1922,14 +1922,12 @@ function initWatcherPanel() {
   const inpWatchPass = document.getElementById('watch-password');
   const btnToggleWatchPass = document.getElementById('btn-toggle-watch-pass');
   const selectWatchSuite = document.getElementById('watch-suite-select');
-  const btnAddWatchKeyfile = document.getElementById('btn-add-watch-keyfile');
-  const btnClearWatchKeyfiles = document.getElementById('btn-clear-watch-keyfiles');
-  const watchKeyfilesChip = document.getElementById('watch-keyfiles-chip');
 
   const filterRadios = document.querySelectorAll('input[name="watch-filter-mode"]');
   const watchExtWrapper = document.getElementById('watch-extensions-wrapper');
   const inpWatchExt = document.getElementById('watch-filter-extensions-input');
   const selectWatchTimeout = document.getElementById('watch-timeout-select');
+  const chkWatchNameFuzzing = document.getElementById('watch-name-fuzzing-chk');
   const chkWatchRecursive = document.getElementById('watch-recursive-chk');
   const chkWatchNotify = document.getElementById('watch-notify-chk');
   const chkWatchShred = document.getElementById('watch-shred-source-chk');
@@ -1946,7 +1944,6 @@ function initWatcherPanel() {
   const btnExportCsv = document.getElementById('btn-export-audit-csv');
   const btnExportJsonl = document.getElementById('btn-export-audit-jsonl');
 
-  let watchKeyfiles = [];
   let watcherInterval = null;
 
   btnBrowseWatchFolder?.addEventListener('click', async () => {
@@ -2009,6 +2006,7 @@ function initWatcherPanel() {
 
     const timeoutMinutes = parseInt(selectWatchTimeout?.value || '15', 10);
     const suite = selectWatchSuite?.value || '768';
+    const isNameFuzzing = chkWatchNameFuzzing ? chkWatchNameFuzzing.checked : true;
     const isRecursive = chkWatchRecursive ? chkWatchRecursive.checked : true;
     const isNotify = chkWatchNotify ? chkWatchNotify.checked : true;
     const isShred = chkWatchShred ? chkWatchShred.checked : false;
@@ -2023,6 +2021,7 @@ function initWatcherPanel() {
           password: password,
           keyfile_paths: keyfiles,
           suite: suite,
+          name_fuzzing: isNameFuzzing,
           shred_source: isShred,
           recursive: isRecursive,
           filter_mode: selectedFilterMode,
@@ -2051,6 +2050,7 @@ function initWatcherPanel() {
       appendWatcherLog(`[INICIADO] Motor de Vigilancia MirageX v4.1 activo`);
       appendWatcherLog(`[ORIGEN] ${watchDir} ${isRecursive ? '(Recursivo)' : '(Directorio Raíz)'}`);
       appendWatcherLog(`[DESTINO] ${outputDir}`);
+      appendWatcherLog(`[NAME FUZZING] ${isNameFuzzing ? 'ACTIVADO ([sha256].wraith anonimizado)' : 'Conservar nombre original'}`);
       appendWatcherLog(`[FILTRO] Modo: ${selectedFilterMode.toUpperCase()}${selectedFilterMode === 'whitelist' ? ' [' + filterExtensions.join(', ') + ']' : ''}`);
       appendWatcherLog(`[AUTO-BLOQUEO] Inactividad RAM: ${timeoutMinutes > 0 ? timeoutMinutes + ' min' : 'Desactivado'}`);
       appendWatcherLog(`[SEGURIDAD] Triturado: ${isShred ? 'ACTIVADO (CSPRNG 3 pases)' : 'Conservar original'}`);
