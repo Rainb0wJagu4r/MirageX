@@ -1,39 +1,39 @@
 {
-  "version": "4.0.2",
-  "notes": "MirageX v4.0.2 — Velvet Cyber HUD, In-App Auto-Updates & Vaults\n\n- In-App Auto-Updater with cryptographic verification\n- Official Changelog Viewer\n- Cryptographic Guidance Center\n- Velvet Palette UI Redesign\n- Encrypted In-Memory Vaults (.wvault)\n- VeraCrypt / Arcanum Keyfiles with Quantum Mouse Entropy\n- Ephemeral QR Code Password Sharing\n- Universal HFS+ macOS Installer and Windows File Associations",
-  "pub_date": "2026-10-18T18:00:00Z",
+  "version": "4.1.0",
+  "notes": "MirageX v4.1.0 — Motor Vigilante, Name Fuzzing por Defecto, Respaldo Cloud & Menús OS\n\n- 👁️ Pestaña principal 'VIGILANTE': Auto-cifrado continuo en segundo plano con polling atómico (1500ms).\n- 🛡️ Name Fuzzing activo por defecto: anonimización criptográfica ([sha256].wraith) con restauración íntegra al descifrar.\n- 🗄️ Modo Respaldo Nube en CIFRAR/DESCIFRAR: Blinded Hashes reproducibles y manifiesto maestro cifrado para Restic, Borg y rsync.\n- 🖱️ Integración nativa de menús contextuales: Quick Actions en macOS Finder y menú contextual en Windows Explorer.\n- 🔑 Generador de Keyfiles con radar de entropía física en Vigilante.\n- 🌐 Selector bilingüe en HUD: Español (🇲🇽) e Inglés (🇺🇸).\n- 📐 Auto-dimensionamiento de la interfaz: Velvet Cyber HUD fluido con media queries responsivas.",
+  "pub_date": "2026-10-20T21:00:00Z",
   "platforms": {
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.0.2/MirageX_4.0.2_aarch64.dmg"
+      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/MirageX_4.1.0_aarch64.dmg"
     },
     "darwin-aarch64-app": {
       "signature": "",
-      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.0.2/MirageX_4.0.2_aarch64.dmg"
+      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/MirageX_4.1.0_aarch64.dmg"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.0.2/MirageX_4.0.2_x64.dmg"
+      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/MirageX_4.1.0_x64.dmg"
     },
     "darwin-x86_64-app": {
       "signature": "",
-      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.0.2/MirageX_4.0.2_x64.dmg"
+      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/MirageX_4.1.0_x64.dmg"
     },
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.0.2/MirageX_4.0.2_x64-setup.exe"
+      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/MirageX_4.1.0_x64-setup.exe"
     },
     "windows-x86_64-nsis": {
       "signature": "",
-      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.0.2/MirageX_4.0.2_x64-setup.exe"
+      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/MirageX_4.1.0_x64-setup.exe"
     },
     "windows-x86_64-msi": {
       "signature": "",
-      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.0.2/MirageX_4.0.2_x64_en-US.msi"
+      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/MirageX_4.1.0_x64_en-US.msi"
     },
     "linux-x86_64": {
       "signature": "",
-      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.0.2/miragex"
+      "url": "https://github.com/Rainb0wJagu4r/MirageX/releases/download/v4.1.0/miragex"
     }
   }
 }
