@@ -1589,8 +1589,19 @@ function setupUpdaterLogic() {
         btnRestart.style.display = 'inline-block';
       } catch (err) {
         btnInstall.disabled = false;
-        btnInstall.textContent = '🚀 REINTENTAR INSTALAR ACTUALIZACIÓN';
-        showToast(`Error al instalar actualización: ${err}`, 'error');
+        btnInstall.textContent = '🚀 REINTENTAR INSTALACIÓN';
+        if (progressStats) {
+          progressStats.textContent = `Descarga completada, pero el sistema requiere aplicar el instalador nativo (${err}). Usa el botón directo abajo.`;
+        }
+        if (btnDirectDownload) {
+          btnDirectDownload.style.display = 'inline-block';
+          btnDirectDownload.className = 'btn-primary highlight-pink';
+          btnDirectDownload.textContent = '🌐 DESCARGAR / ABRIR INSTALADOR OFICIAL (.DMG / .EXE)';
+        }
+        if (lblMessage) {
+          lblMessage.textContent = 'Para completar la actualización en tu sistema, abre el instalador oficial descargado o descárgalo directamente con el botón rosa.';
+        }
+        showToast(`Instalación automática pausada por el sistema. Usa el botón de descarga directa.`, 'warning');
       }
     });
   }

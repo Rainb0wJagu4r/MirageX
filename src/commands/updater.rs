@@ -145,7 +145,9 @@ pub async fn check_app_update_cmd(app: AppHandle) -> Result<UpdateCheckResult, S
 
     #[cfg(target_os = "windows")]
     let platform_installer = format!("https://github.com/Rainb0wJagu4r/MirageX/releases/download/v{}/MirageX_{}_x64-setup.exe", latest_changelog_ver, latest_changelog_ver);
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    let platform_installer = format!("https://github.com/Rainb0wJagu4r/MirageX/releases/download/v{}/MirageX_{}_aarch64.dmg", latest_changelog_ver, latest_changelog_ver);
+    #[cfg(all(target_os = "macos", not(target_arch = "aarch64")))]
     let platform_installer = format!("https://github.com/Rainb0wJagu4r/MirageX/releases/download/v{}/MirageX_{}_x64.dmg", latest_changelog_ver, latest_changelog_ver);
     #[cfg(target_os = "linux")]
     let platform_installer = format!("https://github.com/Rainb0wJagu4r/MirageX/releases/download/v{}/MirageX_{}_amd64.AppImage", latest_changelog_ver, latest_changelog_ver);
