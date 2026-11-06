@@ -51,8 +51,25 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0.0" --locked
 
+      - name: Setup macOS Code Signing Identity (HeptagonSec - Rainb0Jagu4r)
+        if: startsWith(matrix.platform, 'macos')
+        run: |
+          openssl req -x509 -newkey rsa:2048 -days 3650 \
+            -keyout /tmp/dev.key -out /tmp/dev.crt -nodes \
+            -subj "/CN=HeptagonSec - Rainb0Jagu4r" \
+            -addext "keyUsage=critical,digitalSignature" \
+            -addext "extendedKeyUsage=codeSigning"
+          openssl pkcs12 -export -legacy \
+            -in /tmp/dev.crt -inkey /tmp/dev.key \
+            -out /tmp/dev.p12 -password pass:miragex
+          security import /tmp/dev.p12 -k ~/Library/Keychains/login.keychain-db -P miragex -A
+          security add-trusted-cert -p codeSign -k ~/Library/Keychains/login.keychain-db /tmp/dev.crt
+          rm -f /tmp/dev.key /tmp/dev.crt /tmp/dev.p12
+
       - name: Build Tauri App & Bundles
         run: cargo tauri build ${{ matrix.args }}
+        env:
+          APPLE_SIGNING_IDENTITY: "HeptagonSec - Rainb0Jagu4r"
 
       - name: Upload Release Artifacts
         if: startsWith(github.ref, 'refs/tags/')

@@ -68,6 +68,7 @@
       }
     ],
     "macOS": {
+      "signingIdentity": "HeptagonSec - Rainb0Jagu4r",
       "files": {
         "Resources/nobug.icns": "icons/nobug.icns",
         "Resources/wraith.icns": "icons/wraith.icns"
