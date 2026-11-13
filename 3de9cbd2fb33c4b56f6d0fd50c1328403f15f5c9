@@ -1,0 +1,7 @@
+🎨 MirageX Full UI Redesign & Dual Theme Release:
+- Botanical Zen (Light Mode): Clean canvas, pure white cards, high-contrast charcoal typography (#121915), and botanical accents (~Aquamarine #86e7b8, ~Light Green #93ff96, ~Mint #b2ffa8, ~Tea Green #d0ffb7, ~Beige #f2f5de).
+- Obsidian Emerald Glow (Dark Mode): Deep obsidian canvas (#080c0a) with green ambient mesh auroras, frosted glass panels (backdrop blur 24px), and warm beige clarity typography (#f2f5de).
+- Persistent Theme Switcher: Sidebar footer toggle button alongside ES/EN with dynamic Moon/Sun icons and localStorage persistence.
+- Wide 2-Column Encrypt Architecture: Container expanded to 980px (.zen-wide) eliminating excessive vertical scrolling with parallel columns for File Origin (left) and Cryptographic Controls (right).
+- Centered Minimalist Footer: Balanced bottom status bar with links to GitHub repository, Releases, and Issues.
+- 100% Rust Backend & Security Verification: 58/58 test suite passing with ML-KEM-768/1024, AES-256-GCM, Argon2id, and Name Fuzzing.
