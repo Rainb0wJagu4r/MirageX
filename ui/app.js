@@ -62,7 +62,57 @@ document.addEventListener('DOMContentLoaded', () => {
   initBetaLabs();
 });
 
-// 1. Navigation Tabs
+// 1. Navigation Tabs & Topbar Titles
+const TAB_METADATA = {
+  encrypt: {
+    es: { title: 'Cifrado Post-Cuántico', sub: 'Protección de alta graduación con ML-KEM-768 y envelope WRAITH v4' },
+    en: { title: 'Post-Quantum Encryption', sub: 'High-grade protection with ML-KEM-768 and WRAITH v4 envelope' }
+  },
+  decrypt: {
+    es: { title: 'Descifrado WRAITH', sub: 'Desencapsula y autentica contenedores criptográficos .wraith' },
+    en: { title: 'WRAITH Decryption', sub: 'Decapsulate and authenticate .wraith cryptographic containers' }
+  },
+  vault: {
+    es: { title: 'Bóveda Criptográfica', sub: 'Almacena múltiples archivos y carpetas en un contenedor sellado' },
+    en: { title: 'Encrypted Vault', sub: 'Store multiple files and folders in a sealed container' }
+  },
+  watcher: {
+    es: { title: 'Vigilante Autónomo', sub: 'Monitoreo de carpetas en tiempo real con cifrado automático y shredding' },
+    en: { title: 'Autonomous Watcher', sub: 'Real-time folder monitoring with automated encryption and shredding' }
+  },
+  inspect: {
+    es: { title: 'Inspector de Metadatos', sub: 'Inspección forense de cabeceras, algoritmos y firmas sin exponer datos' },
+    en: { title: 'Metadata Inspector', sub: 'Forensic inspection of headers, algorithms, and signatures' }
+  },
+  benchmark: {
+    es: { title: 'Benchmark Criptográfico', sub: 'Mide el rendimiento de ML-KEM, Argon2id y AES-256-GCM en tu CPU' },
+    en: { title: 'Cryptographic Benchmark', sub: 'Measure ML-KEM, Argon2id, and AES-256-GCM performance on your CPU' }
+  },
+  shred: {
+    es: { title: 'Triturador de Archivos', sub: 'Destrucción segura de datos con algoritmos DoD 5220.22-M y FTL wiping' },
+    en: { title: 'File Shredder', sub: 'Secure data destruction with DoD 5220.22-M and FTL wear-leveling wiping' }
+  },
+  guide: {
+    es: { title: 'Guía y Referencia Rápida', sub: 'Documentación técnica sobre suites post-cuánticas, keyfiles y opciones' },
+    en: { title: 'Quick Guide & Reference', sub: 'Technical documentation on post-quantum suites, keyfiles, and options' }
+  },
+  beta: {
+    es: { title: 'Beta Labs & Integración OS', sub: 'Integraciones experimentales con Finder, Explorer y vistas previas' },
+    en: { title: 'Beta Labs & OS Integration', sub: 'Experimental integrations with Finder, Explorer, and QuickLook previews' }
+  }
+};
+
+function updateTopbar(tabName) {
+  const meta = TAB_METADATA[tabName];
+  if (!meta) return;
+  const lang = (typeof currentLang !== 'undefined' && currentLang) ? currentLang : 'es';
+  const info = meta[lang] || meta.es;
+  const titleEl = document.getElementById('view-title');
+  const subEl = document.getElementById('view-subtitle');
+  if (titleEl) titleEl.textContent = info.title;
+  if (subEl) subEl.textContent = info.sub;
+}
+
 function setupTabs() {
   const tabs = document.querySelectorAll('.nav-tab');
   const contents = document.querySelectorAll('.tab-content');
@@ -77,6 +127,7 @@ function setupTabs() {
       targetContent.classList.add('active');
       const workspace = document.querySelector('.hud-workspace');
       if (workspace) workspace.scrollTop = 0;
+      updateTopbar(tabName);
     }
   }
 
@@ -2853,11 +2904,16 @@ function applyLanguage(lang) {
   if (flagEl && textEl) {
     if (lang === 'en') {
       flagEl.textContent = '🇺🇸';
-      textEl.textContent = 'English';
+      textEl.textContent = 'EN';
     } else {
       flagEl.textContent = '🇲🇽';
-      textEl.textContent = 'Español';
+      textEl.textContent = 'ES';
     }
+  }
+
+  const activeTab = document.querySelector('.nav-tab.active');
+  if (activeTab && typeof updateTopbar === 'function') {
+    updateTopbar(activeTab.dataset.tab);
   }
 
   if (typeof updateEncryptValidation === 'function') {

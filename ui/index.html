@@ -7,373 +7,361 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-container">
-    <!-- Top HUD Header -->
-    <header class="hud-header">
-      <div class="brand">
-        <div class="brand-logo">
-          <img src="logo.png" alt="MirageX Logo" class="brand-img">
-        </div>
-        <div class="brand-text">
-          <div class="brand-title">MIRAGE<span class="highlight">X</span></div>
-          <div class="brand-subtitle" data-i18n="brand_sub">MOTOR CRIPTOGRÁFICO POST-CUÁNTICO // FORMATO WRAITH v4</div>
-        </div>
-      </div>
-      <div class="hud-status">
-        <div class="status-pill">
-          <span class="status-dot"></span>
-          <span class="status-label" data-i18n="status_algo">ALGORITMO: MIRAGEX (NIST FIPS 203)</span>
-        </div>
-        <button class="status-chip btn-clickable highlight-pink" id="btn-quick-guide" title="Guía explicativa paso a paso de opciones y algoritmos">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <span data-i18n="btn_quick_guide">¿POR DÓNDE EMPIEZO?</span>
-        </button>
-        <button class="status-chip btn-clickable" id="btn-open-updater" title="Verificar actualizaciones y consultar Changelog">
-          <span id="updater-badge-dot" class="updater-dot" style="display: none;"></span>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          <span data-i18n="btn_updates">UPDATES & CHANGELOG</span>
-        </button>
-        <button class="status-chip btn-clickable" id="btn-setup-context-menu" title="Configurar acceso rápido en menú contextual (Windows Explorer / Finder)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-          <span data-i18n="btn_context_menu">INTEGRACIÓN MENÚ OS</span>
-        </button>
-        <button type="button" class="status-chip btn-clickable btn-lang-switch" id="btn-lang-toggle" title="Cambiar idioma / Switch language">
-          <span id="lang-flag">🇲🇽</span> <span id="lang-text">Español</span>
-        </button>
-        <div class="status-chip" data-i18n="status_zero_server">ZERO-SERVER // IPC NATIVO</div>
-      </div>
-    </header>
-
-    <!-- Navigation Bar (Two-Group Segmented HUD) -->
-    <nav class="hud-nav">
-      <div class="nav-group-primary">
-        <button class="nav-tab active" data-tab="encrypt">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span class="nav-text" data-i18n="nav_encrypt">CIFRAR</span>
-        </button>
-        <button class="nav-tab" data-tab="decrypt">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
-          <span class="nav-text" data-i18n="nav_decrypt">DESCIFRAR</span>
-        </button>
-        <button class="nav-tab" data-tab="vault">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-          <span class="nav-text" data-i18n="nav_vault">BÓVEDA</span>
-        </button>
-        <button class="nav-tab" data-tab="watcher">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span class="nav-text" data-i18n="nav_watcher">VIGILANTE</span>
-          <span class="badge-watcher-live" id="nav-watcher-badge" style="display:none;">LIVE</span>
-        </button>
-      </div>
-
-      <div class="nav-divider"></div>
-
-      <div class="nav-group-tools">
-        <button class="nav-tab" data-tab="inspect">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span class="nav-text" data-i18n="nav_inspect">INSPECTOR</span>
-        </button>
-        <button class="nav-tab" data-tab="benchmark">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          <span class="nav-text" data-i18n="nav_benchmark">BENCHMARK</span>
-        </button>
-        <button class="nav-tab" data-tab="shred">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-          <span class="nav-text" data-i18n="nav_shred">TRITURADOR</span>
-        </button>
-        <button class="nav-tab" data-tab="guide">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <span class="nav-text" data-i18n="nav_guide">GUÍA & AYUDA</span>
-        </button>
-        <button class="nav-tab beta-tab" data-tab="beta">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          <span class="nav-text" data-i18n="nav_beta">BETA LABS</span>
-          <span class="badge-beta-pill" data-i18n="badge_new">NUEVO</span>
-        </button>
-      </div>
-    </nav>
-
-    <!-- Main Workspace -->
-    <main class="hud-workspace">
-      <!-- 1. ENCRYPT PANEL (STEPPED PROGRESSIVE FLOW) -->
-      <section id="tab-encrypt" class="tab-content active">
-        <div class="stepped-flow-container">
-
-          <!-- PASO 1: ORIGEN DEL ARCHIVO -->
-          <div class="flow-step-card" id="step-encrypt-origin">
-            <div class="flow-step-header">
-              <div class="flow-step-title-wrap">
-                <span class="flow-step-number">01</span>
-                <h3 class="flow-step-title" id="lbl-encrypt-origin-title" data-i18n="enc_origin_title">ORIGEN DEL ARCHIVO O RESPALDO</h3>
-                <span class="badge purple" id="badge-encrypt-origin" data-i18n="badge_single_file">ARCHIVO INDIVIDUAL</span>
-              </div>
-              <label class="hud-switch-container" title="Alternar entre cifrado individual y modo respaldo anonimizado para la nube">
-                <input type="checkbox" id="toggle-encrypt-backup-mode">
-                <span class="hud-switch-slider"></span>
-                <span class="hud-switch-text" data-i18n="lbl_cloud_backup_mode">Modo Respaldo Nube (Restic/Borg)</span>
-              </label>
-            </div>
-            
-            <!-- Standard Single File Section -->
-            <div id="encrypt-single-file-section">
-              <div class="dropzone" id="encrypt-dropzone">
-                <div class="dropzone-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                </div>
-                <div class="dropzone-title" id="encrypt-file-title" data-i18n="drop_enc_title">Arrastra tu archivo aquí</div>
-                <div class="dropzone-sub" id="encrypt-file-sub" data-i18n="drop_enc_sub">o haz clic para abrir el selector nativo de archivos</div>
-                <button type="button" class="dropzone-browse-btn" tabindex="-1">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  <span data-i18n="btn_browse_file">Elegir Archivo</span>
-                </button>
-              </div>
-
-              <div class="selected-file-info" id="encrypt-file-meta" style="display:none;">
-                <div class="selected-file-main-row">
-                  <div class="file-identity">
-                    <div class="file-type-badge">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    </div>
-                    <div class="file-name-meta">
-                      <span class="file-name" id="meta-encrypt-name">-</span>
-                      <span class="file-size" id="meta-encrypt-size">-</span>
-                    </div>
-                  </div>
-                  <div class="file-card-actions">
-                    <button type="button" class="btn-secondary btn-sm" id="btn-change-encrypt-file" title="Seleccionar otro archivo">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <span data-i18n="btn_change_file">Cambiar</span>
-                    </button>
-                    <button type="button" class="btn-secondary btn-sm" id="btn-clear-encrypt-file" title="Quitar archivo seleccionado">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      <span data-i18n="btn_remove_file">Quitar</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="meta-row">
-                  <span class="meta-key">Ruta Absoluta:</span>
-                  <span class="meta-val" id="meta-encrypt-path">-</span>
-                </div>
-                <div class="meta-row">
-                  <span class="meta-key">Nombre en Disco:</span>
-                  <span class="meta-val" id="meta-encrypt-out-preview" style="color: var(--cyan); font-family: var(--font-mono); font-size: 11px;">[sha256].wraith (Name Fuzzing Activo)</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Backup Cloud Directory Mode Section -->
-            <div id="encrypt-backup-mode-section" style="display: none;">
-              <div class="backup-folder-pickers">
-                <div class="input-group">
-                  <label for="backup-main-src-input">Carpeta a Respaldar (Origen):</label>
-                  <div class="input-with-button">
-                    <input type="text" id="backup-main-src-input" placeholder="Selecciona la carpeta con tus archivos..." readonly>
-                    <button type="button" class="btn-secondary" id="btn-browse-backup-main-src" data-i18n="btn_browse">Explorar</button>
-                  </div>
-                </div>
-
-                <div class="input-group" style="margin-top: 12px;">
-                  <label for="backup-main-dst-input">Directorio de Respaldo Cifrado (Destino):</label>
-                  <div class="input-with-button">
-                    <input type="text" id="backup-main-dst-input" placeholder="Carpeta de destino para los .wraith y el manifiesto..." readonly>
-                    <button type="button" class="btn-secondary" id="btn-browse-backup-main-dst" data-i18n="btn_browse">Explorar</button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="beta-feature-pill-banner" style="margin-top: 14px;">
-                <span class="pill-dot pink"></span>
-                <span><strong>Blinded Hashes Activado:</strong> Cada archivo recibe un hash opaco determinista (<code>[sha256].wraith</code>) preservando deduplicación incremental en Restic, Borg y rsync sin revelar nombres ni rutas. Se genera el manifiesto maestro cifrado <code>backup_manifest.wraith</code>.</span>
-              </div>
-            </div>
+  <div class="app-layout">
+    <!-- Minimalist Sidebar (Linear / Raycast Style) -->
+    <aside class="app-sidebar">
+      <div class="sidebar-top">
+        <!-- Sidebar Brand -->
+        <div class="sidebar-brand">
+          <div class="brand-badge">
+            <img src="logo.png" alt="MirageX Logo">
           </div>
-
-          <!-- PASO 2: PROTECCIÓN & CLAVES -->
-          <div class="flow-step-card" id="step-encrypt-protection">
-            <div class="flow-step-header">
-              <div class="flow-step-title-wrap">
-                <span class="flow-step-number">02</span>
-                <h3 class="flow-step-title" data-i18n="lbl_step_protection">PROTECCIÓN & CLAVES</h3>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="encrypt-password" data-i18n="lbl_enc_pass">CONTRASEÑA MAESTRA DE PROTECCIÓN</label>
-              <div class="input-with-action">
-                <input type="password" id="encrypt-password" placeholder="Introduce una contraseña para el envelope MirageX..." data-i18n-placeholder="ph_enc_pass" autocomplete="off">
-                <button type="button" class="btn-secondary" id="btn-gen-pass" data-i18n="btn_gen">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="16" r="1.5"/><circle cx="12" cy="12" r="1.5"/></svg>
-                  <span>Generar</span>
-                </button>
-                <button type="button" class="btn-secondary" id="btn-share-qr-encrypt" title="Compartir contraseña mediante Código QR">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                  <span>QR</span>
-                </button>
-                <button type="button" class="btn-icon" id="btn-toggle-encrypt-pass" title="Mostrar/Ocultar contraseña">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-              </div>
-              <div class="password-meter">
-                <div class="meter-bar" id="pass-meter-bar"></div>
-              </div>
-              <div class="meter-label" id="pass-meter-text">Entropía: Esperando entrada...</div>
-            </div>
-
-            <div class="form-group keyfile-form-group">
-              <label data-i18n="lbl_enc_kf">KEYFILE DE SEGURIDAD (OPCIONAL: 2FA O SOLO-KEYFILE)</label>
-              <div class="input-with-action">
-                <input type="text" id="encrypt-keyfile-display" placeholder="Sin keyfile (Opcional: 2FA o Solo-Keyfile)..." data-i18n-placeholder="ph_kf" readonly>
-                <button type="button" class="btn-secondary" id="btn-select-keyfile-encrypt" data-i18n="btn_browse_kf">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  <span>Examinar</span>
-                </button>
-                <button type="button" class="btn-secondary" id="btn-open-gen-keyfile" data-i18n="btn_gen_kf">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-6 6l7-7m-7 7l-2-2m-4 4l-4 4a5 5 0 0 1-7-7l4-4a5 5 0 0 1 7 7z"/></svg>
-                  <span>Generar Keyfile</span>
-                </button>
-                <button type="button" class="btn-icon" id="btn-clear-keyfile-encrypt" title="Quitar keyfile" data-i18n-title="btn_remove_kf" style="display:none;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div class="field-hint" data-i18n="hint_enc_kf">Algoritmo de mezcla CRC-32 IEEE 802.3 y adición modular de 64 bytes.</div>
-            </div>
+          <div class="brand-details">
+            <div class="brand-name">Mirage<span>X</span></div>
+            <div class="brand-version">v4.1.1</div>
           </div>
+        </div>
 
-          <!-- PASO 3: CONFIGURACIÓN DEL CIFRADO -->
-          <div class="flow-step-card" id="step-encrypt-config">
-            <div class="flow-step-header">
-              <div class="flow-step-title-wrap">
-                <span class="flow-step-number">03</span>
-                <h3 class="flow-step-title" data-i18n="card_suite_title">CONFIGURACIÓN DEL CIFRADO</h3>
-              </div>
-              <span class="badge purple">HÍBRIDO PQC</span>
-            </div>
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar-nav">
+          <div class="nav-section-label" data-i18n="nav_section_operations">Operaciones</div>
+          <button class="nav-tab active" data-tab="encrypt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span class="nav-text" data-i18n="nav_encrypt">Cifrar</span>
+          </button>
+          <button class="nav-tab" data-tab="decrypt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+            <span class="nav-text" data-i18n="nav_decrypt">Descifrar</span>
+          </button>
+          <button class="nav-tab" data-tab="vault">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            <span class="nav-text" data-i18n="nav_vault">Bóveda</span>
+          </button>
+          <button class="nav-tab" data-tab="watcher">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="nav-text" data-i18n="nav_watcher">Vigilante</span>
+            <span class="badge-live" id="nav-watcher-badge" style="display:none;">LIVE</span>
+          </button>
 
-            <div class="form-group">
-              <label data-i18n="lbl_security_mode">SUITE POST-CUÁNTICA MIRAGEX</label>
-              <div class="radio-group">
-                <label class="radio-card active">
-                  <input type="radio" name="pqc-suite" value="1" checked>
-                  <div class="radio-indicator"></div>
-                  <div class="radio-info">
-                    <div class="radio-title-row">
-                      <span class="radio-title">MirageX Standard</span>
-                      <span class="badge purple">NIST NIVEL 3</span>
-                    </div>
-                    <span class="radio-desc" data-i18n="suite_standard_desc">ML-KEM-768 + AES-256-GCM. Rendimiento óptimo balanceado para uso general y respaldo.</span>
-                  </div>
-                </label>
+          <div class="nav-section-label" style="margin-top: 14px;" data-i18n="nav_section_tools">Herramientas</div>
+          <button class="nav-tab" data-tab="inspect">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span class="nav-text" data-i18n="nav_inspect">Inspector</span>
+          </button>
+          <button class="nav-tab" data-tab="benchmark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span class="nav-text" data-i18n="nav_benchmark">Benchmark</span>
+          </button>
+          <button class="nav-tab" data-tab="shred">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            <span class="nav-text" data-i18n="nav_shred">Triturador</span>
+          </button>
+          <button class="nav-tab" data-tab="guide">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="nav-text" data-i18n="nav_guide">Guía & Ayuda</span>
+          </button>
+          <button class="nav-tab beta-tab" data-tab="beta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span class="nav-text" data-i18n="nav_beta">Beta Labs</span>
+            <span class="badge-beta-pill" data-i18n="badge_new">NUEVO</span>
+          </button>
+        </nav>
+      </div>
 
-                <label class="radio-card">
-                  <input type="radio" name="pqc-suite" value="2">
-                  <div class="radio-indicator"></div>
-                  <div class="radio-info">
-                    <div class="radio-title-row">
-                      <span class="radio-title">MirageX Ultra</span>
-                      <span class="badge pink">NIST NIVEL 5</span>
-                    </div>
-                    <span class="radio-desc" data-i18n="suite_ultra_desc">ML-KEM-1024 + AES-256-GCM. Máxima resistencia teórica disponible contra computación cuántica.</span>
-                  </div>
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="sidebar-status-tag">
+          <span class="status-indicator-dot"></span>
+          <span data-i18n="status_zero_server">Zero-Server // FIPS 203</span>
+        </div>
+        <div class="sidebar-actions">
+          <button type="button" class="sidebar-mini-btn" id="btn-quick-guide" title="¿Por dónde empiezo? Guía rápida">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </button>
+          <button type="button" class="sidebar-mini-btn" id="btn-open-updater" title="Verificar actualizaciones y changelog">
+            <span id="updater-badge-dot" class="updater-dot" style="display: none;"></span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+          <button type="button" class="sidebar-mini-btn" id="btn-setup-context-menu" title="Configurar acceso rápido en menú contextual">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
+          <button type="button" class="sidebar-mini-btn lang-btn" id="btn-lang-toggle" title="Cambiar idioma / Switch language">
+            <span id="lang-flag">🇲🇽</span> <span id="lang-text">ES</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <div class="app-main">
+      <!-- Minimalist Topbar -->
+      <header class="app-topbar">
+        <div class="topbar-title-wrap">
+          <h2 class="view-title" id="view-title">Cifrado Post-Cuántico</h2>
+          <span class="view-subtitle" id="view-subtitle">Protección de alta graduación con ML-KEM-768 y envelope WRAITH v4</span>
+        </div>
+        <div class="topbar-actions">
+          <div class="security-pill">
+            <span class="pill-dot green"></span>
+            <span data-i18n="status_algo">ML-KEM-768 // AES-GCM</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Scrollable Main Workspace -->
+      <main class="hud-workspace">
+        <!-- 1. ENCRYPT PANEL (ZEN MINIMALIST CARD) -->
+        <section id="tab-encrypt" class="tab-content active">
+          <div class="zen-container">
+            <div class="zen-card">
+
+              <!-- Card Header: Title & Cloud Backup Toggle -->
+              <div class="zen-card-header">
+                <div class="zen-card-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span id="lbl-encrypt-origin-title" data-i18n="enc_origin_title">Cifrar Archivo</span>
+                  <span class="badge purple" id="badge-encrypt-origin" data-i18n="badge_single_file" style="margin-left: 8px;">INDIVIDUAL</span>
+                </div>
+                <label class="hud-switch-container" title="Alternar entre cifrado individual y modo respaldo anonimizado para la nube">
+                  <input type="checkbox" id="toggle-encrypt-backup-mode">
+                  <span class="hud-switch-slider"></span>
+                  <span class="hud-switch-text" data-i18n="lbl_cloud_backup_mode">Modo Respaldo Nube</span>
                 </label>
               </div>
-            </div>
 
-            <details class="advanced-disclosure">
-              <summary>
-                <span>Opciones Avanzadas (Tamaño de Bloque, Name Fuzzing y Borrado Seguro)</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-              </summary>
-              <div class="advanced-content">
-                <div class="form-group">
-                  <label for="chunk-size-select" data-i18n="lbl_chunk_size">TAMAÑO DE BLOQUE / STREAMING CHUNK</label>
-                  <select id="chunk-size-select" class="hud-select">
-                    <option value="4">4 MiB (Archivos pequeños)</option>
-                    <option value="16" selected>16 MiB (Estándar Óptimo WRAITH v4)</option>
-                    <option value="64">64 MiB (Archivos masivos >10 GB)</option>
-                  </select>
-                </div>
-
-                <div class="checkbox-group">
-                  <label class="checkbox-label" title="Anonimiza el nombre del archivo en disco ([sha256].wraith) para evitar filtración de metadatos o extensiones. Al descifrar con MirageX se restaura el nombre real íntegro.">
-                    <input type="checkbox" id="encrypt-name-fuzzing-chk" checked>
-                    <span class="checkbox-custom"></span>
-                    <span data-i18n="chk_name_fuzzing"><strong>Name Fuzzing (Activo por defecto)</strong></span>
-                  </label>
-                  <div class="field-hint" style="font-size: 11px; margin-top: 3px; color: var(--text-muted);" data-i18n="hint_name_fuzzing">
-                    Cero fuga de nombres o extensiones (<code>[sha256].wraith</code>). Se restaura al descifrar.
+              <!-- Standard Single File Section -->
+              <div id="encrypt-single-file-section">
+                <div class="dropzone" id="encrypt-dropzone">
+                  <div class="dropzone-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   </div>
+                  <div class="dropzone-title" id="encrypt-file-title" data-i18n="drop_enc_title">Arrastra y suelta tu archivo aquí</div>
+                  <div class="dropzone-sub" id="encrypt-file-sub" data-i18n="drop_enc_sub">o haz clic para explorar en el disco</div>
+                  <button type="button" class="dropzone-browse-btn" tabindex="-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span data-i18n="btn_browse_file">Elegir Archivo</span>
+                  </button>
                 </div>
 
-                <div class="checkbox-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="shred-source-chk">
-                    <span class="checkbox-custom"></span>
-                    <span data-i18n="chk_shred_source">Borrado seguro del archivo original tras cifrar</span>
-                  </label>
-                </div>
-
-                <div id="encrypt-shred-options" style="display: none; padding: 10px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border-subtle); border-radius: var(--radius-sm);">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
-                      <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="lbl_disk_type">TIPO DE DISCO</label>
-                      <select id="encrypt-shred-media" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
-                        <option value="ssd" selected>SSD/NVMe (FTL Wear-Leveling)</option>
-                        <option value="hdd">HDD (Magnético DoD 5220.22-M)</option>
-                      </select>
+                <div class="selected-file-info" id="encrypt-file-meta" style="display:none;">
+                  <div class="selected-file-main-row">
+                    <div class="file-identity">
+                      <div class="file-type-badge">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      </div>
+                      <div class="file-name-meta">
+                        <span class="file-name" id="meta-encrypt-name">-</span>
+                        <span class="file-size" id="meta-encrypt-size">-</span>
+                      </div>
                     </div>
-                    <div>
-                      <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="lbl_passes">PASADAS</label>
-                      <select id="encrypt-shred-passes" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
-                        <option value="3" selected>3 Pasadas</option>
-                        <option value="7">7 Pasadas</option>
-                      </select>
+                    <div class="file-card-actions">
+                      <button type="button" class="btn-secondary btn-sm" id="btn-change-encrypt-file" title="Seleccionar otro archivo">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span data-i18n="btn_change_file">Cambiar</span>
+                      </button>
+                      <button type="button" class="btn-secondary btn-sm" id="btn-clear-encrypt-file" title="Quitar archivo seleccionado">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <span data-i18n="btn_remove_file">Quitar</span>
+                      </button>
                     </div>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Ruta:</span>
+                    <span class="meta-val" id="meta-encrypt-path">-</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Salida:</span>
+                    <span class="meta-val" id="meta-encrypt-out-preview" style="color: var(--accent-cyan); font-family: var(--font-mono); font-size: 11px;">[sha256].wraith (Name Fuzzing Activo)</span>
                   </div>
                 </div>
               </div>
-            </details>
+
+              <!-- Backup Cloud Directory Mode Section -->
+              <div id="encrypt-backup-mode-section" style="display: none;">
+                <div class="backup-folder-pickers">
+                  <div class="input-group">
+                    <label for="backup-main-src-input">Carpeta a Respaldar (Origen):</label>
+                    <div class="input-with-button">
+                      <input type="text" id="backup-main-src-input" placeholder="Selecciona la carpeta con tus archivos..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-backup-main-src" data-i18n="btn_browse">Explorar</button>
+                    </div>
+                  </div>
+
+                  <div class="input-group" style="margin-top: 12px;">
+                    <label for="backup-main-dst-input">Directorio de Respaldo Cifrado (Destino):</label>
+                    <div class="input-with-button">
+                      <input type="text" id="backup-main-dst-input" placeholder="Carpeta de destino para los .wraith y el manifiesto..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-backup-main-dst" data-i18n="btn_browse">Explorar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="beta-feature-pill-banner" style="margin-top: 14px;">
+                  <span class="pill-dot pink"></span>
+                  <span><strong>Blinded Hashes:</strong> Cada archivo recibe un hash opaco determinista (<code>[sha256].wraith</code>) preservando deduplicación incremental en Restic, Borg y rsync sin revelar nombres ni rutas.</span>
+                </div>
+              </div>
+
+              <!-- Password Protection Form Group -->
+              <div class="form-group">
+                <label for="encrypt-password" data-i18n="lbl_enc_pass">Contraseña Maestra</label>
+                <div class="input-with-action">
+                  <input type="password" id="encrypt-password" placeholder="Introduce una contraseña segura..." data-i18n-placeholder="ph_enc_pass" autocomplete="off">
+                  <button type="button" class="btn-secondary btn-sm" id="btn-gen-pass" data-i18n="btn_gen">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="16" r="1.5"/><circle cx="12" cy="12" r="1.5"/></svg>
+                    <span>Generar</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btn-share-qr-encrypt" title="Compartir contraseña mediante Código QR">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    <span>QR</span>
+                  </button>
+                  <button type="button" class="btn-icon" id="btn-toggle-encrypt-pass" title="Mostrar/Ocultar contraseña">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+                <div class="password-meter">
+                  <div class="meter-bar" id="pass-meter-bar"></div>
+                </div>
+                <div class="meter-label" id="pass-meter-text">Entropía: Esperando entrada...</div>
+              </div>
+
+              <!-- Keyfile Row (Optional) -->
+              <div class="form-group keyfile-form-group">
+                <label data-i18n="lbl_enc_kf">Keyfile de Seguridad (Opcional: 2FA)</label>
+                <div class="input-with-action">
+                  <input type="text" id="encrypt-keyfile-display" placeholder="Sin keyfile (Opcional)..." data-i18n-placeholder="ph_kf" readonly>
+                  <button type="button" class="btn-secondary btn-sm" id="btn-select-keyfile-encrypt" data-i18n="btn_browse_kf">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span>Examinar</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btn-open-gen-keyfile" data-i18n="btn_gen_kf">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-6 6l7-7m-7 7l-2-2m-4 4l-4 4a5 5 0 0 1-7-7l4-4a5 5 0 0 1 7 7z"/></svg>
+                    <span>Generar</span>
+                  </button>
+                  <button type="button" class="btn-icon" id="btn-clear-keyfile-encrypt" title="Quitar keyfile" data-i18n-title="btn_remove_kf" style="display:none;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Collapsible Advanced Drawer -->
+              <details class="advanced-disclosure">
+                <summary>
+                  <span>Opciones Avanzadas (Suite Post-Cuántica, Bloque, Borrado)</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <div class="advanced-content">
+                  <div class="form-group">
+                    <label data-i18n="lbl_security_mode">Suite Criptográfica</label>
+                    <div class="radio-group">
+                      <label class="radio-card active">
+                        <input type="radio" name="pqc-suite" value="1" checked>
+                        <div class="radio-indicator"></div>
+                        <div class="radio-info">
+                          <div class="radio-title-row">
+                            <span class="radio-title">MirageX Standard</span>
+                            <span class="badge purple">NIST 3</span>
+                          </div>
+                          <span class="radio-desc" data-i18n="suite_standard_desc">ML-KEM-768 + AES-256-GCM. Rendimiento óptimo balanceado.</span>
+                        </div>
+                      </label>
+
+                      <label class="radio-card">
+                        <input type="radio" name="pqc-suite" value="2">
+                        <div class="radio-indicator"></div>
+                        <div class="radio-info">
+                          <div class="radio-title-row">
+                            <span class="radio-title">MirageX Ultra</span>
+                            <span class="badge pink">NIST 5</span>
+                          </div>
+                          <span class="radio-desc" data-i18n="suite_ultra_desc">ML-KEM-1024 + AES-256-GCM. Máxima resistencia cuántica teórica.</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="chunk-size-select" data-i18n="lbl_chunk_size">Tamaño de Bloque (Chunking)</label>
+                    <select id="chunk-size-select" class="hud-select">
+                      <option value="4">4 MiB (Archivos pequeños)</option>
+                      <option value="16" selected>16 MiB (Estándar WRAITH v4)</option>
+                      <option value="64">64 MiB (Archivos masivos >10 GB)</option>
+                    </select>
+                  </div>
+
+                  <div class="checkbox-group">
+                    <label class="checkbox-label" title="Anonimiza el nombre del archivo en disco ([sha256].wraith) para evitar filtración de metadatos o extensiones. Al descifrar con MirageX se restaura el nombre real íntegro.">
+                      <input type="checkbox" id="encrypt-name-fuzzing-chk" checked>
+                      <span class="checkbox-custom"></span>
+                      <span data-i18n="chk_name_fuzzing"><strong>Name Fuzzing (Activo por defecto)</strong></span>
+                    </label>
+                    <div class="field-hint" style="font-size: 11px; margin-top: 2px; color: var(--text-muted);" data-i18n="hint_name_fuzzing">
+                      Cero fuga de nombres o extensiones (<code>[sha256].wraith</code>). Se restaura al descifrar.
+                    </div>
+                  </div>
+
+                  <div class="checkbox-group">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="shred-source-chk">
+                      <span class="checkbox-custom"></span>
+                      <span data-i18n="chk_shred_source">Borrado seguro del archivo original tras cifrar</span>
+                    </label>
+                  </div>
+
+                  <div id="encrypt-shred-options" style="display: none; padding: 10px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border-subtle); border-radius: var(--radius-sm);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                      <div>
+                        <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="lbl_disk_type">TIPO DE DISCO</label>
+                        <select id="encrypt-shred-media" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
+                          <option value="ssd" selected>SSD/NVMe (FTL Wear-Leveling)</option>
+                          <option value="hdd">HDD (Magnético DoD 5220.22-M)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="lbl_passes">PASADAS</label>
+                        <select id="encrypt-shred-passes" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
+                          <option value="3" selected>3 Pasadas</option>
+                          <option value="7">7 Pasadas</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <!-- Action & Validation Hint -->
+              <div class="step-action-row">
+                <div class="action-validation-hint" id="encrypt-validation-hint">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span id="encrypt-validation-hint-text">Selecciona un archivo para cifrar.</span>
+                </div>
+
+                <button class="btn-primary" id="btn-start-encrypt" data-i18n="btn_start_encrypt" disabled>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span>Cifrar Archivo</span>
+                </button>
+              </div>
+
+              <!-- Telemetry Card -->
+              <div class="telemetry-card" id="encrypt-telemetry" style="display:none;">
+                <div class="telemetry-header">
+                  <h4 data-i18n="telemetry_title">Telemetría Criptográfica MirageX</h4>
+                  <span class="telemetry-speed" id="encrypt-speed">0.00 MB/s</span>
+                </div>
+                <div class="progress-container">
+                  <div class="progress-fill" id="encrypt-progress-fill" style="width: 0%;"></div>
+                </div>
+                <div class="telemetry-stats">
+                  <span id="encrypt-stats-chunks">Chunk: 0 / 0</span>
+                  <span id="encrypt-stats-bytes">0 / 0 MB</span>
+                  <span id="encrypt-stats-time">Tiempo: 0s</span>
+                </div>
+              </div>
+
+            </div>
           </div>
+        </section>
 
-          <!-- PASO 4: ACCIÓN & ESTADO -->
-          <div class="flow-step-card" id="step-encrypt-action">
-            <div class="flow-step-header">
-              <div class="flow-step-title-wrap">
-                <span class="flow-step-number">04</span>
-                <h3 class="flow-step-title" data-i18n="lbl_step_action">ACCIÓN & ESTADO</h3>
-              </div>
-            </div>
-
-            <div class="step-action-row">
-              <div class="action-validation-hint" id="encrypt-validation-hint">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span id="encrypt-validation-hint-text">Selecciona un archivo para cifrar.</span>
-              </div>
-
-              <button class="btn-primary" id="btn-start-encrypt" data-i18n="btn_start_encrypt" disabled>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <span>INICIAR CIFRADO MIRAGEX</span>
-              </button>
-            </div>
-
-            <!-- Telemetry Card -->
-            <div class="telemetry-card" id="encrypt-telemetry" style="display:none;">
-              <div class="telemetry-header">
-                <h4 data-i18n="telemetry_title">TELEMETRÍA CRIPTOGRÁFICA MIRAGEX</h4>
-                <span class="telemetry-speed" id="encrypt-speed">0.00 MB/s</span>
-              </div>
-              <div class="progress-container">
-                <div class="progress-fill" id="encrypt-progress-fill" style="width: 0%;"></div>
-              </div>
-              <div class="telemetry-stats">
-                <span id="encrypt-stats-chunks">Chunk: 0 / 0</span>
-                <span id="encrypt-stats-bytes">0 / 0 MB</span>
-                <span id="encrypt-stats-time">Tiempo: 0s</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
 
       <!-- 2. DECRYPT PANEL -->
       <section id="tab-decrypt" class="tab-content">
@@ -1376,9 +1364,11 @@
           <span class="footer-icon">🐞</span> Issues
         </a>
       </div>
-    </footer>
+      </footer>
+    </div>
+  </div>
 
-    <!-- Global Toast Container -->
+  <!-- Global Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
     <!-- QR Code Share Modal -->
@@ -1552,7 +1542,6 @@
         </div>
       </div>
     </div>
-  </div>
 
   <script src="qrcode.min.js"></script>
   <script src="app.js"></script>
