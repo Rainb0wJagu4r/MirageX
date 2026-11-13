@@ -45,6 +45,7 @@ let clipboardClearTimer = null;
 // DOM Initialization
 document.addEventListener('DOMContentLoaded', () => {
   setupLanguageLogic();
+  setupThemeLogic();
   setupTabs();
   setupPasswordLogic();
   setupQrModalLogic();
@@ -2943,6 +2944,75 @@ function setupLanguageLogic() {
         console.warn('localStorage write error', e);
       }
       applyLanguage(currentLang);
+      updateThemeToggleTitle();
+    });
+  }
+}
+
+let updateThemeToggleTitle = () => {};
+
+function setupThemeLogic() {
+  let currentTheme = 'light';
+  try {
+    const saved = localStorage.getItem('miragex_theme');
+    if (saved === 'dark' || saved === 'light') {
+      currentTheme = saved;
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      currentTheme = 'dark';
+    }
+  } catch (e) {
+    console.warn('localStorage theme read error', e);
+  }
+
+  function applyTheme(theme) {
+    currentTheme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    const moonIcon = document.getElementById('theme-icon-moon');
+    const sunIcon = document.getElementById('theme-icon-sun');
+    const btnThemeToggle = document.getElementById('btn-theme-toggle');
+
+    if (moonIcon && sunIcon) {
+      if (theme === 'dark') {
+        moonIcon.style.display = 'none';
+        sunIcon.style.display = 'block';
+      } else {
+        moonIcon.style.display = 'block';
+        sunIcon.style.display = 'none';
+      }
+    }
+    updateThemeToggleTitle();
+  }
+
+  updateThemeToggleTitle = () => {
+    const btnThemeToggle = document.getElementById('btn-theme-toggle');
+    if (!btnThemeToggle) return;
+    if (currentTheme === 'dark') {
+      btnThemeToggle.title = currentLang === 'es'
+        ? 'Cambiar a Modo Claro (Botanical Zen)'
+        : 'Switch to Light Mode (Botanical Zen)';
+    } else {
+      btnThemeToggle.title = currentLang === 'es'
+        ? 'Cambiar a Modo Oscuro (Obsidian Emerald)'
+        : 'Switch to Dark Mode (Obsidian Emerald)';
+    }
+  };
+
+  applyTheme(currentTheme);
+
+  const btnThemeToggle = document.getElementById('btn-theme-toggle');
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener('click', () => {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('miragex_theme', nextTheme);
+      } catch (e) {
+        console.warn('localStorage theme write error', e);
+      }
+      applyTheme(nextTheme);
+      const msg = nextTheme === 'dark'
+        ? (currentLang === 'es' ? 'Modo Oscuro (Obsidian Emerald) activado' : 'Dark Mode (Obsidian Emerald) activated')
+        : (currentLang === 'es' ? 'Modo Claro (Botanical Zen) activado' : 'Light Mode (Botanical Zen) activated');
+      showToast(msg, 'info');
     });
   }
 }
