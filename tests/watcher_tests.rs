@@ -14,7 +14,7 @@ static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[test]
 fn test_folder_watcher_auto_encryption_and_shred() {
-    let _guard = TEST_LOCK.lock().unwrap();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let temp_base = std::env::temp_dir().join(format!("miragex_watcher_test_{}", std::process::id()));
     let watch_dir = temp_base.join("watched");
     let output_dir = temp_base.join("encrypted_out");
@@ -60,17 +60,14 @@ fn test_folder_watcher_auto_encryption_and_shred() {
     let mut encrypted_found = false;
 
     for _ in 0..40 {
-        thread::sleep(Duration::from_millis(150));
-        if expected_out.exists() {
+        if expected_out.exists() && !test_file.exists() {
             encrypted_found = true;
             break;
         }
+        thread::sleep(Duration::from_millis(150));
     }
 
-    assert!(encrypted_found, "Watcher should have created the .wraith container");
-
-    // Check that source file was shredded / removed
-    assert!(!test_file.exists(), "Source file should have been securely wiped after encryption");
+    assert!(encrypted_found, "Watcher should have created the .wraith container and shredded the source file");
 
     // Verify decrypted contents of the auto-encrypted file
     let enc_file = File::open(&expected_out).expect("Open encrypted container");
@@ -108,7 +105,7 @@ fn test_folder_watcher_auto_encryption_and_shred() {
 
 #[test]
 fn test_folder_watcher_same_folder_no_loop() {
-    let _guard = TEST_LOCK.lock().unwrap();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let temp_base = std::env::temp_dir().join(format!("miragex_watch_same_{}", OsRng.next_u64()));
     let watch_dir = temp_base.join("shared_inbox");
     fs::create_dir_all(&watch_dir).expect("Create shared inbox");
@@ -169,7 +166,7 @@ fn test_folder_watcher_same_folder_no_loop() {
 
 #[test]
 fn test_folder_watcher_name_fuzzing_by_default_and_roundtrip() {
-    let _guard = TEST_LOCK.lock().unwrap();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let temp_base = std::env::temp_dir().join(format!("miragex_watch_fuzz_{}", OsRng.next_u64()));
     let watch_dir = temp_base.join("incoming");
     let output_dir = temp_base.join("vault_out");

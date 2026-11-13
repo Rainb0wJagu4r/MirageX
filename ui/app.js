@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupExternalLinks();
   checkInitialFilePayload();
   setupEncryptBackupMode();
+  updateEncryptValidation();
   initWatcherPanel();
   initBetaLabs();
 });
@@ -158,7 +159,10 @@ function setupTauriNativeEvents() {
           document.getElementById('meta-encrypt-name').textContent = fileName;
           document.getElementById('meta-encrypt-path').textContent = fullPath;
           document.getElementById('meta-encrypt-size').textContent = 'Ruta absoluta detectada por macOS';
+          updateEncryptOutputPreview();
+          document.getElementById('encrypt-dropzone').style.display = 'none';
           document.getElementById('encrypt-file-meta').style.display = 'flex';
+          updateEncryptValidation();
           showToast(`Archivo seleccionado: ${fileName}`, 'success');
         } else if (activeTab === 'decrypt') {
           selectedDecryptPath = fullPath;
@@ -206,7 +210,9 @@ function setupDropzones() {
         document.getElementById('meta-encrypt-path').textContent = fileInfo.path;
         document.getElementById('meta-encrypt-size').textContent = formatBytes(fileInfo.size);
         updateEncryptOutputPreview();
+        document.getElementById('encrypt-dropzone').style.display = 'none';
         document.getElementById('encrypt-file-meta').style.display = 'flex';
+        updateEncryptValidation();
         showToast(`Archivo cargado: ${fileInfo.name}`, 'success');
       }
     } catch (e) {
@@ -306,6 +312,7 @@ function setupPasswordLogic() {
     meterBar.style.width = `${score.pct}%`;
     meterBar.style.background = score.color;
     meterText.textContent = `Entropía: ${score.label} (~${score.bits} bits)`;
+    updateEncryptValidation();
   });
 
   btnGen.addEventListener('click', () => {
@@ -346,8 +353,98 @@ function evaluatePasswordEntropy(pwd) {
   return { pct: 100, color: '#10b981', label: 'Criptográficamente Imbatible', bits };
 }
 
+// 4.1 Encrypt Form Live Validation
+function updateEncryptValidation() {
+  const btnStartEncrypt = document.getElementById('btn-start-encrypt');
+  const validationHint = document.getElementById('encrypt-validation-hint');
+  const hintText = document.getElementById('encrypt-validation-hint-text');
+  if (!btnStartEncrypt || !validationHint || !hintText) return;
+
+  const isBackupMode = document.getElementById('toggle-encrypt-backup-mode')?.checked;
+  const password = document.getElementById('encrypt-password')?.value.trim();
+  const hasAuth = !!password || !!selectedEncryptKeyfilePath;
+
+  if (isBackupMode) {
+    const srcFolder = document.getElementById('backup-main-src-input')?.value.trim();
+    const dstFolder = document.getElementById('backup-main-dst-input')?.value.trim();
+    if (!srcFolder || !dstFolder) {
+      btnStartEncrypt.disabled = true;
+      validationHint.style.display = 'flex';
+      validationHint.classList.remove('valid');
+      hintText.textContent = (currentLang === 'en')
+        ? 'Select source and destination folders for backup.'
+        : 'Selecciona las carpetas de origen y destino del respaldo.';
+      return;
+    }
+    if (!hasAuth) {
+      btnStartEncrypt.disabled = true;
+      validationHint.style.display = 'flex';
+      validationHint.classList.remove('valid');
+      hintText.textContent = (currentLang === 'en')
+        ? 'Enter a password or select a keyfile to protect the backup.'
+        : 'Introduce una contraseña o keyfile para proteger el respaldo.';
+      return;
+    }
+    btnStartEncrypt.disabled = false;
+    validationHint.style.display = 'flex';
+    validationHint.classList.add('valid');
+    hintText.textContent = (currentLang === 'en')
+      ? 'Ready to generate cryptographic cloud backup.'
+      : 'Listo para generar respaldo criptográfico para la nube.';
+    return;
+  }
+
+  // Single file mode
+  if (!selectedEncryptPath) {
+    btnStartEncrypt.disabled = true;
+    validationHint.style.display = 'flex';
+    validationHint.classList.remove('valid');
+    hintText.textContent = (currentLang === 'en')
+      ? 'Select a file to encrypt.'
+      : 'Selecciona un archivo para cifrar.';
+    return;
+  }
+
+  if (!hasAuth) {
+    btnStartEncrypt.disabled = true;
+    validationHint.style.display = 'flex';
+    validationHint.classList.remove('valid');
+    hintText.textContent = (currentLang === 'en')
+      ? 'Enter a master password or select a keyfile.'
+      : 'Introduce una contraseña maestra o selecciona un keyfile.';
+    return;
+  }
+
+  btnStartEncrypt.disabled = false;
+  validationHint.style.display = 'flex';
+  validationHint.classList.add('valid');
+  hintText.textContent = (currentLang === 'en')
+    ? 'Ready to encrypt with MirageX (Post-Quantum).'
+    : 'Listo para cifrar con MirageX (Post-Cuántico).';
+}
+
 // 5. Action Handlers (XSS-Safe DOM Manipulation)
 function setupActions() {
+  // Clear and Change Selected Encrypt File
+  const btnClearEncFile = document.getElementById('btn-clear-encrypt-file');
+  if (btnClearEncFile) {
+    btnClearEncFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedEncryptPath = null;
+      document.getElementById('encrypt-file-meta').style.display = 'none';
+      document.getElementById('encrypt-dropzone').style.display = 'flex';
+      updateEncryptValidation();
+      showToast(currentLang === 'en' ? 'File removed.' : 'Archivo retirado.', 'info');
+    });
+  }
+
+  const btnChangeEncFile = document.getElementById('btn-change-encrypt-file');
+  if (btnChangeEncFile) {
+    btnChangeEncFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('encrypt-dropzone').click();
+    });
+  }
   // Shred Options toggles
   const shredSourceChk = document.getElementById('shred-source-chk');
   const encryptShredOpts = document.getElementById('encrypt-shred-options');
@@ -803,8 +900,10 @@ function handleIncomingFile(fullPath, fileName, fileSize, action) {
     document.getElementById('meta-encrypt-path').textContent = fullPath;
     document.getElementById('meta-encrypt-size').textContent = fileSize ? formatBytes(fileSize) : 'Detectado por menú contextual';
     updateEncryptOutputPreview();
+    document.getElementById('encrypt-dropzone').style.display = 'none';
     document.getElementById('encrypt-file-meta').style.display = 'flex';
     document.getElementById('encrypt-password').focus();
+    updateEncryptValidation();
     showToast(`Archivo listo para cifrar desde menú contextual: ${fileName}`, 'success');
   }
 }
@@ -863,6 +962,7 @@ function setupKeyfileLogic() {
           selectedEncryptKeyfilePath = fileInfo.path;
           document.getElementById('encrypt-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
           document.getElementById('btn-clear-keyfile-encrypt').style.display = 'inline-block';
+          updateEncryptValidation();
           showToast(`Keyfile seleccionado: ${fileInfo.name}`, 'info');
         }
       } catch (e) {
@@ -877,6 +977,7 @@ function setupKeyfileLogic() {
       selectedEncryptKeyfilePath = null;
       document.getElementById('encrypt-keyfile-display').value = '';
       btnClearEncKf.style.display = 'none';
+      updateEncryptValidation();
     });
   }
 
@@ -1041,6 +1142,7 @@ function setupKeyfileLogic() {
             selectedEncryptKeyfilePath = fileInfo.path;
             document.getElementById('encrypt-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
             document.getElementById('btn-clear-keyfile-encrypt').style.display = 'inline-block';
+            updateEncryptValidation();
           } else if (activeKeyfileTarget === 'vault-create') {
             selectedVaultCreateKeyfilePath = fileInfo.path;
             document.getElementById('vault-create-keyfile-display').value = `${fileInfo.name} (${formatBytes(fileInfo.size)})`;
@@ -1845,16 +1947,30 @@ function setupEncryptBackupMode() {
     if (toggleBackup.checked) {
       if (singleFileSection) singleFileSection.style.display = 'none';
       if (backupModeSection) backupModeSection.style.display = 'block';
-      if (originTitle) originTitle.textContent = 'RESPALDO CIFRADO PARA LA NUBE';
+      if (originTitle) originTitle.textContent = (currentLang === 'en') ? 'CRYPTOGRAPHIC CLOUD BACKUP' : 'RESPALDO CIFRADO PARA LA NUBE';
       if (originBadge) originBadge.textContent = 'RESTIC / BORG / RSYNC';
-      if (btnStartEncrypt) btnStartEncrypt.textContent = '🚀 GENERAR RESPALDO CRIPTOGRÁFICO ANONIMIZADO';
+      if (btnStartEncrypt) {
+        btnStartEncrypt.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> <span>' + ((currentLang === 'en') ? 'GENERATE CLOUD BACKUP' : 'GENERAR RESPALDO CRIPTOGRÁFICO') + '</span>';
+      }
     } else {
-      if (singleFileSection) singleFileSection.style.display = 'block';
+      if (singleFileSection) {
+        singleFileSection.style.display = 'block';
+        if (selectedEncryptPath) {
+          document.getElementById('encrypt-dropzone').style.display = 'none';
+          document.getElementById('encrypt-file-meta').style.display = 'flex';
+        } else {
+          document.getElementById('encrypt-dropzone').style.display = 'flex';
+          document.getElementById('encrypt-file-meta').style.display = 'none';
+        }
+      }
       if (backupModeSection) backupModeSection.style.display = 'none';
-      if (originTitle) originTitle.textContent = 'ORIGEN DE DATOS & ARCHIVO';
-      if (originBadge) originBadge.textContent = 'ARCHIVO INDIVIDUAL';
-      if (btnStartEncrypt) btnStartEncrypt.textContent = '🔒 INICIAR CIFRADO MIRAGEX';
+      if (originTitle) originTitle.textContent = (currentLang === 'en') ? 'DATA SOURCE & FILE' : 'ORIGEN DEL ARCHIVO O RESPALDO';
+      if (originBadge) originBadge.textContent = (currentLang === 'en') ? 'SINGLE FILE' : 'ARCHIVO INDIVIDUAL';
+      if (btnStartEncrypt) {
+        btnStartEncrypt.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <span>' + ((currentLang === 'en') ? 'START MIRAGEX ENCRYPTION' : 'INICIAR CIFRADO MIRAGEX') + '</span>';
+      }
     }
+    updateEncryptValidation();
   });
 
   const btnBrowseSrc = document.getElementById('btn-browse-backup-main-src');
@@ -1862,7 +1978,10 @@ function setupEncryptBackupMode() {
   btnBrowseSrc?.addEventListener('click', async () => {
     try {
       const folder = await invokeBackend('select_folder_dialog');
-      if (folder && inpBackupSrc) inpBackupSrc.value = folder;
+      if (folder && inpBackupSrc) {
+        inpBackupSrc.value = folder;
+        updateEncryptValidation();
+      }
     } catch (e) {
       showToast(`Error seleccionando carpeta origen: ${e}`, 'error');
     }
@@ -1873,7 +1992,10 @@ function setupEncryptBackupMode() {
   btnBrowseDst?.addEventListener('click', async () => {
     try {
       const folder = await invokeBackend('select_folder_dialog');
-      if (folder && inpBackupDst) inpBackupDst.value = folder;
+      if (folder && inpBackupDst) {
+        inpBackupDst.value = folder;
+        updateEncryptValidation();
+      }
     } catch (e) {
       showToast(`Error seleccionando carpeta destino: ${e}`, 'error');
     }
@@ -2398,25 +2520,32 @@ const I18N = {
     ph_kf: "Sin keyfile (Opcional: 2FA o Solo-Keyfile)...",
 
     // Encrypt Tab
-    enc_origin_title: "ORIGEN DE DATOS & ARCHIVO",
+    enc_origin_title: "ORIGEN DEL ARCHIVO O RESPALDO",
     badge_single_file: "ARCHIVO INDIVIDUAL",
-    lbl_cloud_backup_mode: "🗄️ Modo Respaldo Nube (Restic/Borg)",
+    lbl_cloud_backup_mode: "Modo Respaldo Nube (Restic/Borg)",
     drop_enc_title: "Arrastra tu archivo aquí",
-    drop_enc_sub: "o haz clic para abrir el selector nativo",
+    drop_enc_sub: "o haz clic para abrir el selector nativo de archivos",
+    btn_browse_file: "Elegir Archivo",
+    btn_change_file: "Cambiar",
+    btn_remove_file: "Quitar",
+    lbl_step_protection: "PROTECCIÓN & CLAVES",
+    lbl_step_action: "ACCIÓN & ESTADO",
+    suite_standard_desc: "ML-KEM-768 + AES-256-GCM. Rendimiento óptimo balanceado para uso general y respaldo.",
+    suite_ultra_desc: "ML-KEM-1024 + AES-256-GCM. Máxima resistencia teórica disponible contra computación cuántica.",
     lbl_enc_pass: "CONTRASEÑA MAESTRA DE PROTECCIÓN",
     ph_enc_pass: "Introduce una contraseña para el envelope MirageX...",
-    btn_gen: "🎲 Generar",
-    lbl_enc_kf: "KEYFILE DE SEGURIDAD // ESTÁNDAR VERACRYPT & ARCANUM",
-    hint_enc_kf: "Algoritmo de mezcla CRC-32 IEEE 802.3 y adición modular. Compatible con Arcanum y VeraCrypt.",
-    card_suite_title: "SUITE DEL ALGORITMO MIRAGEX",
-    lbl_security_mode: "MODO DE SEGURIDAD MIRAGEX",
-    lbl_chunk_size: "STREAMING CHUNK SIZE",
+    btn_gen: "Generar",
+    lbl_enc_kf: "KEYFILE DE SEGURIDAD (OPCIONAL: 2FA O SOLO-KEYFILE)",
+    hint_enc_kf: "Algoritmo de mezcla CRC-32 IEEE 802.3 y adición modular de 64 bytes.",
+    card_suite_title: "CONFIGURACIÓN DEL CIFRADO",
+    lbl_security_mode: "SUITE POST-CUÁNTICA MIRAGEX",
+    lbl_chunk_size: "TAMAÑO DE BLOQUE / STREAMING CHUNK",
     chk_name_fuzzing: "Name Fuzzing (Activo por defecto)",
-    hint_name_fuzzing: "🛡️ Cero fuga de nombres o extensiones ([sha256].wraith). Se restaura al descifrar.",
+    hint_name_fuzzing: "Cero fuga de nombres o extensiones ([sha256].wraith). Se restaura al descifrar.",
     chk_shred_source: "Borrado seguro del archivo original tras cifrar",
     lbl_disk_type: "TIPO DE DISCO",
     lbl_passes: "PASADAS",
-    btn_start_encrypt: "🔒 INICIAR CIFRADO MIRAGEX",
+    btn_start_encrypt: "INICIAR CIFRADO MIRAGEX",
     telemetry_title: "TELEMETRÍA CRIPTOGRÁFICA MIRAGEX",
 
     // Decrypt Tab
@@ -2550,13 +2679,33 @@ const I18N = {
     ph_kf: "No keyfile (Optional: 2FA or Keyfile-only)...",
 
     // Encrypt Tab
-    enc_origin_title: "DATA SOURCE & FILE",
+    enc_origin_title: "FILE OR BACKUP ORIGIN",
     badge_single_file: "SINGLE FILE",
-    lbl_cloud_backup_mode: "🗄️ Cloud Backup Mode (Restic/Borg)",
+    lbl_cloud_backup_mode: "Cloud Backup Mode (Restic/Borg)",
     drop_enc_title: "Drag & drop your file here",
     drop_enc_sub: "or click to open native file selector",
+    btn_browse_file: "Choose File",
+    btn_change_file: "Change",
+    btn_remove_file: "Remove",
+    lbl_step_protection: "PROTECTION & KEYS",
+    lbl_step_action: "ACTION & STATUS",
+    suite_standard_desc: "ML-KEM-768 + AES-256-GCM. Optimal balanced performance for everyday use & backup.",
+    suite_ultra_desc: "ML-KEM-1024 + AES-256-GCM. Maximum theoretical post-quantum resistance available.",
     lbl_enc_pass: "MASTER PROTECTION PASSWORD",
     ph_enc_pass: "Enter password for MirageX envelope...",
+    btn_gen: "Generate",
+    lbl_enc_kf: "SECURITY KEYFILE (OPTIONAL: 2FA OR KEYFILE-ONLY)",
+    hint_enc_kf: "CRC-32 IEEE 802.3 and 64-byte modular addition mixing algorithm.",
+    card_suite_title: "ENCRYPTION CONFIGURATION",
+    lbl_security_mode: "MIRAGEX POST-QUANTUM SUITE",
+    lbl_chunk_size: "BLOCK SIZE / STREAMING CHUNK",
+    chk_name_fuzzing: "Name Fuzzing (Active by default)",
+    hint_name_fuzzing: "Zero filename or extension leakage ([sha256].wraith). Restored upon decryption.",
+    chk_shred_source: "Securely shred original file after encryption",
+    lbl_disk_type: "STORAGE TYPE",
+    lbl_passes: "PASSES",
+    btn_start_encrypt: "START MIRAGEX ENCRYPTION",
+    telemetry_title: "MIRAGEX CRYPTOGRAPHIC TELEMETRY",
     btn_gen: "🎲 Generate",
     lbl_enc_kf: "SECURITY KEYFILE // VERACRYPT & ARCANUM STANDARD",
     hint_enc_kf: "CRC-32 IEEE 802.3 and modular addition mixing algorithm. Compatible with Arcanum and VeraCrypt.",
@@ -2709,6 +2858,10 @@ function applyLanguage(lang) {
       flagEl.textContent = '🇲🇽';
       textEl.textContent = 'Español';
     }
+  }
+
+  if (typeof updateEncryptValidation === 'function') {
+    updateEncryptValidation();
   }
 }
 
