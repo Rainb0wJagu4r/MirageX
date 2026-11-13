@@ -654,7 +654,7 @@ function setupActions() {
       title.textContent = '✅ AUTENTICIDAD & INTEGRIDAD MIRAGEX VERIFICADAS';
       container.appendChild(title);
 
-      const addRow = (label, value, valueColor = '#fff') => {
+      const addRow = (label, value, valueColor = 'var(--text-primary)') => {
         const row = document.createElement('div');
         const lbl = document.createElement('span');
         lbl.style.color = 'var(--text-secondary)';
