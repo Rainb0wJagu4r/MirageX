@@ -42,6 +42,9 @@ pub fn get_changelog_entries() -> Vec<ChangelogEntry> {
             date: "20 de Octubre, 2026".to_string(),
             is_current: true,
             highlights: vec![
+                "🌿 Rediseño Visual Completo (Botanical Zen & Obsidian Emerald Glow): motor dual de temas Claro y Oscuro con gradiente verde ambiental y persistencia.".to_string(),
+                "📐 Vista de Cifrado Ancha (2 Columnas Horizontales): contenedor expandido a 980px con separación paralela de origen de archivo y controles criptográficos.".to_string(),
+                "🌓 Selector de Tema Integrado: alternador interactivo Sol/Luna en la barra lateral junto al selector de idioma.".to_string(),
                 "👁️ Fix crítico en Vigilante: resolución del bucle infinito cuando el origen y destino coinciden, con shredding seguro del original tras cifrar.".to_string(),
                 "🛡️ Name Fuzzing activo por defecto en Vigilante: anonimización criptográfica inmediata ([sha256].wraith) preservando la integridad del nombre al descifrar.".to_string(),
                 "🔑 Generador de Keyfiles integrado en Vigilante: creación asistida de archivos de clave con radar de entropía física del cursor.".to_string(),

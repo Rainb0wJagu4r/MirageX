@@ -36,6 +36,32 @@
 
 ---
 
+## 🎨 Rediseño Integral de la Interfaz & Motor Dual de Temas (v4.1.1)
+
+<p align="center">
+
+**1. Motor Dual de Temas: Botanical Zen & Obsidian Emerald Glow**<br/>
+• **Modo Claro (*Botanical Zen*):** Lienzo claro suave (`#f4f7f4`), tarjetas en blanco puro con bordes *hairline*, tipografía en carbón-pino de alta definición (`#121915`) y acentos en la paleta botánica (~Aquamarine `#86E7B8`, ~Light Green `#93FF96`, ~Mint `#B2FFA8`, ~Tea Green `#D0FFB7`, ~Beige `#F2F5DE`).<br/>
+• **Modo Oscuro (*Obsidian Emerald Glow*):** Fondo carbón profundo (`#080c0a`) con malla ambiental de auroras radiales en verde aguamarina y esmeralda, paneles de cristal ahumado translúcido (`backdrop-filter: blur(24px)`), bordes verdes sutiles y tipografía en beige cálido (`#f2f5de`) para cero fatiga visual.<br/>
+• **Interruptor de Tema en Barra Lateral:** Botón interactivo de Sol/Luna en la barra lateral inferior junto a `ES / EN`, con persistencia automática en `localStorage` y detección de preferencia de macOS.<br/>
+
+<br/>
+
+**2. Vista de Cifrado Ancha (2 Columnas Paralelas)**<br/>
+• Contenedor principal expandido a **980px** (`.zen-wide`) que elimina el scroll vertical excesivo.<br/>
+• **Columna Izquierda (Origen):** Dropzone espaciosa horizontal para arrastrar archivos, explorador de disco, tarjeta de metadatos con preview de *Name Fuzzing* y selector de respaldos en la nube.<br/>
+• **Columna Derecha (Protección & Configuración):** Contraseña maestra con generador, medidor de entropía dinámico con radar de entropía física, keyfiles VeraCrypt, selección de suite (Standard vs Ultra), drawer de opciones avanzadas y botón de acción principal.<br/>
+• **Telemetría Inferior:** Barra de velocidad y progreso a ancho completo cuando el cifrado está activo.<br/>
+
+<br/>
+
+**3. Pie de Página Equilibrado y Centrado**<br/>
+• Barra inferior modernizada con crédito centrado: `Hecho con 💚 por Rainb0wJagu4r desde México 🇲🇽 | ⭐ GitHub • 📦 Releases • 🐞 Issues`.
+
+</p>
+
+---
+
 ## 🚀 Novedades y Características en v4.0.1
 
 <p align="center">
