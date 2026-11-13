@@ -1,0 +1,6 @@
+UI Redesign Summary:
+- Dual Theme Engine: Botanical Zen (Light) & Obsidian Emerald Glow (Dark with green ambient gradient mesh)
+- Theme toggle button in sidebar footer alongside language switcher
+- Wide 2-Column Encrypt View (980px) separating File Origin and Cryptographic Controls
+- Centered minimalist footer with GitHub, Releases, and Issues links
+- 58/58 Rust PQC tests verified passing
