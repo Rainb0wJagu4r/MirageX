@@ -399,9 +399,9 @@ function evaluatePasswordEntropy(pwd) {
 
   const bits = Math.round(pwd.length * (Math.log2(pool || 1)));
   if (bits < 40) return { pct: 25, color: '#ef4444', label: 'Muy Débil', bits };
-  if (bits < 64) return { pct: 50, color: '#fbbf24', label: 'Media', bits };
-  if (bits < 90) return { pct: 75, color: '#c084fc', label: 'Robusta', bits };
-  return { pct: 100, color: '#10b981', label: 'Criptográficamente Imbatible', bits };
+  if (bits < 64) return { pct: 50, color: '#d0ffb7', label: 'Media', bits };
+  if (bits < 90) return { pct: 75, color: '#86e7b8', label: 'Robusta', bits };
+  return { pct: 100, color: '#93ff96', label: 'Criptográficamente Imbatible', bits };
 }
 
 // 4.1 Encrypt Form Live Validation
