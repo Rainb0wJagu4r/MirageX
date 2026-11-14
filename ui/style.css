@@ -470,15 +470,14 @@ body {
 /* ==========================================================================
    ZEN CIFRAR (Ultra-Clean & Direct Flow)
    ========================================================================== */
-.zen-container,
-.zen-container.zen-wide {
-  max-width: 980px;
+.zen-container {
+  max-width: 680px;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-bottom: 24px;
+  gap: 18px;
+  padding-bottom: 28px;
 }
 
 .zen-card {
@@ -488,7 +487,7 @@ body {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   box-shadow: var(--shadow-subtle);
   transition: all 0.2s ease;
 }
@@ -498,43 +497,11 @@ body {
   box-shadow: var(--shadow-elevated);
 }
 
-.zen-split-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.15fr;
-  gap: 24px;
-  align-items: start;
-}
-
-.zen-col-left,
-.zen-col-right {
+.step-action-row {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.col-section-tag {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.col-tag-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-aquamarine);
-}
-
-.dropzone.dropzone-wide {
-  padding: 38px 20px;
-  min-height: 220px;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .zen-card-header {
@@ -737,11 +704,11 @@ body {
 .input-with-action {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 3px 5px;
+  padding: 4px 6px;
   transition: all 0.2s ease;
 }
 
@@ -756,6 +723,7 @@ body {
 .input-group input[type="text"],
 .input-group input[type="password"] {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -763,6 +731,11 @@ body {
   font-family: var(--font-sans);
   font-size: 13px;
   padding: 8px 10px;
+}
+
+.input-with-action .btn-secondary,
+.input-with-action .btn-icon {
+  flex-shrink: 0;
 }
 
 .input-with-action input::placeholder,
@@ -1894,10 +1867,6 @@ body {
   }
   .panel-grid {
     grid-template-columns: 1fr;
-  }
-  .zen-split-grid {
-    grid-template-columns: 1fr;
-    gap: 18px;
   }
 }
 

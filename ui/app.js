@@ -3040,10 +3040,18 @@ function setupBootscreenLogic() {
     if (!dismissed) dismiss();
   }, { once: true });
 
+  let isEn = false;
+  try {
+    const saved = localStorage.getItem('miragex_lang');
+    if (saved === 'en') isEn = true;
+  } catch (_) {}
+
   const steps = [
-    { pct: '35%', text: 'Verificando primitivas PQC ML-KEM-768/1024...', delay: 200 },
-    { pct: '75%', text: 'Calibrando entropía física CSPRNG & WRAITH v4...', delay: 650 },
-    { pct: '100%', text: '✓ Zero-Server Cryptographic Engine Listo', delay: 1100 }
+    { pct: '18%', text: isEn ? 'Initializing MirageX cryptographic subsystems...' : 'Inicializando subsistemas criptográficos MirageX...', delay: 350 },
+    { pct: '45%', text: isEn ? 'Verifying PQC ML-KEM-768/1024 primitives (NIST FIPS 203)...' : 'Verificando primitivas PQC ML-KEM-768/1024 (NIST FIPS 203)...', delay: 1000 },
+    { pct: '72%', text: isEn ? 'Calibrating CSPRNG physical entropy & WRAITH v4 envelope...' : 'Calibrando entropía física CSPRNG & envelope WRAITH v4...', delay: 1750 },
+    { pct: '92%', text: isEn ? 'Synchronizing zero-server memory safe-enclave...' : 'Sincronizando enclave de memoria segura (Zero-Server)...', delay: 2400 },
+    { pct: '100%', text: isEn ? '✓ Zero-Server Cryptographic Engine Ready' : '✓ Zero-Server Cryptographic Engine Listo', delay: 2750 }
   ];
 
   steps.forEach(s => {
@@ -3056,5 +3064,5 @@ function setupBootscreenLogic() {
 
   setTimeout(() => {
     dismiss();
-  }, 1550);
+  }, 3000);
 }
