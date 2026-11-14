@@ -7,6 +7,30 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- High-Tech Cyber Bootscreen Overlay -->
+  <div id="bootscreen-overlay" class="bootscreen-overlay" title="Haz clic o presiona cualquier tecla para continuar">
+    <div class="bootscreen-content">
+      <div class="bootscreen-logo-wrapper">
+        <div class="bootscreen-ambient-halo"></div>
+        <img src="logo.png" alt="MirageX Post-Quantum" class="bootscreen-logo-img">
+      </div>
+      <div class="bootscreen-branding">
+        <div class="bootscreen-title">MIRAGE<span>X</span></div>
+        <div class="bootscreen-tagline">POST-QUANTUM CRYPTOGRAPHIC ENGINE // NIST FIPS 203</div>
+      </div>
+      <div class="bootscreen-loader-box">
+        <div class="bootscreen-track">
+          <div class="bootscreen-bar" id="bootscreen-bar"></div>
+        </div>
+        <div class="bootscreen-status-row">
+          <span class="bootscreen-status-dot"></span>
+          <span class="bootscreen-status-text" id="bootscreen-status-text">Inicializando subsistemas criptográficos...</span>
+          <span class="bootscreen-skip-hint">ESC / CLIC</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="app-layout">
     <!-- Minimalist Sidebar (Linear / Raycast Style) -->
     <aside class="app-sidebar">

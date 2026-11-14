@@ -2438,3 +2438,175 @@ body {
 [data-theme="dark"] .footer-link:hover {
   color: var(--accent-aquamarine);
 }
+
+/* ==========================================================================
+   HIGH-TECH CYBER BOOTSCREEN OVERLAY
+   ========================================================================== */
+.bootscreen-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: #080c0a;
+  background-image: 
+    radial-gradient(circle at 50% 45%, rgba(134, 231, 184, 0.18) 0%, transparent 55%),
+    radial-gradient(circle at 20% 80%, rgba(147, 255, 150, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(208, 255, 183, 0.05) 0%, transparent 40%),
+    linear-gradient(135deg, #090e0b 0%, #050806 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s ease, visibility 0.4s;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bootscreen-overlay.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.03);
+  pointer-events: none;
+}
+
+.bootscreen-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  animation: bootScaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes bootScaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.bootscreen-logo-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bootscreen-ambient-halo {
+  position: absolute;
+  inset: -15px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(134, 231, 184, 0.45) 0%, rgba(147, 255, 150, 0.15) 45%, transparent 70%);
+  filter: blur(16px);
+  animation: bootHaloPulse 2.2s infinite ease-in-out;
+}
+
+@keyframes bootHaloPulse {
+  0%, 100% { opacity: 0.65; transform: scale(0.96); }
+  50% { opacity: 1.0; transform: scale(1.08); }
+}
+
+.bootscreen-logo-img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 16px rgba(134, 231, 184, 0.55));
+}
+
+.bootscreen-branding {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bootscreen-title {
+  font-family: var(--font-sans);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #f2f5de;
+}
+
+.bootscreen-title span {
+  color: var(--accent-aquamarine);
+}
+
+.bootscreen-tagline {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #62776c;
+  text-transform: uppercase;
+}
+
+.bootscreen-loader-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.bootscreen-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(134, 231, 184, 0.18);
+}
+
+.bootscreen-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #86e7b8 0%, #93ff96 50%, #b2ffa8 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(134, 231, 184, 0.7);
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bootscreen-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.bootscreen-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-aquamarine);
+  box-shadow: 0 0 8px rgba(134, 231, 184, 0.8);
+  animation: bootDotBlink 0.9s infinite alternate;
+  flex-shrink: 0;
+}
+
+@keyframes bootDotBlink {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+.bootscreen-status-text {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #9cb3a5;
+}
+
+.bootscreen-skip-hint {
+  font-size: 9px;
+  color: #526359;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}

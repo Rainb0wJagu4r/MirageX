@@ -44,6 +44,7 @@ let clipboardClearTimer = null;
 
 // DOM Initialization
 document.addEventListener('DOMContentLoaded', () => {
+  setupBootscreenLogic();
   setupLanguageLogic();
   setupThemeLogic();
   setupTabs();
@@ -3015,4 +3016,45 @@ function setupThemeLogic() {
       showToast(msg, 'info');
     });
   }
+}
+
+function setupBootscreenLogic() {
+  const overlay = document.getElementById('bootscreen-overlay');
+  if (!overlay) return;
+
+  const bar = document.getElementById('bootscreen-bar');
+  const statusText = document.getElementById('bootscreen-status-text');
+
+  let dismissed = false;
+  const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    overlay.classList.add('fade-out');
+    setTimeout(() => {
+      overlay.style.display = 'none';
+    }, 450);
+  };
+
+  overlay.addEventListener('click', dismiss);
+  window.addEventListener('keydown', () => {
+    if (!dismissed) dismiss();
+  }, { once: true });
+
+  const steps = [
+    { pct: '35%', text: 'Verificando primitivas PQC ML-KEM-768/1024...', delay: 200 },
+    { pct: '75%', text: 'Calibrando entropía física CSPRNG & WRAITH v4...', delay: 650 },
+    { pct: '100%', text: '✓ Zero-Server Cryptographic Engine Listo', delay: 1100 }
+  ];
+
+  steps.forEach(s => {
+    setTimeout(() => {
+      if (dismissed) return;
+      if (bar) bar.style.width = s.pct;
+      if (statusText) statusText.textContent = s.text;
+    }, s.delay);
+  });
+
+  setTimeout(() => {
+    dismiss();
+  }, 1550);
 }
