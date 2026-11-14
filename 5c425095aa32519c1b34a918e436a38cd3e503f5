@@ -1,0 +1,5 @@
+🚀 Branding & Bootscreen Update:
+- Replaced MirageX logo with new quantum microchip design ('/Users/brx/Documents/new logo.png')
+- Generated macOS squircle icon (.icns) with obsidian base and emerald halo
+- Implemented Tech Cyber-Boot (~1.5s) startup screen with smooth animated progress & PQC telemetry
+- All 58 tests verified passing
