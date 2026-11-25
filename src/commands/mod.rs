@@ -5,6 +5,7 @@ use std::time::Instant;
 use rand::rngs::OsRng;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use zeroize::Zeroize;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +60,8 @@ pub struct EncryptionResult {
     pub suite_name: String,
     pub chunks_count: u64,
     pub elapsed_ms: u128,
+    #[serde(default)]
+    pub name_fuzzed: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -178,8 +181,295 @@ pub fn select_wraith_dialog() -> Result<Option<SelectedFileInfo>, String> {
     }
 }
 
+#[tauri::command]
+pub fn select_keyfile_dialog() -> Result<Option<SelectedFileInfo>, String> {
+    if let Some(path) = rfd::FileDialog::new().pick_file() {
+        let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+        let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        Ok(Some(SelectedFileInfo {
+            path: path.to_string_lossy().to_string(),
+            name,
+            size: meta.len(),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn generate_keyfile_cmd(
+    size: usize,
+    entropy: Vec<u8>,
+    default_name: Option<String>,
+) -> Result<Option<SelectedFileInfo>, String> {
+    let filename = default_name.unwrap_or_else(|| "miragex.key".to_string());
+    if let Some(dest_path) = rfd::FileDialog::new()
+        .set_file_name(&filename)
+        .save_file()
+    {
+        let key_bytes = crate::crypto::keyfile::generate_keyfile(size, Some(&entropy))?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&dest_path)
+                .map_err(|e| e.to_string())?;
+            std::io::Write::write_all(&mut file, &key_bytes).map_err(|e| e.to_string())?;
+            file.sync_all().map_err(|e| e.to_string())?;
+        }
+        #[cfg(not(unix))]
+        {
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&dest_path)
+                .map_err(|e| e.to_string())?;
+            std::io::Write::write_all(&mut file, &key_bytes).map_err(|e| e.to_string())?;
+            file.sync_all().map_err(|e| e.to_string())?;
+        }
+
+        let meta = std::fs::metadata(&dest_path).map_err(|e| e.to_string())?;
+        let name = dest_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or(filename);
+
+        Ok(Some(SelectedFileInfo {
+            path: dest_path.to_string_lossy().to_string(),
+            name,
+            size: meta.len(),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn select_vault_sources_dialog() -> Result<Vec<SelectedFileInfo>, String> {
+    if let Some(paths) = rfd::FileDialog::new().pick_files() {
+        let mut list = Vec::new();
+        for p in paths {
+            let meta = std::fs::metadata(&p).map_err(|e| e.to_string())?;
+            let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            list.push(SelectedFileInfo {
+                path: p.to_string_lossy().to_string(),
+                name,
+                size: meta.len(),
+            });
+        }
+        Ok(list)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+#[tauri::command]
+pub fn select_vault_source_folder_dialog() -> Result<Option<SelectedFileInfo>, String> {
+    if let Some(path) = rfd::FileDialog::new().pick_folder() {
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.to_string_lossy().to_string());
+        Ok(Some(SelectedFileInfo {
+            path: path.to_string_lossy().to_string(),
+            name,
+            // Folder size is resolved during vault packaging; 0 = "not computed".
+            size: 0,
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn select_vault_dialog() -> Result<Option<SelectedFileInfo>, String> {
+    if let Some(path) = rfd::FileDialog::new()
+        .add_filter("MirageX Cyber Vault", &["wvault", "wraith"])
+        .pick_file()
+    {
+        let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+        let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        Ok(Some(SelectedFileInfo {
+            path: path.to_string_lossy().to_string(),
+            name,
+            size: meta.len(),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn create_vault_cmd(
+    source_paths: Vec<String>,
+    output_path: Option<String>,
+    password: Option<String>,
+    keyfile_path: Option<String>,
+    suite_id: Option<u8>,
+) -> Result<String, String> {
+    let pwd_str = password.unwrap_or_default();
+    let pwd_bytes = pwd_str.as_bytes();
+
+    let kf_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
+        Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
+        _ => Vec::new(),
+    };
+
+    if pwd_bytes.is_empty() && kf_paths.is_empty() {
+        return Err("A password or at least one keyfile must be provided".to_string());
+    }
+
+    let sources: Vec<PathBuf> = source_paths.into_iter().map(PathBuf::from).collect();
+    if sources.is_empty() {
+        return Err("No source files selected".to_string());
+    }
+
+    let out_p = match output_path {
+        Some(p) => PathBuf::from(p),
+        None => {
+            if let Some(dest) = rfd::FileDialog::new()
+                .set_file_name("secure_vault.wvault")
+                .add_filter("Cyber Vault", &["wvault", "wraith"])
+                .save_file()
+            {
+                dest
+            } else {
+                return Err("Vault creation cancelled: no destination picked".to_string());
+            }
+        }
+    };
+
+    let suite = match suite_id {
+        Some(id) => PqcSuite::from_u8(id).map_err(|e| e.to_string())?,
+        None => PqcSuite::MlKem768,
+    };
+
+    crate::vault::create_vault(&out_p, &sources, pwd_bytes, &kf_paths, suite)?;
+    Ok(out_p.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn open_vault_cmd(
+    vault_path: String,
+    password: Option<String>,
+    keyfile_path: Option<String>,
+) -> Result<crate::vault::VaultSessionInfo, String> {
+    let pwd_str = password.unwrap_or_default();
+    let pwd_bytes = pwd_str.as_bytes();
+
+    let kf_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
+        Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
+        _ => Vec::new(),
+    };
+
+    if pwd_bytes.is_empty() && kf_paths.is_empty() {
+        return Err("A password or keyfile must be provided".to_string());
+    }
+
+    let v_path = Path::new(&vault_path);
+    crate::vault::open_vault(v_path, pwd_bytes, &kf_paths)
+}
+
+#[tauri::command]
+pub fn list_vault_entries_cmd(session_id: String) -> Result<Vec<crate::vault::VaultEntryInfo>, String> {
+    crate::vault::list_vault_entries(&session_id)
+}
+
+#[tauri::command]
+pub fn extract_vault_entry_cmd(
+    session_id: String,
+    entry_path: String,
+    destination_dir: Option<String>,
+) -> Result<String, String> {
+    let dest = match destination_dir {
+        Some(d) => PathBuf::from(d),
+        None => {
+            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                folder
+            } else {
+                return Err("Extraction cancelled: no folder selected".to_string());
+            }
+        }
+    };
+    let res = crate::vault::extract_vault_entry(&session_id, &entry_path, &dest)?;
+    Ok(res.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn extract_all_vault_cmd(
+    session_id: String,
+    destination_dir: Option<String>,
+) -> Result<usize, String> {
+    let dest = match destination_dir {
+        Some(d) => PathBuf::from(d),
+        None => {
+            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                folder
+            } else {
+                return Err("Extraction cancelled: no folder selected".to_string());
+            }
+        }
+    };
+    crate::vault::extract_all_vault(&session_id, &dest)
+}
+
+#[tauri::command]
+pub fn close_vault_cmd(session_id: String) -> Result<(), String> {
+    crate::vault::close_vault(&session_id)
+}
+
+/// Returns `desired` if it does not exist, otherwise a non-colliding
+/// `"<stem> (N)<ext>"` sibling. Used for automatic output names so a malicious
+/// container manifest can never silently overwrite an existing file.
+fn unique_output_path(desired: &Path) -> PathBuf {
+    if fs::symlink_metadata(desired).is_err() {
+        return desired.to_path_buf();
+    }
+
+    let parent = desired.parent().unwrap_or_else(|| Path::new("."));
+    let stem = desired
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "output".to_string());
+    let ext = desired
+        .extension()
+        .map(|e| format!(".{}", e.to_string_lossy()))
+        .unwrap_or_default();
+
+    for n in 1..=9999u32 {
+        let candidate = parent.join(format!("{} ({}){}", stem, n, ext));
+        if fs::symlink_metadata(&candidate).is_err() {
+            return candidate;
+        }
+    }
+
+    parent.join(format!("{}-{}", stem, OsRng.next_u64()))
+}
+
+/// Refuses to write through a symbolic link. This matters on Windows, where the
+/// `fs::copy` fallback would follow the link and overwrite its target.
+fn reject_symlink_destination(path: &Path) -> Result<(), String> {
+    if let Ok(meta) = fs::symlink_metadata(path) {
+        if meta.file_type().is_symlink() {
+            return Err(format!(
+                "Refusing to overwrite symbolic link '{}'",
+                path.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Atomically commits a temporary file to its final destination, falling back to copy+delete on cross-device links (EXDEV).
 fn commit_file_atomic(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
+    reject_symlink_destination(final_path)?;
+
     if fs::rename(tmp_path, final_path).is_ok() {
         return Ok(());
     }
@@ -189,19 +479,34 @@ fn commit_file_atomic(tmp_path: &Path, final_path: &Path) -> Result<(), String> 
     Ok(())
 }
 
+pub fn compute_fuzzed_filename(orig_name: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(b"WRAITH_NAME_FUZZING_V1:");
+    hasher.update(orig_name.as_bytes());
+    let hash = hasher.finalize();
+    format!("{}.wraith", hex::encode(hash))
+}
+
 #[tauri::command]
 pub fn encrypt_file_cmd(
     input_path: String,
     output_path: Option<String>,
     mut password: String,
+    keyfile_path: Option<String>,
     suite_id: Option<u8>,
     chunk_size_mb: Option<u32>,
     shred_source: bool,
     shred_mode: Option<String>,
     shred_passes: Option<u8>,
+    name_fuzzing: Option<bool>,
 ) -> Result<EncryptionResult, String> {
-    if password.is_empty() {
-        return Err("Password cannot be empty".to_string());
+    let keyfile_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
+        Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
+        _ => Vec::new(),
+    };
+
+    if password.is_empty() && keyfile_paths.is_empty() {
+        return Err("A password or at least one keyfile must be provided".to_string());
     }
 
     let in_p = Path::new(&input_path);
@@ -212,13 +517,22 @@ pub fn encrypt_file_cmd(
     let storage = LocalStorageAdapter::new();
     let meta = storage.stat(in_p).map_err(|e| e.to_string())?;
 
+    let is_name_fuzzing = name_fuzzing.unwrap_or(true);
+    let orig_name = in_p.file_name().unwrap_or_default().to_string_lossy();
+    let was_name_fuzzed = is_name_fuzzing && output_path.is_none();
+
     let out_p = match output_path {
         Some(p) => PathBuf::from(p),
         None => {
             let mut p = in_p.to_path_buf();
-            let orig_name = in_p.file_name().unwrap_or_default().to_string_lossy();
-            p.set_file_name(format!("{}.wraith", orig_name));
-            p
+            if is_name_fuzzing {
+                p.set_file_name(compute_fuzzed_filename(&orig_name));
+            } else {
+                p.set_file_name(format!("{}.wraith", orig_name));
+            }
+            // Never silently overwrite an existing container when the user did
+            // not choose an explicit destination.
+            unique_output_path(&p)
         }
     };
 
@@ -274,18 +588,18 @@ pub fn encrypt_file_cmd(
         .open(&tmp_out_path)
         .map_err(|e| e.to_string())?;
 
+    let effective_password = crate::crypto::keyfile::apply_keyfile_paths(password.as_bytes(), &keyfile_paths)?;
+    password.zeroize();
+
     let start = Instant::now();
     let total_encrypted_res = encrypt_stream(
         in_file,
         &mut tmp_file,
-        password.as_bytes(),
+        &effective_password,
         meta.size,
         options,
         |_| {},
     );
-
-    // Scrub password string
-    password.zeroize();
 
     let total_encrypted = match total_encrypted_res {
         Ok(bytes) => bytes,
@@ -343,6 +657,7 @@ pub fn encrypt_file_cmd(
         suite_name: suite.name().to_string(),
         chunks_count,
         elapsed_ms: elapsed,
+        name_fuzzed: was_name_fuzzed,
     })
 }
 
@@ -351,12 +666,18 @@ pub fn decrypt_file_cmd(
     input_path: String,
     output_path: Option<String>,
     mut password: String,
+    keyfile_path: Option<String>,
     shred_source: bool,
     shred_mode: Option<String>,
     shred_passes: Option<u8>,
 ) -> Result<DecryptionResult, String> {
-    if password.is_empty() {
-        return Err("Password cannot be empty".to_string());
+    let keyfile_paths: Vec<PathBuf> = match keyfile_path.as_deref() {
+        Some(p) if !p.trim().is_empty() => vec![PathBuf::from(p)],
+        _ => Vec::new(),
+    };
+
+    if password.is_empty() && keyfile_paths.is_empty() {
+        return Err("A password or at least one keyfile must be provided".to_string());
     }
 
     let in_p = Path::new(&input_path);
@@ -391,11 +712,14 @@ pub fn decrypt_file_cmd(
         .open(&tmp_out_path)
         .map_err(|e| e.to_string())?;
 
+    let effective_password = crate::crypto::keyfile::apply_keyfile_paths(password.as_bytes(), &keyfile_paths)?;
+    password.zeroize();
+
     let start = Instant::now();
     let decrypt_res: Result<Manifest, _> = decrypt_stream(
         in_file,
         &mut tmp_file,
-        password.as_bytes(),
+        &effective_password,
         DecryptOptions::default(),
         |_| {},
     );
@@ -428,7 +752,9 @@ pub fn decrypt_file_cmd(
 
     let out_p = match output_path {
         Some(p) => PathBuf::from(p),
-        None => parent_dir.join(&sanitized_filename),
+        // The filename comes from the (attacker-controllable) manifest: never
+        // silently overwrite an existing file with it.
+        None => unique_output_path(&parent_dir.join(&sanitized_filename)),
     };
 
     // Commit decrypted file atomically (with EXDEV fallback)
@@ -585,6 +911,49 @@ pub fn get_initial_file_cmd() -> Result<Option<InitialFilePayload>, String> {
     }
 }
 
+#[cfg(windows)]
+pub fn ensure_windows_nobug_icon() -> std::path::PathBuf {
+    const NOBUG_ICO_BYTES: &[u8] = include_bytes!("../../icons/nobug.ico");
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            let candidate = parent.join("nobug.ico");
+            if candidate.exists() {
+                return candidate;
+            }
+            let candidate_res = parent.join("icons").join("nobug.ico");
+            if candidate_res.exists() {
+                return candidate_res;
+            }
+        }
+    }
+
+    let base_dir = std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::env::var_os("APPDATA")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| std::path::PathBuf::from("."))
+        });
+    let target_dir = base_dir.join("MirageX");
+    let _ = std::fs::create_dir_all(&target_dir);
+    let target_ico = target_dir.join("nobug.ico");
+
+    let should_write = match std::fs::metadata(&target_ico) {
+        Ok(meta) => meta.len() != NOBUG_ICO_BYTES.len() as u64,
+        Err(_) => true,
+    };
+    if should_write {
+        let _ = std::fs::write(&target_ico, NOBUG_ICO_BYTES);
+    }
+    target_ico
+}
+
+#[cfg(not(windows))]
+pub fn ensure_windows_nobug_icon() -> std::path::PathBuf {
+    std::path::PathBuf::from("icons/nobug.ico")
+}
+
 #[tauri::command]
 pub fn setup_context_menu_cmd() -> Result<String, String> {
     #[cfg(windows)]
@@ -593,6 +962,8 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
             use std::os::windows::process::CommandExt;
             const CREATE_NO_WINDOW: u32 = 0x08000000;
             let exe_str = exe_path.to_string_lossy().to_string();
+            let icon_path = ensure_windows_nobug_icon();
+            let icon_str = icon_path.to_string_lossy().to_string();
 
             let run_reg = |args: &[&str]| {
                 let _ = std::process::Command::new("reg")
@@ -611,14 +982,20 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
             run_reg(&["add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
             run_reg(&["add", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt\\command", "/ve", "/d", &format!("\"{}\" --gui-encrypt \"%1\"", exe_str), "/f"]);
 
-            // 3. .wraith Context Menu (MirageX.wraith\shell)
+            // 3. .wraith Context Menu (MirageX.wraith\shell) -> Uses nobug.ico!
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\DefaultIcon", "/ve", "/d", &format!("\"{}\",0", icon_str), "/f"]);
             run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open", "/ve", "/d", "Descifrar con MirageX (Post-Quantum)", "/f"]);
-            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open", "/v", "Icon", "/d", &format!("\"{}\",0", icon_str), "/f"]);
             run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\open\\command", "/ve", "/d", &format!("\"{}\" --gui-decrypt \"%1\"", exe_str), "/f"]);
 
             run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect", "/ve", "/d", "Inspeccionar Contenedor WRAITH", "/f"]);
-            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect", "/v", "Icon", "/d", &format!("\"{}\",0", exe_str), "/f"]);
+            run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect", "/v", "Icon", "/d", &format!("\"{}\",0", icon_str), "/f"]);
             run_reg(&["add", "HKCU\\Software\\Classes\\MirageX.wraith\\shell\\inspect\\command", "/ve", "/d", &format!("\"{}\" --gui-inspect \"%1\"", exe_str), "/f"]);
+
+            let _ = std::process::Command::new("ie4uinit.exe")
+                .arg("-show")
+                .creation_flags(CREATE_NO_WINDOW)
+                .output();
 
             Ok("Menú contextual de Windows Explorer registrado exitosamente.".into())
         } else {
@@ -632,8 +1009,18 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
             let services_dir = PathBuf::from(home).join("Library/Services");
             let _ = fs::create_dir_all(&services_dir);
 
+            let exe_path_str = std::env::current_exe()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+
+            let target_bin = if exe_path_str.contains("/deps/") || exe_path_str.is_empty() {
+                "/Applications/MirageX.app/Contents/MacOS/miragex".to_string()
+            } else {
+                exe_path_str
+            };
+
             // Helper to generate automator workflow
-            let create_workflow = |name: &str, title: &str, send_types: &str| {
+            let create_workflow = |name: &str, title: &str, action_flag: &str, send_types: &str| {
                 let workflow_dir = services_dir.join(format!("{}.workflow", name));
                 let contents_dir = workflow_dir.join("Contents");
                 let _ = fs::create_dir_all(&contents_dir);
@@ -672,7 +1059,19 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
 </dict>
 </plist>"#, title, send_types);
 
-                let doc_wflow = r#"<?xml version="1.0" encoding="UTF-8"?>
+                let command_script = format!(r#"EXE="{}"
+for f in "$@"
+do
+    if [ -x "$EXE" ]; then
+        "$EXE" {} "$f" >/dev/null 2>&1 &
+    elif [ -d "/Applications/MirageX.app" ]; then
+        open -n -a "/Applications/MirageX.app" --args {} "$f" 2>/dev/null
+    else
+        open -n -a "MirageX" --args {} "$f" 2>/dev/null
+    fi
+done"#, target_bin, action_flag, action_flag, action_flag);
+
+                let doc_wflow = format!(r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -721,10 +1120,7 @@ pub fn setup_context_menu_cmd() -> Result<String, String> {
                 <key>ActionParameters</key>
                 <dict>
                     <key>COMMAND_STRING</key>
-                    <string>for f in "$@"
-do
-    open -a "MirageX" "$f" 2>/dev/null || open -a "/Applications/MirageX.app" "$f" 2>/dev/null
-done</string>
+                    <string>{}</string>
                     <key>inputMethod</key>
                     <integer>1</integer>
                     <key>shell</key>
@@ -738,7 +1134,7 @@ done</string>
         </dict>
     </array>
 </dict>
-</plist>"#;
+</plist>"#, command_script);
 
                 let _ = fs::write(contents_dir.join("Info.plist"), info_plist);
                 let _ = fs::write(contents_dir.join("document.wflow"), doc_wflow);
@@ -748,14 +1144,24 @@ done</string>
             create_workflow(
                 "Cifrar con MirageX (Post-Quantum)",
                 "Cifrar con MirageX (Post-Quantum)",
-                "<string>public.item</string>\n                <string>public.folder</string>"
+                "--gui-encrypt",
+                "<string>public.item</string>\n                <string>public.data</string>\n                <string>public.content</string>\n                <string>public.folder</string>"
             );
 
             // 2. Descifrar con MirageX
             create_workflow(
                 "Descifrar con MirageX (Post-Quantum)",
                 "Descifrar con MirageX (Post-Quantum)",
-                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>"
+                "--gui-decrypt",
+                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>\n                <string>public.item</string>"
+            );
+
+            // 3. Inspeccionar Contenedor WRAITH
+            create_workflow(
+                "Inspeccionar Contenedor WRAITH",
+                "Inspeccionar Contenedor WRAITH",
+                "--gui-inspect",
+                "<string>com.miragesecurity.wraith</string>\n                <string>public.data</string>\n                <string>public.item</string>"
             );
 
             let _ = std::process::Command::new("/System/Library/CoreServices/pbs")
@@ -773,4 +1179,270 @@ done</string>
         Ok("Integración de menú contextual completada.".into())
     }
 }
+
+pub mod linux_mime;
+pub mod preview;
+pub mod updater;
+
+pub use updater::{
+    check_app_update_cmd, get_changelog_history_cmd, install_app_update_cmd, restart_app_cmd,
+    ChangelogEntry, UpdateCheckResult, UpdateProgress,
+};
+
+#[tauri::command]
+pub fn start_folder_watcher_cmd(config: crate::watcher::WatcherConfig) -> Result<String, String> {
+    crate::watcher::start_folder_watcher(config)
+}
+
+#[tauri::command]
+pub fn stop_folder_watcher_cmd() -> Result<String, String> {
+    crate::watcher::stop_folder_watcher()
+}
+
+#[tauri::command]
+pub fn get_watcher_status_cmd() -> crate::watcher::WatcherStatus {
+    crate::watcher::get_watcher_status()
+}
+
+#[tauri::command]
+pub fn export_watcher_audit_log_cmd(format: String) -> Result<String, String> {
+    crate::watcher::export_watcher_audit_log(&format)
+}
+
+#[tauri::command]
+pub fn create_backup_archive_cmd(
+    source_path: String,
+    dest_path: String,
+    password: String,
+    keyfile_paths: Option<Vec<String>>,
+    suite: Option<String>,
+) -> Result<crate::backup::BackupResult, String> {
+    let pqc_suite = match suite.as_deref() {
+        Some("1024") => PqcSuite::MlKem1024,
+        _ => PqcSuite::MlKem768,
+    };
+    crate::backup::create_backup_archive(
+        &source_path,
+        &dest_path,
+        password,
+        &keyfile_paths.unwrap_or_default(),
+        pqc_suite,
+    )
+}
+
+#[tauri::command]
+pub fn restore_backup_archive_cmd(
+    backup_path: String,
+    restore_path: String,
+    password: String,
+    keyfile_paths: Option<Vec<String>>,
+) -> Result<crate::backup::RestoreResult, String> {
+    crate::backup::restore_backup_archive(
+        &backup_path,
+        &restore_path,
+        password,
+        &keyfile_paths.unwrap_or_default(),
+    )
+}
+
+#[tauri::command]
+pub fn inspect_header_for_preview_cmd(file_path: String) -> Result<preview::HeaderPreviewInfo, String> {
+    preview::inspect_header_for_preview(&file_path)
+}
+
+#[tauri::command]
+pub fn setup_quicklook_preview_cmd() -> Result<String, String> {
+    preview::setup_quicklook_preview()
+}
+
+#[tauri::command]
+pub fn setup_linux_desktop_integration_cmd() -> Result<String, String> {
+    linux_mime::setup_linux_desktop_integration()
+}
+
+#[tauri::command]
+pub fn get_linux_integration_status_cmd() -> linux_mime::LinuxIntegrationStatus {
+    linux_mime::get_linux_integration_status()
+}
+
+#[tauri::command]
+pub fn remove_context_menu_cmd() -> Result<String, String> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let run_reg = |args: &[&str]| {
+            let _ = std::process::Command::new("reg")
+                .args(args)
+                .creation_flags(CREATE_NO_WINDOW)
+                .output();
+        };
+
+        run_reg(&["delete", "HKCU\\Software\\Classes\\*\\shell\\MirageX.Encrypt", "/f"]);
+        run_reg(&["delete", "HKCU\\Software\\Classes\\Directory\\shell\\MirageX.Encrypt", "/f"]);
+        run_reg(&["delete", "HKCU\\Software\\Classes\\MirageX.wraith", "/f"]);
+        run_reg(&["delete", "HKCU\\Software\\Classes\\.wraith", "/f"]);
+
+        let _ = std::process::Command::new("ie4uinit.exe")
+            .arg("-show")
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
+
+        Ok("Menú contextual y asociación de .wraith desinstalados de Windows Explorer.".into())
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(home) = std::env::var_os("HOME") {
+            let services_dir = PathBuf::from(home).join("Library/Services");
+            let _ = fs::remove_dir_all(services_dir.join("Cifrar con MirageX (Post-Quantum).workflow"));
+            let _ = fs::remove_dir_all(services_dir.join("Descifrar con MirageX (Post-Quantum).workflow"));
+            let _ = fs::remove_dir_all(services_dir.join("Inspeccionar Contenedor WRAITH.workflow"));
+            let _ = fs::remove_dir_all(services_dir.join("Vista Previa Cabecera WRAITH.workflow"));
+
+            let _ = std::process::Command::new("/System/Library/CoreServices/pbs")
+                .arg("-flush")
+                .output();
+
+            Ok("Servicios y Acciones Rápidas de MirageX desinstalados de macOS Finder.".into())
+        } else {
+            Err("No se pudo resolver el directorio HOME.".into())
+        }
+    }
+
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        Ok("Desinstalación de integración completada.".into())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMenuScripts {
+    pub windows_bat: String,
+    pub windows_reg: String,
+    pub linux_sh: String,
+}
+
+#[tauri::command]
+pub fn export_context_menu_scripts_cmd() -> ContextMenuScripts {
+    let windows_bat = r#"@echo off
+title MirageX - Registro de Menu Contextual e Icono .wraith
+set "APP_DIR=%~dp0"
+set "EXE_PATH=%APP_DIR%miragex.exe"
+set "ICO_PATH=%APP_DIR%nobug.ico"
+
+echo [*] Registrando Menu Contextual de Cifrado MirageX...
+reg add "HKCU\Software\Classes\*\shell\MirageX.Encrypt" /ve /d "Cifrar con MirageX (Post-Quantum)" /f >nul
+reg add "HKCU\Software\Classes\*\shell\MirageX.Encrypt" /v "Icon" /d "\"%EXE_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\*\shell\MirageX.Encrypt\command" /ve /d "\"%EXE_PATH%\" --gui-encrypt \"%%1\"" /f >nul
+
+reg add "HKCU\Software\Classes\Directory\shell\MirageX.Encrypt" /ve /d "Cifrar con MirageX (Post-Quantum)" /f >nul
+reg add "HKCU\Software\Classes\Directory\shell\MirageX.Encrypt" /v "Icon" /d "\"%EXE_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\Directory\shell\MirageX.Encrypt\command" /ve /d "\"%EXE_PATH%\" --gui-encrypt \"%%1\"" /f >nul
+
+reg add "HKCU\Software\Classes\.wraith" /ve /d "MirageX.wraith" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith" /ve /d "WRAITH Encrypted Container" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\DefaultIcon" /ve /d "\"%ICO_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\open" /ve /d "Descifrar con MirageX (Post-Quantum)" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\open" /v "Icon" /d "\"%ICO_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\open\command" /ve /d "\"%EXE_PATH%\" --gui-decrypt \"%%1\"" /f >nul
+
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\inspect" /ve /d "Inspeccionar Contenedor WRAITH" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\inspect" /v "Icon" /d "\"%ICO_PATH%\",0" /f >nul
+reg add "HKCU\Software\Classes\MirageX.wraith\shell\inspect\command" /ve /d "\"%EXE_PATH%\" --gui-inspect \"%%1\"" /f >nul
+
+ie4uinit.exe -show >nul 2>&1
+echo [OK] Menu contextual e icono de MirageX registrados con exito!
+pause
+"#.into();
+
+    let windows_reg = r#"Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\*\shell\MirageX.Encrypt]
+@="Cifrar con MirageX (Post-Quantum)"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\MirageX.Encrypt]
+@="Cifrar con MirageX (Post-Quantum)"
+
+[HKEY_CURRENT_USER\Software\Classes\.wraith]
+@="MirageX.wraith"
+
+[HKEY_CURRENT_USER\Software\Classes\MirageX.wraith]
+@="WRAITH Encrypted Container"
+"#.into();
+
+    let linux_sh = r#"#!/usr/bin/env bash
+set -e
+echo "[*] Instalando asociacion MIME y accesos de MirageX en Linux..."
+mkdir -p ~/.local/share/mime/packages ~/.local/share/applications ~/.local/share/icons/hicolor/128x128/mimetypes
+cat << 'EOF' > ~/.local/share/mime/packages/miragex-wraith.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <mime-type type="application/x-wraith">
+        <comment>Contenedor Cifrado Post-Cuantico WRAITH</comment>
+        <glob pattern="*.wraith"/>
+        <icon name="application-x-wraith"/>
+    </mime-type>
+</mime-info>
+EOF
+
+update-mime-database ~/.local/share/mime 2>/dev/null || true
+update-desktop-database ~/.local/share/applications 2>/dev/null || true
+echo "[OK] Integracion Linux completada con exito!"
+"#.into();
+
+    ContextMenuScripts {
+        windows_bat,
+        windows_reg,
+        linux_sh,
+    }
+}
+
+#[tauri::command]
+pub fn select_folder_dialog() -> Result<Option<String>, String> {
+    if let Some(path) = rfd::FileDialog::new().pick_folder() {
+        Ok(Some(path.to_string_lossy().to_string()))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn open_external_url_cmd(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err("Solo se permiten URLs seguras con protocolo http o https".into());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        std::process::Command::new("cmd")
+            .args(&["/c", "start", "", &url])
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+
+
 

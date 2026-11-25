@@ -559,6 +559,10 @@ fn test_initial_file_payload_and_context_menu_commands() {
     // Context menu command should succeed without panicking
     let ctx_res = miragex::commands::setup_context_menu_cmd();
     assert!(ctx_res.is_ok(), "setup_context_menu_cmd should succeed");
+
+    // Test ensure_windows_nobug_icon returns valid path
+    let icon_path = miragex::commands::ensure_windows_nobug_icon();
+    assert!(!icon_path.as_os_str().is_empty(), "Icon path should not be empty");
 }
 
 

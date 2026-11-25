@@ -36,6 +36,32 @@
 
 ---
 
+## 🎨 Rediseño Integral de la Interfaz & Motor Dual de Temas (v4.1.1)
+
+<p align="center">
+
+**1. Motor Dual de Temas: Botanical Zen & Obsidian Emerald Glow**<br/>
+• **Modo Claro (*Botanical Zen*):** Lienzo claro suave (`#f4f7f4`), tarjetas en blanco puro con bordes *hairline*, tipografía en carbón-pino de alta definición (`#121915`) y acentos en la paleta botánica (~Aquamarine `#86E7B8`, ~Light Green `#93FF96`, ~Mint `#B2FFA8`, ~Tea Green `#D0FFB7`, ~Beige `#F2F5DE`).<br/>
+• **Modo Oscuro (*Obsidian Emerald Glow*):** Fondo carbón profundo (`#080c0a`) con malla ambiental de auroras radiales en verde aguamarina y esmeralda, paneles de cristal ahumado translúcido (`backdrop-filter: blur(24px)`), bordes verdes sutiles y tipografía en beige cálido (`#f2f5de`) para cero fatiga visual.<br/>
+• **Interruptor de Tema en Barra Lateral:** Botón interactivo de Sol/Luna en la barra lateral inferior junto a `ES / EN`, con persistencia automática en `localStorage` y detección de preferencia de macOS.<br/>
+
+<br/>
+
+**2. Vista de Cifrado Ancha (2 Columnas Paralelas)**<br/>
+• Contenedor principal expandido a **980px** (`.zen-wide`) que elimina el scroll vertical excesivo.<br/>
+• **Columna Izquierda (Origen):** Dropzone espaciosa horizontal para arrastrar archivos, explorador de disco, tarjeta de metadatos con preview de *Name Fuzzing* y selector de respaldos en la nube.<br/>
+• **Columna Derecha (Protección & Configuración):** Contraseña maestra con generador, medidor de entropía dinámico con radar de entropía física, keyfiles VeraCrypt, selección de suite (Standard vs Ultra), drawer de opciones avanzadas y botón de acción principal.<br/>
+• **Telemetría Inferior:** Barra de velocidad y progreso a ancho completo cuando el cifrado está activo.<br/>
+
+<br/>
+
+**3. Pie de Página Equilibrado y Centrado**<br/>
+• Barra inferior modernizada con crédito centrado: `Hecho con 💚 por Rainb0wJagu4r desde México 🇲🇽 | ⭐ GitHub • 📦 Releases • 🐞 Issues`.
+
+</p>
+
+---
+
 ## 🚀 Novedades y Características en v4.0.1
 
 <p align="center">
@@ -68,6 +94,18 @@ Descifrado directo bloque a bloque hacia archivos temporales atómicos con reemp
 **5. Higiene de Memoria y CLI Segura**<br/>
 Soporte de contraseña interactiva oculta en terminal (`rpassword`) y lectura desde tuberías (`--password-stdin`).<br/>
 Sobrescritura física de claves intermedias y credenciales en memoria física mediante `zeroize::Zeroizing`.
+
+<br/>
+
+**6. Keyfiles Compatibles con VeraCrypt / Arcanum**<br/>
+Autenticación de dos factores (contraseña + keyfile) o solo-keyfile usando la misma derivación por pool de 64/128 bytes (CRC-32 IEEE 802.3) de VeraCrypt y Arcanum, verificada byte a byte contra el código C oficial.<br/>
+Generador nativo CSPRNG (`OsRng` + plegado de entropía del mouse) en la GUI y comando `miragex keyfile generate` en la CLI.
+
+<br/>
+
+**7. Bóvedas Cifradas Portables (`.wvault`) con Explorador In-App**<br/>
+Contenedores multi-archivo y multi-carpeta cifrados con WRAITH v4 (ML-KEM + Argon2id + AES-256-GCM), protegidos por contraseña y/o keyfile.<br/>
+Explorador integrado para listar, buscar, extraer entradas individuales o todo, y bloquear la bóveda con zeroización en memoria.
 
 </p>
 
@@ -106,6 +144,15 @@ open MirageX.app
 
 # Borrado seguro independiente (Modo HDD DoD 5220.22-M):
 ./miragex shred archivo_sensible.txt --mode hdd --passes 7
+
+# Generar un keyfile compatible con VeraCrypt / Arcanum (64 bytes):
+./miragex keyfile generate segundo_factor.key --size 64
+
+# Cifrar con contraseña + keyfile (deja la contraseña vacía para solo-keyfile):
+./miragex encrypt documento.pdf -k segundo_factor.key
+
+# Descifrar con el mismo keyfile:
+./miragex decrypt documento.pdf.wraith -k segundo_factor.key
 ```
 
 <div align="center">
@@ -117,6 +164,16 @@ open MirageX.app
 <p align="center">
 Los datos cifrados en contenedores <code>.wraith</code> v4 generados por <strong>MirageX Ultra (ML-KEM-1024 / Nivel 5)</strong> superaron con éxito la batería de pruebas estadísticas de aleatoriedad <strong>NIST SP 800-22</strong> con distribución uniforme de bits y cero sesgos detectables.
 </p>
+
+---
+
+## ⚠️ Limitaciones Conocidas
+
+- **Límite de tamaño de las bóvedas:** los `.wvault` se empaquetan y descifran en memoria y están limitados a **2 GiB de texto plano** (más el overhead del TAR); las bóvedas mayores se rechazan con un error claro. Los contenedores individuales `.wraith` siguen usando streaming con memoria constante.
+- **Sin sobrescrituras silenciosas:** cuando no se elige un destino explícito, nunca se sobrescribe un archivo existente (se usa el sufijo `nombre (1).ext`) y se rechazan destinos que sean symlinks.
+- **Compatibilidad de keyfiles ≠ compatibilidad de contenedores:** la derivación de keyfiles coincide con VeraCrypt/Arcanum, pero MirageX **no** monta ni abre volúmenes VeraCrypt `.tc` / `.hc` / `.vc`. Las bóvedas usan el formato MirageX `.wvault`.
+- **Symlinks rechazados:** al crear una bóveda se rechazan symlinks y archivos especiales para evitar incluir datos fuera del árbol seleccionado o bucles infinitos.
+- **Bóvedas solo en GUI:** la creación, exploración y extracción de bóvedas está disponible en la interfaz Tauri; la CLI cubre keyfiles y contenedores `.wraith`.
 
 ---
 

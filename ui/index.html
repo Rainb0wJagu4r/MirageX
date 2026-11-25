@@ -7,199 +7,409 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-container">
-    <!-- Top HUD Header -->
-    <header class="hud-header">
-      <div class="brand">
-        <div class="brand-logo">
-          <img src="logo.png" alt="MirageX Logo" class="brand-img">
+  <!-- High-Tech Cyber Bootscreen Overlay -->
+  <div id="bootscreen-overlay" class="bootscreen-overlay" title="Haz clic o presiona cualquier tecla para continuar">
+    <div class="bootscreen-content">
+      <div class="bootscreen-logo-wrapper">
+        <div class="bootscreen-ambient-halo"></div>
+        <img src="logo.png" alt="MirageX Post-Quantum" class="bootscreen-logo-img">
+      </div>
+      <div class="bootscreen-branding">
+        <div class="bootscreen-title">MIRAGE<span>X</span></div>
+        <div class="bootscreen-tagline">POST-QUANTUM CRYPTOGRAPHIC ENGINE // NIST FIPS 203</div>
+      </div>
+      <div class="bootscreen-loader-box">
+        <div class="bootscreen-track">
+          <div class="bootscreen-bar" id="bootscreen-bar"></div>
         </div>
-        <div class="brand-text">
-          <div class="brand-title">MIRAGE<span class="highlight">X</span></div>
-          <div class="brand-subtitle">MOTOR CRIPTOGRÁFICO POST-CUÁNTICO // FORMATO WRAITH v4</div>
+        <div class="bootscreen-status-row">
+          <span class="bootscreen-status-dot"></span>
+          <span class="bootscreen-status-text" id="bootscreen-status-text">Inicializando subsistemas criptográficos...</span>
+          <span class="bootscreen-skip-hint">ESC / CLIC</span>
         </div>
       </div>
-      <div class="hud-status">
-        <div class="status-pill">
-          <span class="status-dot"></span>
-          <span class="status-label">ALGORITMO: MIRAGEX (NIST FIPS 203)</span>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <!-- Minimalist Sidebar (Linear / Raycast Style) -->
+    <aside class="app-sidebar">
+      <div class="sidebar-top">
+        <!-- Sidebar Brand -->
+        <div class="sidebar-brand">
+          <div class="brand-badge">
+            <img src="logo.png" alt="MirageX Logo">
+          </div>
+          <div class="brand-details">
+            <div class="brand-name">Mirage<span>X</span></div>
+            <div class="brand-version">v4.1.1</div>
+          </div>
         </div>
-        <button class="status-chip btn-clickable" id="btn-setup-context-menu" title="Configurar acceso rápido en menú contextual (Windows Explorer / Finder)">
-          🖱️ INTEGRACIÓN MENÚ OS
-        </button>
-        <div class="status-chip">ZERO-SERVER // IPC NATIVO</div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar-nav">
+          <div class="nav-section-label" data-i18n="nav_section_operations">Operaciones</div>
+          <button class="nav-tab active" data-tab="encrypt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span class="nav-text" data-i18n="nav_encrypt">Cifrar</span>
+          </button>
+          <button class="nav-tab" data-tab="decrypt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+            <span class="nav-text" data-i18n="nav_decrypt">Descifrar</span>
+          </button>
+          <button class="nav-tab" data-tab="vault">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            <span class="nav-text" data-i18n="nav_vault">Bóveda</span>
+          </button>
+          <button class="nav-tab" data-tab="watcher">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="nav-text" data-i18n="nav_watcher">Vigilante</span>
+            <span class="badge-live" id="nav-watcher-badge" style="display:none;">LIVE</span>
+          </button>
+
+          <div class="nav-section-label" style="margin-top: 14px;" data-i18n="nav_section_tools">Herramientas</div>
+          <button class="nav-tab" data-tab="inspect">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span class="nav-text" data-i18n="nav_inspect">Inspector</span>
+          </button>
+          <button class="nav-tab" data-tab="benchmark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span class="nav-text" data-i18n="nav_benchmark">Benchmark</span>
+          </button>
+          <button class="nav-tab" data-tab="shred">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            <span class="nav-text" data-i18n="nav_shred">Triturador</span>
+          </button>
+          <button class="nav-tab" data-tab="guide">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="nav-text" data-i18n="nav_guide">Guía & Ayuda</span>
+          </button>
+          <button class="nav-tab beta-tab" data-tab="beta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span class="nav-text" data-i18n="nav_beta">Beta Labs</span>
+            <span class="badge-beta-pill" data-i18n="badge_new">NUEVO</span>
+          </button>
+        </nav>
       </div>
-    </header>
 
-    <!-- Navigation Bar -->
-    <nav class="hud-nav">
-      <button class="nav-tab active" data-tab="encrypt">
-        <span class="nav-icon">🛡️</span>
-        <span class="nav-text">CIFRAR (.wraith)</span>
-      </button>
-      <button class="nav-tab" data-tab="decrypt">
-        <span class="nav-icon">🔓</span>
-        <span class="nav-text">DESCIFRAR</span>
-      </button>
-      <button class="nav-tab" data-tab="inspect">
-        <span class="nav-icon">🔍</span>
-        <span class="nav-text">INSPECTOR</span>
-      </button>
-      <button class="nav-tab" data-tab="benchmark">
-        <span class="nav-icon">⚡</span>
-        <span class="nav-text">BENCHMARK</span>
-      </button>
-      <button class="nav-tab" data-tab="shred">
-        <span class="nav-icon">🌪️</span>
-        <span class="nav-text">TRITURADOR</span>
-      </button>
-    </nav>
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="sidebar-status-tag">
+          <span class="status-indicator-dot"></span>
+          <span data-i18n="status_zero_server">Zero-Server // FIPS 203</span>
+        </div>
+        <div class="sidebar-actions">
+          <button type="button" class="sidebar-mini-btn" id="btn-quick-guide" title="¿Por dónde empiezo? Guía rápida">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </button>
+          <button type="button" class="sidebar-mini-btn" id="btn-open-updater" title="Verificar actualizaciones y changelog">
+            <span id="updater-badge-dot" class="updater-dot" style="display: none;"></span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+          <button type="button" class="sidebar-mini-btn" id="btn-setup-context-menu" title="Configurar acceso rápido en menú contextual">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
+          <button type="button" class="sidebar-mini-btn" id="btn-theme-toggle" title="Cambiar tema // Toggle Theme">
+            <svg id="theme-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg id="theme-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
+          <button type="button" class="sidebar-mini-btn lang-btn" id="btn-lang-toggle" title="Cambiar idioma / Switch language">
+            <span id="lang-flag">🇲🇽</span> <span id="lang-text">ES</span>
+          </button>
+        </div>
+      </div>
+    </aside>
 
-    <!-- Main Workspace -->
-    <main class="hud-workspace">
-      <!-- 1. ENCRYPT PANEL -->
-      <section id="tab-encrypt" class="tab-content active">
-        <div class="panel-grid">
-          <div class="panel-card main-panel">
-            <div class="card-header">
-              <h3>ORIGEN DE DATOS & ARCHIVO</h3>
-              <span class="badge purple">LOCAL / SSD / USB</span>
-            </div>
-            
-            <div class="dropzone" id="encrypt-dropzone">
-              <div class="dropzone-icon">📥</div>
-              <div class="dropzone-title" id="encrypt-file-title">Arrastra tu archivo aquí</div>
-              <div class="dropzone-sub" id="encrypt-file-sub">o haz clic para abrir el selector nativo de macOS</div>
-            </div>
-
-            <div class="selected-file-info" id="encrypt-file-meta" style="display:none;">
-              <div class="meta-row">
-                <span class="meta-key">Archivo:</span>
-                <span class="meta-val" id="meta-encrypt-name">-</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Ruta Absoluta:</span>
-                <span class="meta-val" id="meta-encrypt-path">-</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Tamaño:</span>
-                <span class="meta-val" id="meta-encrypt-size">-</span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="encrypt-password">CONTRASEÑA MAESTRA DE PROTECCIÓN</label>
-              <div class="input-with-action">
-                <input type="password" id="encrypt-password" placeholder="Introduce una contraseña para el envelope MirageX..." autocomplete="off">
-                <button type="button" class="btn-secondary" id="btn-gen-pass">🎲 Generar</button>
-                <button type="button" class="btn-secondary" id="btn-share-qr-encrypt" title="Compartir contraseña mediante Código QR">📲 QR</button>
-                <button type="button" class="btn-icon" id="btn-toggle-encrypt-pass">👁️</button>
-              </div>
-              <div class="password-meter">
-                <div class="meter-bar" id="pass-meter-bar"></div>
-              </div>
-              <div class="meter-label" id="pass-meter-text">Entropía: Esperando entrada...</div>
-            </div>
-          </div>
-
-          <div class="panel-card side-panel">
-            <div class="card-header">
-              <h3>SUITE DEL ALGORITMO MIRAGEX</h3>
-              <span class="badge purple">HÍBRIDO PQC</span>
-            </div>
-
-            <div class="form-group">
-              <label>MODO DE SEGURIDAD MIRAGEX</label>
-              <div class="radio-group">
-                <label class="radio-card active">
-                  <input type="radio" name="pqc-suite" value="1" checked>
-                  <div class="radio-info">
-                    <span class="radio-title">MirageX Standard</span>
-                    <span class="radio-desc">ML-KEM-768 (NIST Nivel 3) + Argon2id + AES-256-GCM</span>
-                  </div>
-                </label>
-                <label class="radio-card">
-                  <input type="radio" name="pqc-suite" value="2">
-                  <div class="radio-info">
-                    <span class="radio-title">MirageX Ultra</span>
-                    <span class="radio-desc">ML-KEM-1024 (NIST Nivel 5) + Argon2id + AES-256-GCM</span>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="chunk-size-select">STREAMING CHUNK SIZE</label>
-              <select id="chunk-size-select" class="hud-select">
-                <option value="4">4 MiB (Archivos pequeños)</option>
-                <option value="16" selected>16 MiB (Estándar Óptimo WRAITH v4)</option>
-                <option value="64">64 MiB (Archivos masivos >10 GB)</option>
-              </select>
-            </div>
-
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="shred-source-chk">
-                <span class="checkbox-custom"></span>
-                <span>Borrado seguro del archivo original tras cifrar</span>
-              </label>
-            </div>
-
-            <div id="encrypt-shred-options" style="display: none; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border-color); border-radius: 6px;">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">TIPO DE DISCO</label>
-                  <select id="encrypt-shred-media" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
-                    <option value="ssd" selected>⚡ SSD/NVMe (FTL Wear-Leveling)</option>
-                    <option value="hdd">💾 HDD (Magnético DoD 5220.22-M)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">PASADAS</label>
-                  <select id="encrypt-shred-passes" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
-                    <option value="3" selected>3 Pasadas</option>
-                    <option value="7">7 Pasadas</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <button class="btn-primary" id="btn-start-encrypt">
-              🔒 INICIAR CIFRADO MIRAGEX
-            </button>
+    <!-- Main Viewport -->
+    <div class="app-main">
+      <!-- Minimalist Topbar -->
+      <header class="app-topbar">
+        <div class="topbar-title-wrap">
+          <h2 class="view-title" id="view-title">Cifrado Post-Cuántico</h2>
+          <span class="view-subtitle" id="view-subtitle">Protección de alta graduación con ML-KEM-768 y envelope WRAITH v4</span>
+        </div>
+        <div class="topbar-actions">
+          <div class="security-pill">
+            <span class="pill-dot green"></span>
+            <span data-i18n="status_algo">ML-KEM-768 // AES-GCM</span>
           </div>
         </div>
+      </header>
 
-        <!-- Telemetry Card -->
-        <div class="telemetry-card" id="encrypt-telemetry" style="display:none;">
-          <div class="telemetry-header">
-            <h4>TELEMETRÍA CRIPTOGRÁFICA MIRAGEX</h4>
-            <span class="telemetry-speed" id="encrypt-speed">0.00 MB/s</span>
+      <!-- Scrollable Main Workspace -->
+      <main class="hud-workspace">
+        <!-- 1. ENCRYPT PANEL (ZEN MINIMALIST CARD) -->
+        <section id="tab-encrypt" class="tab-content active">
+          <div class="zen-container">
+            <div class="zen-card">
+
+              <!-- Card Header: Title & Cloud Backup Toggle -->
+              <div class="zen-card-header">
+                <div class="zen-card-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span id="lbl-encrypt-origin-title" data-i18n="enc_origin_title">Cifrar Archivo</span>
+                  <span class="badge purple" id="badge-encrypt-origin" data-i18n="badge_single_file" style="margin-left: 8px;">INDIVIDUAL</span>
+                </div>
+                <label class="hud-switch-container" title="Alternar entre cifrado individual y modo respaldo anonimizado para la nube">
+                  <input type="checkbox" id="toggle-encrypt-backup-mode">
+                  <span class="hud-switch-slider"></span>
+                  <span class="hud-switch-text" data-i18n="lbl_cloud_backup_mode">Modo Respaldo Nube</span>
+                </label>
+              </div>
+
+              <!-- Standard Single File Section -->
+              <div id="encrypt-single-file-section">
+                <div class="dropzone" id="encrypt-dropzone">
+                  <div class="dropzone-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  </div>
+                  <div class="dropzone-title" id="encrypt-file-title" data-i18n="drop_enc_title">Arrastra y suelta tu archivo aquí</div>
+                  <div class="dropzone-sub" id="encrypt-file-sub" data-i18n="drop_enc_sub">o haz clic para explorar en el disco</div>
+                  <button type="button" class="dropzone-browse-btn" tabindex="-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span data-i18n="btn_browse_file">Elegir Archivo</span>
+                  </button>
+                </div>
+
+                <div class="selected-file-info" id="encrypt-file-meta" style="display:none;">
+                  <div class="selected-file-main-row">
+                    <div class="file-identity">
+                      <div class="file-type-badge">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      </div>
+                      <div class="file-name-meta">
+                        <span class="file-name" id="meta-encrypt-name">-</span>
+                        <span class="file-size" id="meta-encrypt-size">-</span>
+                      </div>
+                    </div>
+                    <div class="file-card-actions">
+                      <button type="button" class="btn-secondary btn-sm" id="btn-change-encrypt-file" title="Seleccionar otro archivo">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span data-i18n="btn_change_file">Cambiar</span>
+                      </button>
+                      <button type="button" class="btn-secondary btn-sm" id="btn-clear-encrypt-file" title="Quitar archivo seleccionado">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <span data-i18n="btn_remove_file">Quitar</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Ruta:</span>
+                    <span class="meta-val" id="meta-encrypt-path">-</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Salida:</span>
+                    <span class="meta-val fuzzing-preview-tag" id="meta-encrypt-out-preview" style="font-family: var(--font-mono); font-size: 11px;">[sha256].wraith (Anonimizado // Cero metadatos)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Backup Cloud Directory Mode Section -->
+              <div id="encrypt-backup-mode-section" style="display: none;">
+                <div class="backup-folder-pickers">
+                  <div class="input-group">
+                    <label for="backup-main-src-input">Carpeta a Respaldar (Origen):</label>
+                    <div class="input-with-button">
+                      <input type="text" id="backup-main-src-input" placeholder="Selecciona la carpeta con tus archivos..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-backup-main-src" data-i18n="btn_browse">Explorar</button>
+                    </div>
+                  </div>
+
+                  <div class="input-group" style="margin-top: 12px;">
+                    <label for="backup-main-dst-input">Directorio de Respaldo Cifrado (Destino):</label>
+                    <div class="input-with-button">
+                      <input type="text" id="backup-main-dst-input" placeholder="Carpeta de destino para los .wraith y el manifiesto..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-backup-main-dst" data-i18n="btn_browse">Explorar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="beta-feature-pill-banner" style="margin-top: 14px;">
+                  <span class="pill-dot green"></span>
+                  <span><strong>Blinded Hashes:</strong> Hashes opacos deterministas (<code>[sha256].wraith</code>) preservando deduplicación incremental en la nube.</span>
+                </div>
+              </div>
+
+              <!-- Password Protection Form Group -->
+              <div class="form-group">
+                <label for="encrypt-password" data-i18n="lbl_enc_pass">CONTRASEÑA MAESTRA DE PROTECCIÓN</label>
+                <div class="input-with-action">
+                  <input type="password" id="encrypt-password" placeholder="Introduce una contraseña para el envelope MirageX..." data-i18n-placeholder="ph_enc_pass" autocomplete="off">
+                  <button type="button" class="btn-secondary btn-sm" id="btn-gen-pass" data-i18n="btn_gen">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="16" r="1.5"/><circle cx="12" cy="12" r="1.5"/></svg>
+                    <span>Generar</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btn-share-qr-encrypt" title="Compartir contraseña mediante Código QR">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    <span>QR</span>
+                  </button>
+                  <button type="button" class="btn-icon" id="btn-toggle-encrypt-pass" title="Mostrar/Ocultar contraseña">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+                <div class="password-meter">
+                  <div class="meter-bar" id="pass-meter-bar"></div>
+                </div>
+                <div class="meter-label" id="pass-meter-text">Entropía: Esperando entrada...</div>
+              </div>
+
+              <!-- Keyfile Row (Optional) -->
+              <div class="form-group keyfile-form-group">
+                <label data-i18n="lbl_enc_kf">KEYFILE DE SEGURIDAD (OPCIONAL: 2FA O SOLO-KEYFILE)</label>
+                <div class="input-with-action">
+                  <input type="text" id="encrypt-keyfile-display" placeholder="Sin keyfile (Opcional: 2FA o solo-keyfile)..." data-i18n-placeholder="ph_kf" readonly>
+                  <button type="button" class="btn-secondary btn-sm" id="btn-select-keyfile-encrypt" data-i18n="btn_browse_kf">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span>Examinar</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="btn-open-gen-keyfile" data-i18n="btn_gen_kf">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-6 6l7-7m-7 7l-2-2m-4 4l-4 4a5 5 0 0 1-7-7l4-4a5 5 0 0 1 7 7z"/></svg>
+                    <span>Generar Keyfile</span>
+                  </button>
+                  <button type="button" class="btn-icon" id="btn-clear-keyfile-encrypt" title="Quitar keyfile" data-i18n-title="btn_remove_kf" style="display:none;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Collapsible Advanced Drawer -->
+              <details class="advanced-disclosure">
+                <summary>
+                  <span>Opciones Avanzadas (Suite Post-Cuántica, Bloque, Borrado)</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <div class="advanced-content">
+                  <div class="form-group">
+                    <label data-i18n="lbl_security_mode">Suite Criptográfica</label>
+                    <div class="radio-group">
+                      <label class="radio-card active">
+                        <input type="radio" name="pqc-suite" value="1" checked>
+                        <div class="radio-indicator"></div>
+                        <div class="radio-info">
+                          <div class="radio-title-row">
+                            <span class="radio-title">MirageX Standard</span>
+                            <span class="badge purple">NIST 3</span>
+                          </div>
+                          <span class="radio-desc" data-i18n="suite_standard_desc">ML-KEM-768 + AES-256-GCM. Rendimiento óptimo balanceado.</span>
+                        </div>
+                      </label>
+
+                      <label class="radio-card">
+                        <input type="radio" name="pqc-suite" value="2">
+                        <div class="radio-indicator"></div>
+                        <div class="radio-info">
+                          <div class="radio-title-row">
+                            <span class="radio-title">MirageX Ultra</span>
+                            <span class="badge pink">NIST 5</span>
+                          </div>
+                          <span class="radio-desc" data-i18n="suite_ultra_desc">ML-KEM-1024 + AES-256-GCM. Máxima resistencia cuántica teórica.</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="chunk-size-select" data-i18n="lbl_chunk_size">Tamaño de Bloque (Chunking)</label>
+                    <select id="chunk-size-select" class="hud-select">
+                      <option value="4">4 MiB (Archivos pequeños)</option>
+                      <option value="16" selected>16 MiB (Estándar WRAITH v4)</option>
+                      <option value="64">64 MiB (Archivos masivos >10 GB)</option>
+                    </select>
+                  </div>
+
+                  <div class="checkbox-group">
+                    <label class="checkbox-label" title="Anonimiza el nombre del archivo en disco ([sha256].wraith) para evitar filtración de metadatos o extensiones. Al descifrar con MirageX se restaura el nombre real íntegro.">
+                      <input type="checkbox" id="encrypt-name-fuzzing-chk" checked>
+                      <span class="checkbox-custom"></span>
+                      <span data-i18n="chk_name_fuzzing"><strong>Name Fuzzing (Activo por defecto)</strong></span>
+                    </label>
+                    <div class="field-hint" style="font-size: 11px; margin-top: 2px; color: var(--text-muted);" data-i18n="hint_name_fuzzing">
+                      Cero fuga de nombres o extensiones (<code>[sha256].wraith</code>). Se restaura al descifrar.
+                    </div>
+                  </div>
+
+                  <div class="checkbox-group">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="shred-source-chk">
+                      <span class="checkbox-custom"></span>
+                      <span data-i18n="chk_shred_source">Borrado seguro del archivo original tras cifrar</span>
+                    </label>
+                  </div>
+
+                  <div id="encrypt-shred-options" style="display: none; padding: 10px; background: rgba(0,0,0,0.03); border: 1px dashed var(--border-subtle); border-radius: var(--radius-sm);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                      <div>
+                        <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="lbl_disk_type">TIPO DE DISCO</label>
+                        <select id="encrypt-shred-media" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
+                          <option value="ssd" selected>SSD/NVMe (FTL Wear-Leveling)</option>
+                          <option value="hdd">HDD (Magnético DoD 5220.22-M)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="lbl_passes">PASADAS</label>
+                        <select id="encrypt-shred-passes" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
+                          <option value="3" selected>3 Pasadas</option>
+                          <option value="7">7 Pasadas</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <!-- Action & Validation Hint -->
+              <div class="step-action-row">
+                <div class="action-validation-hint" id="encrypt-validation-hint">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span id="encrypt-validation-hint-text">Selecciona un archivo para cifrar.</span>
+                </div>
+
+                <button class="btn-primary" id="btn-start-encrypt" data-i18n="btn_start_encrypt" disabled>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span data-i18n="btn_start_encrypt">INICIAR CIFRADO MIRAGEX</span>
+                </button>
+              </div>
+
+              <!-- Telemetry Card -->
+              <div class="telemetry-card" id="encrypt-telemetry" style="display:none; margin-top: 6px;">
+                <div class="telemetry-header">
+                  <h4 data-i18n="telemetry_title">Telemetría Criptográfica MirageX</h4>
+                  <span class="telemetry-speed" id="encrypt-speed">0.00 MB/s</span>
+                </div>
+                <div class="progress-container">
+                  <div class="progress-fill" id="encrypt-progress-fill" style="width: 0%;"></div>
+                </div>
+                <div class="telemetry-stats">
+                  <span id="encrypt-stats-chunks">Chunk: 0 / 0</span>
+                  <span id="encrypt-stats-bytes">0 / 0 MB</span>
+                  <span id="encrypt-stats-time">Tiempo: 0s</span>
+                </div>
+              </div>
+
+            </div>
           </div>
-          <div class="progress-container">
-            <div class="progress-fill" id="encrypt-progress-fill" style="width: 0%;"></div>
-          </div>
-          <div class="telemetry-stats">
-            <span id="encrypt-stats-chunks">Chunk: 0 / 0</span>
-            <span id="encrypt-stats-bytes">0 / 0 MB</span>
-            <span id="encrypt-stats-time">Tiempo: 0s</span>
-          </div>
-        </div>
-      </section>
+        </section>
+
 
       <!-- 2. DECRYPT PANEL -->
       <section id="tab-decrypt" class="tab-content">
         <div class="panel-grid">
           <div class="panel-card main-panel">
             <div class="card-header">
-              <h3>CONTENEDOR WRAITH (.wraith)</h3>
+              <h3 data-i18n="dec_card_title">CONTENEDOR WRAITH (.wraith)</h3>
               <span class="badge purple">MIRAGEX ENVELOPE</span>
             </div>
 
             <div class="dropzone" id="decrypt-dropzone">
-              <div class="dropzone-icon">📦</div>
-              <div class="dropzone-title" id="decrypt-file-title">Arrastra tu archivo .wraith aquí</div>
-              <div class="dropzone-sub">o haz clic para examinar el disco</div>
+              <div class="dropzone-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+              </div>
+              <div class="dropzone-title" id="decrypt-file-title" data-i18n="drop_dec_title">Arrastra tu archivo .wraith aquí</div>
+              <div class="dropzone-sub" data-i18n="drop_dec_sub">o haz clic para examinar el disco</div>
+              <button type="button" class="dropzone-browse-btn" tabindex="-1">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Seleccionar .wraith</span>
+              </button>
             </div>
 
             <div class="selected-file-info" id="decrypt-file-meta" style="display:none;">
@@ -214,11 +424,30 @@
             </div>
 
             <div class="form-group">
-              <label for="decrypt-password">CONTRASEÑA DE AUTENTICACIÓN</label>
+              <label for="decrypt-password" data-i18n="lbl_dec_pass">CONTRASEÑA DE AUTENTICACIÓN</label>
               <div class="input-with-action">
-                <input type="password" id="decrypt-password" placeholder="Contraseña de desencapsulado..." autocomplete="off">
-                <button type="button" class="btn-secondary" id="btn-share-qr-decrypt" title="Ver contraseña en Código QR">📲 QR</button>
-                <button type="button" class="btn-icon" id="btn-toggle-decrypt-pass">👁️</button>
+                <input type="password" id="decrypt-password" placeholder="Contraseña de desencapsulado..." data-i18n-placeholder="ph_dec_pass" autocomplete="off">
+                <button type="button" class="btn-secondary" id="btn-share-qr-decrypt" title="Ver contraseña en Código QR">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  <span>QR</span>
+                </button>
+                <button type="button" class="btn-icon" id="btn-toggle-decrypt-pass">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group keyfile-form-group">
+              <label data-i18n="lbl_dec_kf">KEYFILE DE DESENCRIPTACIÓN</label>
+              <div class="input-with-action">
+                <input type="text" id="decrypt-keyfile-display" placeholder="Sin keyfile (Opcional si usaste keyfile al cifrar)..." data-i18n-placeholder="ph_kf" readonly>
+                <button type="button" class="btn-secondary" id="btn-select-keyfile-decrypt" data-i18n="btn_browse_kf">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <span>Examinar</span>
+                </button>
+                <button type="button" class="btn-icon" id="btn-clear-keyfile-decrypt" title="Quitar keyfile" data-i18n-title="btn_remove_kf" style="display:none;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               </div>
             </div>
 
@@ -226,21 +455,21 @@
               <label class="checkbox-label">
                 <input type="checkbox" id="shred-container-chk">
                 <span class="checkbox-custom"></span>
-                <span>Borrado seguro del contenedor .wraith tras restauración</span>
+                <span data-i18n="chk_shred_container">Borrado seguro del contenedor .wraith tras restauración</span>
               </label>
             </div>
 
-            <div id="decrypt-shred-options" style="display: none; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border-color); border-radius: 6px;">
+            <div id="decrypt-shred-options" style="display: none; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.03); border: 1px dashed var(--border-subtle); border-radius: var(--radius-sm);">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div>
-                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">TIPO DE DISCO</label>
+                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="lbl_disk_type">TIPO DE DISCO</label>
                   <select id="decrypt-shred-media" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
-                    <option value="ssd" selected>⚡ SSD/NVMe (FTL Wear-Leveling)</option>
-                    <option value="hdd">💾 HDD (Magnético DoD 5220.22-M)</option>
+                    <option value="ssd" selected>SSD/NVMe (FTL Wear-Leveling)</option>
+                    <option value="hdd">HDD (Magnético DoD 5220.22-M)</option>
                   </select>
                 </div>
                 <div>
-                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">PASADAS</label>
+                  <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="lbl_passes">PASADAS</label>
                   <select id="decrypt-shred-passes" class="hud-select" style="font-size: 11px; padding: 4px 8px;">
                     <option value="3" selected>3 Pasadas</option>
                     <option value="7">7 Pasadas</option>
@@ -249,21 +478,373 @@
               </div>
             </div>
 
-            <button class="btn-primary" id="btn-start-decrypt">
-              🔓 DESENCAPSULAR & VERIFICAR CON MIRAGEX
+            <!-- Cloud Backup Restore Banner -->
+            <div id="decrypt-backup-manifest-notice" style="display: none; margin-bottom: 15px;">
+              <div class="beta-feature-pill-banner" style="border-color: var(--pink);">
+                <span class="pill-dot pink"></span>
+                <div style="flex: 1;">
+                  <strong>¡Manifiesto de Respaldo Maestro Detectado! (<code>backup_manifest.wraith</code>)</strong>
+                  <p style="margin: 4px 0 8px 0; font-size: 11px;">Este archivo contiene el árbol completo de directorios y hashes para restaurar tu copia de seguridad de la nube (Restic / Borg / rsync).</p>
+                  <div class="input-group">
+                    <label for="restore-cloud-dest-input" style="font-size: 10px;">Carpeta donde restaurar archivos:</label>
+                    <div class="input-with-button">
+                      <input type="text" id="restore-cloud-dest-input" placeholder="Carpeta de destino de restauración..." readonly>
+                      <button type="button" class="btn-secondary" id="btn-browse-restore-cloud-dest" data-i18n="btn_browse">Explorar</button>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-primary highlight-pink full-width" id="btn-execute-restore-cloud-main" style="margin-top: 10px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    <span>RESTAURAR ÁRBOL COMPLETO DE RESPALDO</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn-primary" id="btn-start-decrypt" data-i18n="btn_start_decrypt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+              <span>DESENCAPSULAR & VERIFICAR CON MIRAGEX</span>
             </button>
           </div>
 
           <div class="panel-card side-panel">
             <div class="card-header">
-              <h3>RESULTADO DE AUTENTICIDAD</h3>
+              <h3 data-i18n="dec_authenticity_title">RESULTADO DE AUTENTICIDAD</h3>
               <span class="badge green">AEAD + SHA-256</span>
             </div>
             
             <div class="decryption-result-box" id="decrypt-result-box">
               <div class="empty-state">
-                <div class="empty-icon">🛡️</div>
-                <p>Esperando autenticación de contenedor para verificar integridad.</p>
+                <div class="empty-icon">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <p data-i18n="dec_empty_text">Esperando autenticación de contenedor para verificar integridad.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.5. VAULT PANEL (ARCANUM / VERACRYPT STYLE PORTABLE ENCRYPTED VAULT) -->
+      <section id="tab-vault" class="tab-content">
+        <!-- State 1: Locked / Setup View -->
+        <div id="vault-locked-view" class="panel-grid">
+          <!-- Col 1: Create New Vault -->
+          <div class="panel-card main-panel">
+            <div class="card-header">
+              <h3 data-i18n="vault_create_title">CREAR NUEVA BÓVEDA CIFRADA</h3>
+              <span class="badge purple">MULTI-ARCHIVO .WVAULT</span>
+            </div>
+
+            <div class="dropzone" id="vault-create-dropzone">
+              <div class="dropzone-icon">📁</div>
+              <div class="dropzone-title" id="vault-create-drop-title" data-i18n="vault_create_drop">Seleccionar Archivos para la Bóveda</div>
+              <div class="dropzone-sub" data-i18n="vault_create_drop_sub">O usa «Añadir carpeta completa» para empaquetar un directorio entero con ML-KEM + AES-256-GCM</div>
+            </div>
+
+            <button type="button" class="btn-secondary vault-add-folder-btn" id="btn-vault-add-folder" data-i18n="btn_vault_add_folder">
+              📁 Añadir carpeta completa
+            </button>
+
+            <div id="vault-sources-list-box" class="vault-sources-box" style="display:none;">
+              <div class="vault-sources-header">
+                <span>ELEMENTOS A INCLUIR EN LA BÓVEDA (<span id="vault-sources-count">0</span>):</span>
+                <button type="button" class="btn-sm btn-secondary" id="btn-clear-vault-sources">Limpiar</button>
+              </div>
+              <ul id="vault-sources-items" class="vault-items-list"></ul>
+            </div>
+
+            <div class="form-group mt-2">
+              <label for="vault-create-password" data-i18n="lbl_vault_create_pass">CONTRASEÑA DE LA BÓVEDA</label>
+              <div class="input-with-action">
+                <input type="password" id="vault-create-password" placeholder="Contraseña maestra de la bóveda..." data-i18n-placeholder="ph_vault_create_pass" autocomplete="off">
+                <button type="button" class="btn-secondary" id="btn-gen-pass-vault" data-i18n="btn_gen">🎲 Generar</button>
+                <button type="button" class="btn-icon" id="btn-toggle-vault-create-pass">👁️</button>
+              </div>
+            </div>
+
+            <div class="form-group keyfile-form-group">
+              <label data-i18n="lbl_vault_create_kf">KEYFILE DE LA BÓVEDA</label>
+              <div class="input-with-action">
+                <input type="text" id="vault-create-keyfile-display" placeholder="Sin keyfile (Opcional: 2FA o Solo-Keyfile)..." data-i18n-placeholder="ph_kf" readonly>
+                <button type="button" class="btn-secondary" id="btn-select-keyfile-vault-create" data-i18n="btn_browse_kf">📂 Examinar</button>
+                <button type="button" class="btn-secondary" id="btn-open-gen-keyfile-vault" data-i18n="btn_gen">🎲 Generar</button>
+                <button type="button" class="btn-icon" id="btn-clear-keyfile-vault-create" title="Quitar keyfile" data-i18n-title="btn_remove_kf" style="display:none;">✕</button>
+              </div>
+            </div>
+
+            <button class="btn-primary" id="btn-execute-create-vault" data-i18n="btn_execute_create_vault">
+              📦 CREAR Y CIFRAR BÓVEDA EN DISCO
+            </button>
+          </div>
+
+          <!-- Col 2: Open / Unlock Existing Vault -->
+          <div class="panel-card side-panel">
+            <div class="card-header">
+              <h3 data-i18n="vault_open_title">DESBLOQUEAR BÓVEDA EXISTENTE</h3>
+              <span class="badge green">EXPLORADOR IN-APP</span>
+            </div>
+
+            <div class="dropzone" id="vault-open-dropzone">
+              <div class="dropzone-icon">🔐</div>
+              <div class="dropzone-title" id="vault-open-file-title" data-i18n="vault_open_drop">Selecciona un archivo .wvault o .wraith</div>
+              <div class="dropzone-sub" data-i18n="vault_open_drop_sub">Abre y explora el árbol de archivos sin drivers de kernel</div>
+            </div>
+
+            <div class="selected-file-info" id="vault-open-meta" style="display:none;">
+              <div class="meta-row">
+                <span class="meta-key">Bóveda:</span>
+                <span class="meta-val" id="meta-vault-open-name">-</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Ruta:</span>
+                <span class="meta-val" id="meta-vault-open-path">-</span>
+              </div>
+            </div>
+
+            <div class="form-group mt-2">
+              <label for="vault-open-password" data-i18n="lbl_vault_open_pass">CONTRASEÑA DE DESBLOQUEO</label>
+              <div class="input-with-action">
+                <input type="password" id="vault-open-password" placeholder="Contraseña de la bóveda..." data-i18n-placeholder="ph_vault_open_pass" autocomplete="off">
+                <button type="button" class="btn-icon" id="btn-toggle-vault-open-pass">👁️</button>
+              </div>
+            </div>
+
+            <div class="form-group keyfile-form-group">
+              <label data-i18n="lbl_vault_open_kf">KEYFILE DE DESBLOQUEO</label>
+              <div class="input-with-action">
+                <input type="text" id="vault-open-keyfile-display" placeholder="Sin keyfile (Opcional)..." data-i18n-placeholder="ph_kf" readonly>
+                <button type="button" class="btn-secondary" id="btn-select-keyfile-vault-open" data-i18n="btn_browse_kf">📂 Examinar</button>
+                <button type="button" class="btn-icon" id="btn-clear-keyfile-vault-open" title="Quitar keyfile" data-i18n-title="btn_remove_kf" style="display:none;">✕</button>
+              </div>
+            </div>
+
+            <button class="btn-primary" id="btn-execute-open-vault" data-i18n="btn_execute_open_vault">
+              🔓 DESBLOQUEAR Y EXPLORAR BÓVEDA
+            </button>
+          </div>
+        </div>
+
+        <!-- State 2: Unlocked Vault In-App Explorer View -->
+        <div id="vault-unlocked-view" class="panel-card full-width" style="display:none;">
+          <div class="vault-explorer-header">
+            <div class="vault-active-info">
+              <span class="vault-status-indicator"></span>
+              <div>
+                <h3 id="vault-unlocked-name" class="vault-active-title">BÓVEDA DESBLOQUEADA</h3>
+                <div class="vault-active-sub" id="vault-unlocked-sub">0 archivos // 0 KB descomprimidos</div>
+              </div>
+            </div>
+            <div class="vault-header-actions">
+              <button type="button" class="btn-secondary" id="btn-extract-all-vault" data-i18n="btn_extract_all_vault">
+                📁 Extraer Todo a Carpeta
+              </button>
+              <button type="button" class="btn-danger" id="btn-close-lock-vault" data-i18n="btn_close_lock_vault">
+                🔒 Bloquear y Cerrar Bóveda
+              </button>
+            </div>
+          </div>
+
+          <div class="vault-toolbar">
+            <div class="vault-search-wrapper">
+              <span class="vault-search-icon">🔍</span>
+              <input type="text" id="vault-search-input" placeholder="Buscar archivos dentro de la bóveda..." data-i18n-placeholder="ph_vault_search" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="vault-table-container">
+            <table class="vault-files-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;"></th>
+                  <th>NOMBRE / RUTA INTERNA</th>
+                  <th style="width: 120px;">TAMAÑO</th>
+                  <th style="width: 160px; text-align: right;">ACCIÓN</th>
+                </tr>
+              </thead>
+              <tbody id="vault-files-tbody">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2.7. VIGILANTE / CARPETA VIGILADA (AUTO-CIFRADO Y MONITORIZACIÓN CONTINUA) -->
+      <section id="tab-watcher" class="tab-content">
+        <div class="beta-scrollable">
+          <!-- Hero Banner -->
+          <div class="beta-hero-card">
+            <div class="beta-hero-header">
+              <span class="badge pink" data-i18n="watcher_badge_top">👁️ MOTOR DE VIGILANCIA EN TIEMPO REAL</span>
+              <span class="badge gray" id="watcher-badge-status-top" data-i18n="watcher_badge_inactive">⚪ INACTIVO</span>
+              <span class="badge navy">FIPS 203 ML-KEM + AES-256-GCM</span>
+              <span class="badge purple" id="watcher-badge-ram" data-i18n="watcher_badge_ram">🛡️ CLAVES EN RAM</span>
+            </div>
+            <h2 class="beta-hero-title"><span data-i18n="watcher_hero_title">Carpeta Vigilada // </span><span class="highlight-pink-text" data-i18n="watcher_hero_title_hl">Auto-Cifrado Continuo</span></h2>
+            <p class="beta-hero-desc" data-i18n="watcher_hero_desc">
+              Todo archivo nuevo o modificado que se guarde en la carpeta vigilada es cifrado automáticamente en streaming como contenedor <code>.wraith</code>. Soporta filtrado de extensiones, modo recursivo, notificaciones de escritorio, triturado seguro y auto-bloqueo por inactividad.
+            </p>
+          </div>
+
+          <!-- Configuration & Rules Panels -->
+          <div class="panel-grid">
+            <!-- Col 1: Folders & Authentication -->
+            <div class="panel-card main-panel">
+              <div class="card-header">
+                <h3 data-i18n="watcher_dirs_title">DIRECTORIOS & SEGURIDAD DE SESIÓN</h3>
+                <span class="badge purple">POLLING ATÓMICO (1500 MS)</span>
+              </div>
+
+              <div class="input-group">
+                <label for="watch-folder-input" data-i18n="watcher_lbl_watch_dir">Directorio Vigilado (Carpeta Origen):</label>
+                <div class="input-with-button">
+                  <input type="text" id="watch-folder-input" placeholder="Selecciona la carpeta a monitorear..." data-i18n-placeholder="watcher_ph_watch_dir" readonly>
+                  <button type="button" class="btn-secondary" id="btn-browse-watch-folder" data-i18n="btn_browse">📂 Explorar</button>
+                </div>
+              </div>
+
+              <div class="input-group" style="margin-top: 12px;">
+                <label for="watch-output-input" data-i18n="watcher_lbl_output_dir">Directorio de Salida Cifrada (.wraith):</label>
+                <div class="input-with-button">
+                  <input type="text" id="watch-output-input" placeholder="Selecciona la carpeta de destino..." data-i18n-placeholder="watcher_ph_output_dir" readonly>
+                  <button type="button" class="btn-secondary" id="btn-browse-watch-output" data-i18n="btn_browse">📂 Explorar</button>
+                </div>
+              </div>
+
+              <div class="form-grid-2" style="margin-top: 12px;">
+                <div class="input-group">
+                  <label for="watch-password" data-i18n="watcher_lbl_pass">Contraseña en Memoria (Sesión Activa):</label>
+                  <div class="input-with-button">
+                    <input type="password" id="watch-password" placeholder="Contraseña para auto-cifrar..." data-i18n-placeholder="watcher_ph_pass">
+                    <button type="button" class="btn-icon" id="btn-toggle-watch-pass" title="Mostrar/ocultar">👁️</button>
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label for="watch-suite-select" data-i18n="watcher_lbl_algo">Algoritmo Post-Cuántico:</label>
+                  <select id="watch-suite-select" class="hud-select">
+                    <option value="768" selected>ML-KEM-768 (NIST Level 3 - Rápido)</option>
+                    <option value="1024">ML-KEM-1024 (NIST Level 5 - Máximo)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group keyfile-form-group" style="margin-top: 12px;">
+                <label data-i18n="lbl_watch_keyfile">KEYFILE DE SEGURIDAD</label>
+                <div class="input-with-action">
+                  <input type="text" id="watch-keyfile-display" placeholder="Sin keyfile (Opcional: 2FA o Solo-Keyfile)..." data-i18n-placeholder="ph_kf" readonly>
+                  <button type="button" class="btn-secondary" id="btn-select-keyfile-watch" data-i18n="btn_browse">📂 Examinar</button>
+                  <button type="button" class="btn-secondary" id="btn-open-gen-keyfile-watch" data-i18n="btn_gen_kf">🎲 Generar Keyfile</button>
+                  <button type="button" class="btn-icon" id="btn-clear-keyfile-watch" title="Quitar keyfile" style="display:none;">✕</button>
+                </div>
+                <div class="field-hint" data-i18n="hint_watch_keyfile">Algoritmo de mezcla CRC-32 IEEE 802.3 y adición modular de 64 bytes.</div>
+              </div>
+            </div>
+
+            <!-- Col 2: Rules & Triggers -->
+            <div class="panel-card side-panel">
+              <div class="card-header">
+                <h3 data-i18n="watcher_rules_title">REGLAS & AUTOMATIZACIÓN</h3>
+                <span class="badge purple">POLÍTICAS ACTIVAS</span>
+              </div>
+
+              <!-- Extension Filter -->
+              <div class="input-group">
+                <label data-i18n="watcher_lbl_filter">Filtro de Archivos:</label>
+                <div class="radio-group" style="margin-bottom: 8px;">
+                  <label class="radio-card active" style="padding: 6px 10px;">
+                    <input type="radio" name="watch-filter-mode" value="all" checked>
+                    <span style="font-size: 11px; font-weight: 700;" data-i18n="watcher_filter_all">Todos los archivos</span>
+                  </label>
+                  <label class="radio-card" style="padding: 6px 10px;">
+                    <input type="radio" name="watch-filter-mode" value="whitelist">
+                    <span style="font-size: 11px; font-weight: 700;" data-i18n="watcher_filter_whitelist">Whitelist de extensiones</span>
+                  </label>
+                </div>
+                <div id="watch-extensions-wrapper" style="display: none;">
+                  <input type="text" id="watch-filter-extensions-input" placeholder="pdf, docx, xlsx, png, jpg, zip" value="pdf, docx, xlsx, png, jpg, zip">
+                  <div class="field-hint" style="font-size: 10px; margin-top: 4px;">Separadas por coma. Se ignoran siempre archivos de sistema (.DS_Store, Thumbs.db, temporales).</div>
+                </div>
+              </div>
+
+              <!-- Timeout -->
+              <div class="input-group" style="margin-top: 10px;">
+                <label for="watch-timeout-select" data-i18n="watcher_lbl_timeout">Auto-Bloqueo de Seguridad por Inactividad:</label>
+                <select id="watch-timeout-select" class="hud-select">
+                  <option value="0" data-i18n="watcher_timeout_0">Desactivado (Mantener sesión abierta)</option>
+                  <option value="5" data-i18n="watcher_timeout_5">5 minutos sin nuevos archivos</option>
+                  <option value="15" selected data-i18n="watcher_timeout_15">15 minutos (Recomendado)</option>
+                  <option value="30" data-i18n="watcher_timeout_30">30 minutos</option>
+                  <option value="60" data-i18n="watcher_timeout_60">1 hora</option>
+                </select>
+                <div class="field-hint" style="font-size: 10px; margin-top: 4px;">Purga criptográficamente la clave de la memoria RAM tras inactividad.</div>
+              </div>
+
+              <!-- Checkboxes -->
+              <div class="checkbox-group" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                <label class="checkbox-label" title="Anonimiza el nombre del archivo en disco ([sha256].wraith) para evitar filtración de metadatos o extensiones. Al descifrar con MirageX se restaura el nombre real íntegro.">
+                  <input type="checkbox" id="watch-name-fuzzing-chk" checked>
+                  <span class="checkbox-custom"></span>
+                  <span data-i18n="chk_name_fuzzing"><strong>Name Fuzzing (Activo por defecto)</strong></span>
+                </label>
+                <div class="field-hint" style="font-size: 10px; margin-top: -3px; margin-bottom: 2px; color: var(--text-secondary);" data-i18n="hint_name_fuzzing">
+                  🛡️ Cero fuga de nombres o extensiones (<code>[sha256].wraith</code>). Se restaura al descifrar.
+                </div>
+
+                <label class="checkbox-label">
+                  <input type="checkbox" id="watch-recursive-chk" checked>
+                  <span class="checkbox-custom"></span>
+                  <span data-i18n="watcher_chk_recursive">Vigilancia recursiva (Monitorear subcarpetas anidadas)</span>
+                </label>
+
+                <label class="checkbox-label">
+                  <input type="checkbox" id="watch-notify-chk" checked>
+                  <span class="checkbox-custom"></span>
+                  <span data-i18n="watcher_chk_notify">Notificaciones nativas del sistema operativo</span>
+                </label>
+
+                <label class="checkbox-label">
+                  <input type="checkbox" id="watch-shred-source-chk" checked>
+                  <span class="checkbox-custom"></span>
+                  <span data-i18n="lbl_watch_shred">Borrado seguro del archivo original tras cifrar (Activo por defecto)</span>
+                </label>
+              </div>
+
+              <div class="beta-actions-row" style="margin-top: 16px;">
+                <button type="button" class="btn-primary" id="btn-start-watcher" style="flex: 1;" data-i18n="btn_start_watcher">
+                  ▶️ INICIAR VIGILANCIA
+                </button>
+                <button type="button" class="btn-secondary" id="btn-stop-watcher" style="display: none; flex: 1;" data-i18n="btn_stop_watcher">
+                  ⏹️ DETENER VIGILANCIA
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audit Log & Live Console -->
+          <div class="beta-card" style="margin-top: 16px;">
+            <div class="card-header">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <h3 data-i18n="watcher_audit_title">REGISTRO DE AUDITORÍA & EVENTOS EN VIVO</h3>
+                <span class="badge navy" id="watcher-badge-count">0 ARCHIVOS PROCESADOS</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-secondary" id="btn-export-audit-csv" title="Descargar log en formato CSV" data-i18n="btn_export_csv">
+                  📥 Exportar CSV
+                </button>
+                <button type="button" class="btn-secondary" id="btn-export-audit-jsonl" title="Descargar log en formato JSONL" data-i18n="btn_export_jsonl">
+                  📥 Exportar JSONL
+                </button>
+              </div>
+            </div>
+
+            <div class="beta-console-wrapper" style="margin-top: 12px;">
+              <div class="beta-console-header">
+                <span data-i18n="watcher_console_title">CONSOLA EN TIEMPO REAL</span>
+                <span id="watcher-status-text" data-i18n="watcher_status_waiting">ESPERANDO CONFIGURACIÓN</span>
+              </div>
+              <div class="beta-console-log" id="watcher-log-terminal">
+                [SISTEMA] Vigilante inicializado. Esperando que configures los directorios y la clave.
               </div>
             </div>
           </div>
@@ -274,14 +855,14 @@
       <section id="tab-inspect" class="tab-content">
         <div class="panel-card full-width">
           <div class="card-header">
-            <h3>INSPECCIÓN ESTRUCTURAL DE CABECERAS WRAITH (CERO CONOCIMIENTO)</h3>
+            <h3 data-i18n="inspect_card_title">INSPECCIÓN ESTRUCTURAL DE CABECERAS WRAITH (CERO CONOCIMIENTO)</h3>
             <span class="badge purple">NON-DESTRUCTIVE</span>
           </div>
 
           <div class="dropzone" id="inspect-dropzone">
             <div class="dropzone-icon">🔬</div>
-            <div class="dropzone-title" id="inspect-file-title">Arrastra un archivo .wraith para inspección inmediata</div>
-            <div class="dropzone-sub">Lee los metadatos de suite y UUID sin requerir la contraseña ni descifrar el contenido</div>
+            <div class="dropzone-title" id="inspect-file-title" data-i18n="drop_inspect_title">Arrastra un archivo .wraith para inspección inmediata</div>
+            <div class="dropzone-sub" data-i18n="drop_inspect_sub">Lee los metadatos de suite y UUID sin requerir la contraseña ni descifrar el contenido</div>
           </div>
 
           <div class="inspection-results" id="inspection-results" style="display:none;">
@@ -321,11 +902,11 @@
       <section id="tab-benchmark" class="tab-content">
         <div class="panel-card full-width">
           <div class="card-header">
-            <h3>BENCHMARK DE RENDIMIENTO DEL ALGORITMO MIRAGEX</h3>
-            <button class="btn-secondary" id="btn-run-bench">⚡ Ejecutar Test de Estrés</button>
+            <h3 data-i18n="bench_card_title">BENCHMARK DE RENDIMIENTO DEL ALGORITMO MIRAGEX</h3>
+            <button class="btn-secondary" id="btn-run-bench" data-i18n="btn_run_bench">⚡ Ejecutar Test de Estrés</button>
           </div>
 
-          <p class="section-desc" style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;">
+          <p class="section-desc" style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;" data-i18n="bench_desc">
             Evalúa la velocidad de encapsulación post-cuántica (FIPS 203), derivación de claves Argon2id y tasa de transferencia por aceleración de hardware AES-256-GCM.
           </p>
 
@@ -358,19 +939,19 @@
       <section id="tab-shred" class="tab-content">
         <div class="panel-card full-width">
           <div class="card-header">
-            <h3>TRITURADOR CRIPTOGRÁFICO CSPRNG (SECURE WIPE)</h3>
+            <h3 data-i18n="shred_card_title">TRITURADOR CRIPTOGRÁFICO CSPRNG (SECURE WIPE)</h3>
             <span class="badge red-badge">SECURE DELETION (BEST-EFFORT EN SSD/NVME)</span>
           </div>
 
           <div class="dropzone" id="shred-dropzone">
             <div class="dropzone-icon">☢️</div>
-            <div class="dropzone-title" id="shred-file-title">Arrastra o selecciona un archivo sensible para borrado seguro</div>
-            <div class="dropzone-sub">Sobreescritura multi-paso con CSPRNG + Patrones complementarios + Truncamiento (mitigación best-effort en memorias flash con wear-leveling)</div>
+            <div class="dropzone-title" id="shred-file-title" data-i18n="drop_shred_title">Arrastra o selecciona un archivo sensible para borrado seguro</div>
+            <div class="dropzone-sub" data-i18n="drop_shred_sub">Sobreescritura multi-paso con CSPRNG + Patrones complementarios + Truncamiento (mitigación best-effort en memorias flash con wear-leveling)</div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
             <div class="form-group">
-              <label for="shred-media-select">TIPO DE ALMACENAMIENTO / MEDIO FÍSICO</label>
+              <label for="shred-media-select" data-i18n="lbl_disk_type">TIPO DE ALMACENAMIENTO / MEDIO FÍSICO</label>
               <select id="shred-media-select" class="hud-select">
                 <option value="ssd" selected>⚡ SSD / NVMe (Mitigación Wear-Leveling & Anti-Deduplicación FTL)</option>
                 <option value="hdd">💾 HDD / Disco Magnético (Sobrescritura Física Directa de Sectores)</option>
@@ -378,7 +959,7 @@
             </div>
 
             <div class="form-group">
-              <label for="shred-passes-select">NÚMERO DE PASADAS DE SOBREESCRITURA</label>
+              <label for="shred-passes-select" data-i18n="lbl_passes">NÚMERO DE PASADAS DE SOBREESCRITURA</label>
               <select id="shred-passes-select" class="hud-select">
                 <option value="3" selected>3 Pasadas (CSPRNG + Patrón Complementario + Ceros)</option>
                 <option value="7">7 Pasadas (Estándar DoD 5220.22-M / Ultra Seguro)</option>
@@ -387,14 +968,436 @@
             </div>
           </div>
 
-          <button class="btn-danger" id="btn-execute-shred" style="margin-top: 15px;">
+          <button class="btn-danger" id="btn-execute-shred" style="margin-top: 15px;" data-i18n="btn_execute_shred">
             🌪️ EJECUTAR BORRADO SEGURO DEL ARCHIVO
           </button>
         </div>
       </section>
+
+      <!-- 7. GUIDE & USE CASES PANEL (CENTRO DE ORIENTACIÓN CRIPTOGRÁFICA) -->
+      <section id="tab-guide" class="tab-content">
+        <div class="guide-scrollable">
+          <!-- Hero Banner -->
+          <div class="guide-hero-card">
+            <div class="guide-hero-header">
+              <span class="badge pink" data-i18n="guide_hero_badge">💡 GUÍA OFICIAL MIRAGEX</span>
+              <span class="badge navy">ZERO-KNOWLEDGE // POST-CUÁNTICO</span>
+            </div>
+            <h2 class="guide-hero-title"><span data-i18n="guide_hero_title">¿No sabes por dónde empezar? </span><span class="highlight-pink-text" data-i18n="guide_hero_title_hl">Te guiamos paso a paso.</span></h2>
+            <p class="guide-hero-desc" data-i18n="guide_hero_desc">MirageX está diseñado para que cualquier persona pueda proteger sus documentos más valiosos con seguridad de grado militar y resistencia post-cuántica (NIST FIPS 203). Aquí aprenderás qué herramienta usar según lo que necesites hacer.</p>
+            
+            <div class="guide-quick-nav">
+              <button type="button" class="btn-guide-pill" data-goto="encrypt">🛡️ Cifrar un Archivo</button>
+              <button type="button" class="btn-guide-pill" data-goto="vault">📦 Proteger una Carpeta (Bóveda)</button>
+              <button type="button" class="btn-guide-pill" data-goto="shred">🌪️ Borrar Archivo para Siempre</button>
+              <button type="button" class="btn-guide-pill" data-goto="decrypt">🔓 Desbloquear Archivo .wraith</button>
+              <button type="button" class="btn-guide-pill" id="btn-guide-changelog">📜 Historial Changelog</button>
+              <button type="button" class="btn-guide-pill external-link" data-url="https://github.com/Rainb0wJagu4r/MirageX">⭐ GitHub Repo</button>
+              <button type="button" class="btn-guide-pill external-link" data-url="https://github.com/Rainb0wJagu4r/MirageX/issues">🐞 Reportes GitHub</button>
+            </div>
+          </div>
+
+          <!-- Section 1: Casos de Uso Cotidianos -->
+          <div class="guide-block">
+            <div class="guide-block-title">
+              <span class="block-number">01</span>
+              <h3>CASOS DE USO PRÁCTICOS // ¿QUÉ QUIERES HACER HOY?</h3>
+            </div>
+
+            <div class="guide-cases-grid">
+              <div class="case-card">
+                <div class="case-badge">CASO TÍPICO A</div>
+                <h4>Quiero enviar un documento privado por WhatsApp, Telegram o subirlo a la nube (Drive/Dropbox)</h4>
+                <p class="case-intro"><strong>El peligro:</strong> Los archivos subidos a la nube o chats pueden ser filtrados, interceptados o revisados por terceros.</p>
+                <div class="case-solution-box">
+                  <div class="solution-item"><span class="step-num">1</span> Ve a la pestaña <strong class="color-pink">🛡️ CIFRAR</strong>.</div>
+                  <div class="solution-item"><span class="step-num">2</span> Arrastra tu documento (PDF, Excel, Foto, Video, etc.).</div>
+                  <div class="solution-item"><span class="step-num">3</span> Escribe una contraseña o pulsa <em>🎲 Generar</em>.</div>
+                  <div class="solution-item"><span class="step-num">4</span> Pulsa <em>Cifrar</em>: se creará un archivo <code class="code-pill">.wraith</code> impenetrable.</div>
+                  <div class="solution-item success"><span class="step-check">✓</span> Sube ese <code class="code-pill">.wraith</code> con tranquilidad: sin tu contraseña es matemáticamente imposible de abrir.</div>
+                </div>
+                <button type="button" class="btn-case-cta" data-goto="encrypt">Ir a Cifrar Archivo →</button>
+              </div>
+
+              <div class="case-card">
+                <div class="case-badge">CASO TÍPICO B</div>
+                <h4>Tengo muchos archivos personales (contratos, fotos, proyectos) y quiero guardarlos juntos en mi PC</h4>
+                <p class="case-intro"><strong>El problema:</strong> Cifrar 200 archivos uno por uno es una molestia y difícil de organizar.</p>
+                <div class="case-solution-box">
+                  <div class="solution-item"><span class="step-num">1</span> Ve a la pestaña <strong class="color-pink">📦 BÓVEDA</strong>.</div>
+                  <div class="solution-item"><span class="step-num">2</span> Selecciona tus carpetas y archivos en bloque.</div>
+                  <div class="solution-item"><span class="step-num">3</span> Elige contraseña y/o Keyfile y pulsa <em>Crear Bóveda</em>.</div>
+                  <div class="solution-item"><span class="step-num">4</span> Genera un único contenedor cifrado <code class="code-pill">.wvault</code>.</div>
+                  <div class="solution-item success"><span class="step-check">✓</span> Cuando lo desbloquees en MirageX, verás un <em>Explorador de Archivos Portátil</em> para ver tamaños, buscar y extraer archivos sin instalar drivers en tu OS.</div>
+                </div>
+                <button type="button" class="btn-case-cta" data-goto="vault">Ir a Crear Bóveda →</button>
+              </div>
+
+              <div class="case-card">
+                <div class="case-badge">CASO TÍPICO C</div>
+                <h4>Quiero autenticación de doble factor física (2FA) para máxima paranoia</h4>
+                <p class="case-intro"><strong>El problema:</strong> Una contraseña memorizada puede ser grabada por un keylogger o vista por cámaras espía.</p>
+                <div class="case-solution-box">
+                  <div class="solution-item"><span class="step-num">1</span> Usa el estándar de <strong>Keyfiles (VeraCrypt / Arcanum)</strong>.</div>
+                  <div class="solution-item"><span class="step-num">2</span> Pulsa <em>🎲 Generar Keyfile</em> y mueve el ratón en el radar de entropía.</div>
+                  <div class="solution-item"><span class="step-num">3</span> Guarda el archivo <code class="code-pill">.key</code> generado en una memoria USB física.</div>
+                  <div class="solution-item success"><span class="step-check">✓</span> Cifra con <strong>Contraseña + Keyfile</strong>. Aunque alguien averigüe tu contraseña, sin tu memoria USB física conectada jamás podrán descifrarlo.</div>
+                </div>
+                <button type="button" class="btn-case-cta" data-goto="encrypt">Probar con Keyfile →</button>
+              </div>
+
+              <div class="case-card">
+                <div class="case-badge">CASO TÍPICO D</div>
+                <h4>Voy a vender mi computadora o quiero borrar archivos bancarios sin que nadie los recupere</h4>
+                <p class="case-intro"><strong>El peligro:</strong> La "Papelera de reciclaje" de Windows o Mac NO borra el archivo. Programas forenses gratuitos lo recuperan en minutos.</p>
+                <div class="case-solution-box">
+                  <div class="solution-item"><span class="step-num">1</span> Ve a la pestaña <strong class="color-pink">🌪️ TRITURADOR</strong>.</div>
+                  <div class="solution-item"><span class="step-num">2</span> Arrastra el archivo confidencial que deseas destruir.</div>
+                  <div class="solution-item"><span class="step-num">3</span> Selecciona tu medio (SSD/NVMe con mitigación wear-leveling, o HDD magnético).</div>
+                  <div class="solution-item success"><span class="step-check">✓</span> Sobreescribe con múltiples pasadas de ruido aleatorio CSPRNG y trunca los sectores físicos dejándolo irrecuperable.</div>
+                </div>
+                <button type="button" class="btn-case-cta" data-goto="shred">Ir al Triturador Seguro →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Explicación de Algoritmos -->
+          <div class="guide-block">
+            <div class="guide-block-title">
+              <span class="block-number">02</span>
+              <h3>ALGORITMOS CRIPTOGRÁFICOS // ¿QUÉ HACEN Y POR QUÉ SON LOS MEJORES?</h3>
+            </div>
+
+            <div class="guide-algo-grid">
+              <div class="algo-card">
+                <div class="algo-top">
+                  <span class="algo-pill pqc">POST-CUÁNTICO (NIST 2024)</span>
+                  <h4>ML-KEM (Kyber) // FIPS 203</h4>
+                </div>
+                <p class="algo-summary">Es el algoritmo de criptografía post-cuántica estandarizado oficialmente por el NIST de Estados Unidos en agosto de 2024. Se basa en el problema matemático de retículos de módulos (Module Learning-with-Errors).</p>
+                <div class="algo-details">
+                  <div class="detail-row">
+                    <span class="detail-name">MirageX Standard (ML-KEM-768):</span>
+                    <span class="detail-val">Nivel de seguridad 3 del NIST (equivalente a AES-192 contra ataques cuánticos). Es el equilibrio ideal entre velocidad fulgurante y protección futura.</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">MirageX Ultra (ML-KEM-1024):</span>
+                    <span class="detail-val">Nivel de seguridad 5 del NIST (equivalente a AES-256 cuántico). Nivel de paranoia máxima para documentos que deben permanecer secretos durante más de 30 años.</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">Protección "Store Now, Decrypt Later":</span>
+                    <span class="detail-val">Evita que atacantes guarden tus archivos hoy para descifrarlos cuando existan computadoras cuánticas potentes.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="algo-card">
+                <div class="algo-top">
+                  <span class="algo-pill symmetric">ALTA VELOCIDAD & INTEGRIDAD</span>
+                  <h4>AES-256-GCM (Cifrado Autenticado AEAD)</h4>
+                </div>
+                <p class="algo-summary">El estándar de oro mundial en cifrado simétrico con autenticación. Cada fragmento de datos (chunk) no solo se cifra, sino que calcula una firma matemática criptográfica (Tag de 128 bits).</p>
+                <div class="algo-details">
+                  <div class="detail-row">
+                    <span class="detail-name">Detección Inmediata de Manipulación:</span>
+                    <span class="detail-val">Si un virus, disco dañado o atacante altera aunque sea un solo bit del archivo en tránsito, el sistema lo detecta y rechaza la descapsulación.</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">Aceleración por Hardware (AES-NI):</span>
+                    <span class="detail-val">Procesa datos a velocidades de cientos de MB por segundo aprovechando las instrucciones dedicadas del procesador sin recalentar el equipo.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="algo-card">
+                <div class="algo-top">
+                  <span class="algo-pill kdf">RESISTENCIA A FUERZA BRUTA</span>
+                  <h4>Argon2id (Derivación de Clave KDF)</h4>
+                </div>
+                <p class="algo-summary">Ganador unánime de la competencia mundial de hashing de contraseñas. Convierte tu contraseña en una clave maestra de 256 bits forzando el uso intensivo de memoria RAM.</p>
+                <div class="algo-details">
+                  <div class="detail-row">
+                    <span class="detail-name">Inmune a Gráficas (Anti-GPU & ASIC):</span>
+                    <span class="detail-val">Exige 64 MB de memoria RAM por intento, lo que impide que atacantes usen clusters de tarjetas gráficas para adivinar millones de contraseñas por segundo.</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">Protección Híbrida:</span>
+                    <span class="detail-val">Combina resistencia contra ataques de canal lateral (Argon2i) y resistencia a cómputo paralelo (Argon2d).</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="algo-card">
+                <div class="algo-top">
+                  <span class="algo-pill veracrypt">ESTÁNDAR VERACRYPT & ARCANUM</span>
+                  <h4>Keyfile Pool & Generador de Entropía</h4>
+                </div>
+                <p class="algo-summary">Implementación idéntica byte a byte al algoritmo de mezcla de VeraCrypt y Arcanum con tabla CRC-32 IEEE 802.3 (polinomio 0xEDB88320).</p>
+                <div class="algo-details">
+                  <div class="detail-row">
+                    <span class="detail-name">Modo de Autenticación Flexible:</span>
+                    <span class="detail-val">Puedes cifrar solo con contraseña, solo con Keyfile (sin escribir nada), o con ambos a la vez para doble factor (2FA).</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-name">Sensor Radar de Entropía:</span>
+                    <span class="detail-val">Combina el generador CSPRNG del sistema operativo con los movimientos físicos de tu ratón para garantizar entropía cuántica complementaria impredecible.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Preguntas Frecuentes -->
+          <div class="guide-block">
+            <div class="guide-block-title">
+              <span class="block-number">03</span>
+              <h3>PREGUNTAS FRECUENTES (FAQ) // TRANSPARENCIA TOTAL</h3>
+            </div>
+
+            <div class="guide-faq-grid">
+              <div class="faq-card">
+                <h4>¿MirageX tiene acceso a mis archivos o contraseñas?</h4>
+                <p><strong>Absolutamente no.</strong> MirageX opera bajo estricto principio de <em>Zero-Knowledge</em> y <em>Zero-Network</em>. No tiene servidores, no envía telemetría ni requiere conexión a internet. Todo el proceso ocurre 100% dentro de tu propio procesador.</p>
+              </div>
+
+              <div class="faq-card">
+                <h4>¿Qué pasa si olvido mi contraseña o pierdo mi keyfile?</h4>
+                <p>Por diseño de seguridad matemática, <strong>nadie en el mundo (ni siquiera los creadores de MirageX) puede recuperar tus datos</strong>. No hay puertas traseras ni botones de recuperación. Te recomendamos anotar tus contraseñas en un gestor seguro.</p>
+              </div>
+
+              <div class="faq-card">
+                <h4>¿Un archivo .wraith hecho en Mac se puede abrir en Windows?</h4>
+                <p><strong>Sí, 100% compatible.</strong> Los archivos cifrados en Mac funcionan de inmediato en Windows y viceversa. La arquitectura es multiplataforma y universal.</p>
+              </div>
+
+              <div class="faq-card">
+                <h4>¿Qué diferencia hay entre .wraith y .wvault?</h4>
+                <p><code class="code-pill">.wraith</code> es para <strong>un archivo individual</strong> cifrado en streaming con velocidad extrema. <code class="code-pill">.wvault</code> es una <strong>bóveda multi-archivo</strong> que empaqueta carpetas completas y te permite explorar y extraer archivos de forma selectiva sin drivers de kernel.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. BETA LABS PANEL (FUNCIONES EXPERIMENTALES) -->
+      <section id="tab-beta" class="tab-content">
+        <div class="beta-scrollable">
+          <!-- Beta Hero Banner -->
+          <div class="beta-hero-card">
+            <div class="beta-hero-header">
+              <span class="badge pink">⚡ MIRAGEX EXPERIMENTAL LABS</span>
+              <span class="badge purple">STATUS: ACTIVE BETA</span>
+              <span class="badge navy">FIPS 203 POST-QUANTUM</span>
+            </div>
+            <h2 class="beta-hero-title">Funciones de Siguiente Generación // <span class="highlight-pink-text">BETA LABS</span></h2>
+            <p class="beta-hero-desc">
+              Herramientas avanzadas de automatización, integración con el sistema operativo y anonimización para respaldos remotos (Restic / Borg / rsync).
+            </p>
+          </div>
+
+          <!-- Promo Card 1: Vigilante Promoted -->
+          <div class="beta-card">
+            <div class="beta-card-header" style="align-items: center;">
+              <div class="beta-card-icon">👁️</div>
+              <div style="flex: 1;">
+                <h3>1. CARPETA VIGILADA // PROMOVIDA A PESTAÑA PRINCIPAL</h3>
+                <p class="beta-card-subtitle">El motor de auto-cifrado en tiempo real ahora cuenta con su propia pestaña dedicada permanente en el HUD (<strong>VIGILANTE</strong>), con soporte para whitelist de extensiones, notificaciones de escritorio nativas, modo recursivo y auto-bloqueo de RAM por inactividad.</p>
+              </div>
+              <button type="button" class="btn-primary highlight-pink" id="btn-goto-watcher-tab">
+                👁️ ABRIR VIGILANTE
+              </button>
+            </div>
+          </div>
+
+          <!-- Promo Card 2: Cloud Backup Promoted -->
+          <div class="beta-card">
+            <div class="beta-card-header" style="align-items: center;">
+              <div class="beta-card-icon">🗄️</div>
+              <div style="flex: 1;">
+                <h3>2. CIFRADO PARA RESPALDO EN LA NUBE // RESTIC, BORG & RSYNC READY</h3>
+                <p class="beta-card-subtitle">Anonimización mediante Blinded Hashes (<code>[sha256].wraith</code>) y manifiesto maestro cifrado integrada directamente en el formulario de la pestaña principal <strong>CIFRAR</strong> mediante el switch de modo respaldo.</p>
+              </div>
+              <button type="button" class="btn-primary" id="btn-goto-encrypt-tab">
+                🛡️ IR A CIFRAR CON RESPALDO
+              </button>
+            </div>
+          </div>
+
+          <!-- Feature 3: Menú Contextual Multiplataforma -->
+          <div class="beta-card">
+            <div class="beta-card-header">
+              <div class="beta-card-icon">🖱️</div>
+              <div>
+                <h3>3. MENÚ CONTEXTUAL DEL EXPLORADOR // WINDOWS & MACOS</h3>
+                <p class="beta-card-subtitle">Clic derecho sobre cualquier archivo o carpeta para Cifrar, Descifrar o Inspeccionar directamente sin abrir la interfaz primero.</p>
+              </div>
+            </div>
+
+            <div class="beta-card-body">
+              <div class="context-features-list">
+                <div class="context-feature-item">
+                  <span class="step-check">✓</span>
+                  <div>
+                    <strong>En Windows Explorer:</strong> Clic derecho en archivos/carpetas &rarr; <em>Cifrar con MirageX (Post-Quantum)</em>. En archivos <code>.wraith</code> &rarr; <em>Descifrar</em> e <em>Inspeccionar</em> con icono oficial <code>nobug.ico</code>.
+                  </div>
+                </div>
+                <div class="context-feature-item">
+                  <span class="step-check">✓</span>
+                  <div>
+                    <strong>En macOS Finder:</strong> Acciones Rápidas y Servicios de Finder registrados para Cifrar, Descifrar e Inspeccionar contenedores WRAITH.
+                  </div>
+                </div>
+              </div>
+
+              <div class="beta-actions-row" style="margin-top: 15px;">
+                <button type="button" class="btn-primary" id="btn-install-context-menu">
+                  ⚡ INSTALAR / ACTUALIZAR EN EL EXPLORADOR O FINDER
+                </button>
+                <button type="button" class="btn-secondary" id="btn-uninstall-context-menu">
+                  🗑️ Desinstalar Menú Contextual
+                </button>
+                <button type="button" class="btn-secondary" id="btn-export-context-scripts">
+                  💾 Exportar Scripts (.bat / .reg / .sh)
+                </button>
+              </div>
+
+              <div id="context-scripts-container" class="beta-console-wrapper" style="display: none; margin-top: 15px;">
+                <div class="beta-console-header">
+                  <span>SCRIPTS DE REGISTRO PORTABLES</span>
+                  <button type="button" class="btn-icon-tiny" id="btn-close-context-scripts">&times;</button>
+                </div>
+                <div class="beta-scripts-tabs">
+                  <button type="button" class="btn-mini-tab active" id="tab-script-bat">register.bat (Windows)</button>
+                  <button type="button" class="btn-mini-tab" id="tab-script-reg">register.reg (Windows)</button>
+                  <button type="button" class="btn-mini-tab" id="tab-script-sh">register.sh (Linux)</button>
+                </div>
+                <pre class="beta-script-code" id="context-script-code"></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature 4: Vista Previa de la Cabecera -->
+          <div class="beta-card">
+            <div class="beta-card-header">
+              <div class="beta-card-icon">👁️</div>
+              <div>
+                <h3>4. VISTA PREVIA DE CABECERA // QUICK LOOK & EXPLORER</h3>
+                <p class="beta-card-subtitle">Inspecciona y verifica instantáneamente el nivel de seguridad PQC, versión WRAITH y parámetros Argon2id de cualquier archivo .wraith sin pedir contraseña.</p>
+              </div>
+            </div>
+
+            <div class="beta-card-body">
+              <div class="form-grid-2">
+                <div class="input-group">
+                  <label for="preview-file-input">Seleccionar o Arrastrar Contenedor .wraith:</label>
+                  <div class="input-with-button">
+                    <input type="text" id="preview-file-input" placeholder="Ruta a inspeccionar..." readonly>
+                    <button type="button" class="btn-secondary" id="btn-browse-preview-file">🔍 Buscar .wraith</button>
+                  </div>
+                </div>
+
+                <div class="input-group" style="display: flex; align-items: flex-end;">
+                  <button type="button" class="btn-secondary full-width" id="btn-install-quicklook-action">
+                    👁️ Registrar Acción Rápida Quick Look en macOS
+                  </button>
+                </div>
+              </div>
+
+              <!-- Preview Card Result -->
+              <div id="preview-display-card" class="preview-inspection-card" style="display: none; margin-top: 15px;">
+                <div class="preview-inspection-header">
+                  <div class="preview-title-box">
+                    <span class="preview-magic-badge" id="preview-badge-magic">WRAITH v4</span>
+                    <h4 id="preview-filename-title">archivo.wraith</h4>
+                  </div>
+                  <span class="badge green" id="preview-badge-security">NIST FIPS 203 VALIDADO</span>
+                </div>
+
+                <div class="preview-stats-grid">
+                  <div class="preview-stat-item">
+                    <span class="stat-label">SUITE POST-CUÁNTICA</span>
+                    <strong class="stat-value color-pink" id="preview-suite-val">ML-KEM-768</strong>
+                  </div>
+                  <div class="preview-stat-item">
+                    <span class="stat-label">KDF ARGON2ID</span>
+                    <strong class="stat-value" id="preview-argon-val">64 MB RAM (t=3, p=4)</strong>
+                  </div>
+                  <div class="preview-stat-item">
+                    <span class="stat-label">STREAMING CHUNKS</span>
+                    <strong class="stat-value" id="preview-chunk-val">16.0 MB (AEAD GCM)</strong>
+                  </div>
+                  <div class="preview-stat-item">
+                    <span class="stat-label">TAMAÑO ARCHIVO</span>
+                    <strong class="stat-value" id="preview-size-val">0.0 MB</strong>
+                  </div>
+                </div>
+
+                <pre class="preview-ascii-terminal" id="preview-ascii-box"></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature 5: Integración en Linux -->
+          <div class="beta-card">
+            <div class="beta-card-header">
+              <div class="beta-card-icon">🐧</div>
+              <div>
+                <h3>5. ASOCIACIÓN DE ARCHIVO & ICONOS EN LINUX</h3>
+                <p class="beta-card-subtitle">Registra el tipo MIME application/x-wraith, el acceso de escritorio miragex.desktop e instala el icono oficial nobug.png en el gestor de archivos de Linux.</p>
+              </div>
+            </div>
+
+            <div class="beta-card-body">
+              <div class="linux-info-banner">
+                <div class="linux-info-col">
+                  <strong>XML Tipo MIME:</strong> <code>~/.local/share/mime/packages/miragex-wraith.xml</code>
+                </div>
+                <div class="linux-info-col">
+                  <strong>Acceso Escritorio:</strong> <code>~/.local/share/applications/miragex.desktop</code>
+                </div>
+                <div class="linux-info-col">
+                  <strong>Icono Oficial:</strong> <code>~/.local/share/icons/hicolor/128x128/mimetypes/application-x-wraith.png</code>
+                </div>
+              </div>
+
+              <div class="beta-actions-row" style="margin-top: 15px;">
+                <button type="button" class="btn-primary" id="btn-install-linux-integration">
+                  🐧 INSTALAR ASOCIACIÓN MIME Y ESCRITORIO EN LINUX
+                </button>
+                <button type="button" class="btn-secondary" id="btn-export-linux-sh">
+                  📦 Exportar Script Instalador (install_linux_mime.sh)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <!-- Global Toast Container -->
+    <!-- Centered Modern Application Footer -->
+    <footer class="hud-footer">
+      <div class="footer-inner">
+        <span class="footer-love">Hecho con <span class="footer-heart">💚</span> por <a href="#" class="external-link link-author" data-url="https://github.com/Rainb0wJagu4r">Rainb0wJagu4r</a> desde México 🇲🇽</span>
+        <span class="footer-sep">|</span>
+        <div class="footer-links">
+          <a href="#" class="external-link footer-link" data-url="https://github.com/Rainb0wJagu4r/MirageX" title="Repositorio oficial en GitHub">
+            <span class="footer-icon">⭐</span> GitHub
+          </a>
+          <span class="footer-sep">•</span>
+          <a href="#" class="external-link footer-link" data-url="https://github.com/Rainb0wJagu4r/MirageX/releases" title="Releases oficiales y descargas">
+            <span class="footer-icon">📦</span> Releases
+          </a>
+          <span class="footer-sep">•</span>
+          <a href="#" class="external-link footer-link" data-url="https://github.com/Rainb0wJagu4r/MirageX/issues" title="Reportar un problema o sugerencia">
+            <span class="footer-icon">🐞</span> Issues
+          </a>
+        </div>
+      </div>
+    </footer>
+    </div>
+  </div>
+
+  <!-- Global Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
     <!-- QR Code Share Modal -->
@@ -426,7 +1429,148 @@
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- Keyfile Generator Modal (VeraCrypt/Arcanum Standard + Cursor Entropy) -->
+    <div class="modal-overlay" id="modal-keyfile-gen" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="modal-icon">🎲</span>
+            <h3 data-i18n="kf_modal_title">GENERADOR DE KEYFILE CRIPTOGRÁFICO</h3>
+          </div>
+          <button class="modal-close" id="btn-close-keyfile-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="qr-notice">
+            <span data-i18n="kf_modal_notice">🛡️ <strong>CSPRNG + Entropía Física:</strong> Mueve el mouse sobre el sensor para cosechar entropía cuántica complementaria.</span>
+          </div>
+
+          <div class="entropy-radar-container">
+            <canvas id="entropy-canvas" width="460" height="150"></canvas>
+            <div class="entropy-progress-wrap">
+              <div class="entropy-label">
+                <span data-i18n="kf_lbl_harvest">COSECHA DE ENTROPÍA DEL USUARIO:</span>
+                <span id="entropy-percent-text">0%</span>
+              </div>
+              <div class="entropy-bar-track">
+                <div id="entropy-bar-fill" class="entropy-bar-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px;">
+            <label data-i18n="kf_lbl_size">TAMAÑO DEL KEYFILE</label>
+            <div class="keyfile-size-options">
+              <label class="radio-card active">
+                <input type="radio" name="keyfile-size-radio" value="64" checked>
+                <div class="radio-info">
+                  <span class="radio-title">64 Bytes</span>
+                  <span class="radio-desc">Estándar VeraCrypt / Arcanum</span>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="keyfile-size-radio" value="256">
+                <div class="radio-info">
+                  <span class="radio-title">256 Bytes</span>
+                  <span class="radio-desc">Seguridad Extendida</span>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="keyfile-size-radio" value="1024">
+                <div class="radio-info">
+                  <span class="radio-title">1024 Bytes</span>
+                  <span class="radio-desc">Entropía Máxima (1 KiB)</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button type="button" class="btn-secondary" id="btn-cancel-keyfile-modal" style="flex: 1;" data-i18n="btn_cancel">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn-save-keyfile-modal" style="flex: 2;" data-i18n="btn_save_kf">💾 Guardar Keyfile en Disco</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- In-App Updater & Changelog Modal -->
+    <div class="modal-overlay" id="modal-updater-changelog" style="display: none;">
+      <div class="modal-card modal-large">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="modal-icon">🚀</span>
+            <h3>SISTEMA DE ACTUALIZACIONES // CHANGELOG</h3>
+          </div>
+          <button class="modal-close" id="btn-close-updater-modal">&times;</button>
+        </div>
+
+        <div class="modal-body updater-modal-body">
+          <!-- Status Banner Card -->
+          <div class="updater-status-card">
+            <div class="updater-status-left">
+              <div class="updater-version-tag">
+                <span class="badge purple">VERSIÓN INSTALADA: <strong id="lbl-current-version">v4.1.1</strong></span>
+                <span class="badge green" id="badge-update-status">SISTEMA ACTUALIZADO</span>
+              </div>
+              <div class="updater-message" id="lbl-update-message">
+                Tu sistema cuenta con la última versión oficial de MirageX y todos los parches de seguridad post-cuántica.
+              </div>
+            </div>
+            <div class="updater-status-right" style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn-secondary" id="btn-check-updates-now">
+                🔍 Buscar Actualizaciones
+              </button>
+              <button type="button" class="btn-secondary external-link" data-url="https://github.com/Rainb0wJagu4r/MirageX/releases" title="Ver releases oficiales y descargas en GitHub">
+                🌐 Ver en GitHub
+              </button>
+            </div>
+          </div>
+
+          <!-- Update Action Box (visible when update is available) -->
+          <div class="updater-action-card" id="card-update-action" style="display: none;">
+            <div class="update-action-header">
+              <span class="badge pink">⚡ NUEVA VERSIÓN DETECTADA</span>
+              <h4 id="lbl-new-version-title">MirageX Disponible</h4>
+            </div>
+            <p id="lbl-new-version-summary" class="update-action-desc">
+              Hay una nueva versión disponible para tu sistema operativo con mejoras criptográficas y nuevas características.
+            </p>
+            
+            <!-- Progress Bar during download -->
+            <div class="update-progress-wrapper" id="wrapper-update-progress" style="display: none;">
+              <div class="update-progress-bar">
+                <div class="update-progress-fill" id="bar-update-progress" style="width: 0%;"></div>
+              </div>
+              <div class="update-progress-stats" id="lbl-update-progress-stats">Descargando... 0%</div>
+            </div>
+
+            <div class="update-action-buttons">
+              <button type="button" class="btn-primary" id="btn-execute-install-update">
+                🚀 DESCARGAR E INSTALAR ACTUALIZACIÓN
+              </button>
+              <button type="button" class="btn-secondary" id="btn-direct-download-installer" style="display: none;">
+                🌐 DESCARGAR INSTALADOR OFICIAL DIRECTO
+              </button>
+              <button type="button" class="btn-primary highlight-pink" id="btn-execute-restart-app" style="display: none;">
+                🔄 REINICIAR MIRAGEX PARA APLICAR CAMBIOS
+              </button>
+            </div>
+          </div>
+
+          <!-- Changelog History Section -->
+          <div class="changelog-container">
+            <div class="changelog-header">
+              <h4>📜 HISTORIAL DE VERSIONES & NOVEDADES (CHANGELOG)</h4>
+              <span class="changelog-subtitle">Registro cronológico de características, parches y mejoras</span>
+            </div>
+
+            <div class="changelog-list" id="changelog-entries-list">
+              <!-- Dynamically populated from get_changelog_history_cmd() or updater response -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
   <script src="qrcode.min.js"></script>
   <script src="app.js"></script>

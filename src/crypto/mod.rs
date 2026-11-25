@@ -1,6 +1,7 @@
 pub mod kdf;
 pub mod kem;
 pub mod aead;
+pub mod keyfile;
 
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};

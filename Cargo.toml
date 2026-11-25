@@ -1,6 +1,6 @@
 [package]
 name = "miragex"
-version = "4.0.1"
+version = "4.1.1"
 edition = "2021"
 authors = ["Mirage Security Team"]
 description = "High-Performance Post-Quantum (PQC) Decoupled Encryption Engine & WRAITH v4 Container"
@@ -29,10 +29,12 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 hex = "0.4.3"
 rpassword = "7.3"
+tar = "0.4"
 
 # Tauri (Desktop GUI Framework)
 tauri = { version = "2.0.0", features = [] }
 tauri-plugin-single-instance = "2.0.0"
+tauri-plugin-updater = "2.0.0"
 
 [build-dependencies]
 tauri-build = { version = "2.0.0", features = [] }
