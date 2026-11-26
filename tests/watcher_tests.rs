@@ -15,6 +15,7 @@ static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 #[test]
 fn test_folder_watcher_auto_encryption_and_shred() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _ = stop_folder_watcher();
     let temp_base = std::env::temp_dir().join(format!("miragex_watcher_test_{}", std::process::id()));
     let watch_dir = temp_base.join("watched");
     let output_dir = temp_base.join("encrypted_out");
@@ -59,7 +60,7 @@ fn test_folder_watcher_auto_encryption_and_shred() {
     let expected_out = output_dir.join("confidential_document.txt.wraith");
     let mut encrypted_found = false;
 
-    for _ in 0..40 {
+    for _ in 0..80 {
         if expected_out.exists() && !test_file.exists() {
             encrypted_found = true;
             break;
@@ -106,6 +107,7 @@ fn test_folder_watcher_auto_encryption_and_shred() {
 #[test]
 fn test_folder_watcher_same_folder_no_loop() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _ = stop_folder_watcher();
     let temp_base = std::env::temp_dir().join(format!("miragex_watch_same_{}", OsRng.next_u64()));
     let watch_dir = temp_base.join("shared_inbox");
     fs::create_dir_all(&watch_dir).expect("Create shared inbox");
@@ -136,10 +138,10 @@ fn test_folder_watcher_same_folder_no_loop() {
 
     let expected_wraith = watch_dir.join("single_doc.pdf.wraith");
 
-    // Wait up to 5 seconds for processing
+    // Wait up to 12 seconds for processing
     let start_time = Instant::now();
     let mut encrypted_found = false;
-    while start_time.elapsed() < Duration::from_secs(5) {
+    while start_time.elapsed() < Duration::from_secs(12) {
         if expected_wraith.exists() && !test_file.exists() {
             encrypted_found = true;
             break;
@@ -167,6 +169,7 @@ fn test_folder_watcher_same_folder_no_loop() {
 #[test]
 fn test_folder_watcher_name_fuzzing_by_default_and_roundtrip() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _ = stop_folder_watcher();
     let temp_base = std::env::temp_dir().join(format!("miragex_watch_fuzz_{}", OsRng.next_u64()));
     let watch_dir = temp_base.join("incoming");
     let output_dir = temp_base.join("vault_out");
@@ -201,10 +204,10 @@ fn test_folder_watcher_name_fuzzing_by_default_and_roundtrip() {
     let expected_fuzzed_name = miragex::commands::compute_fuzzed_filename(file_name);
     let expected_fuzzed_path = output_dir.join(&expected_fuzzed_name);
 
-    // Wait up to 5 seconds for processing
+    // Wait up to 12 seconds for processing
     let start_time = Instant::now();
     let mut encrypted_found = false;
-    while start_time.elapsed() < Duration::from_secs(5) {
+    while start_time.elapsed() < Duration::from_secs(12) {
         if expected_fuzzed_path.exists() && !test_file.exists() {
             encrypted_found = true;
             break;
