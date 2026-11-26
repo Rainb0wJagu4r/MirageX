@@ -255,9 +255,12 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
     }
 
     let manager_arc = get_manager();
-    let mut manager = manager_arc.lock().map_err(|e| e.to_string())?;
+    let existing_handle = {
+        let mut manager = manager_arc.lock().map_err(|e| e.to_string())?;
+        manager.handle.take()
+    };
 
-    if let Some(existing) = manager.handle.take() {
+    if let Some(existing) = existing_handle {
         existing.stop_signal.store(true, Ordering::SeqCst);
         if let Some(th) = existing.thread_handle {
             let _ = th.join();
@@ -337,7 +340,8 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
 
                     // Check if file is stable (not still being written or copied)
                     if let Some((prev_size, first_seen)) = file_candidates.get(&path) {
-                        if *prev_size == size && first_seen.elapsed() >= Duration::from_millis(500) {
+                        if *prev_size == size {
+                            if first_seen.elapsed() >= Duration::from_millis(250) {
                             // File is stable! Proceed with auto-encryption
                             let out_file_name = if name_fuzzing {
                                 crate::commands::compute_fuzzed_filename(&file_name)
@@ -435,7 +439,8 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
                                 }
                             }
 
-                            file_candidates.remove(&path);
+                                file_candidates.remove(&path);
+                            }
                         } else {
                             file_candidates.insert(path, (size, now));
                         }
@@ -449,8 +454,8 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
             file_candidates.retain(|p, _| p.exists());
             processed_fingerprints.retain(|p, _| p.exists());
 
-            // Sleep between polling checks (1500 ms)
-            for _ in 0..15 {
+            // Sleep between polling checks (200 ms)
+            for _ in 0..2 {
                 if stop_clone.load(Ordering::Relaxed) {
                     break;
                 }
@@ -461,6 +466,7 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
         effective_key.zeroize();
     });
 
+    let mut manager = manager_arc.lock().map_err(|e| e.to_string())?;
     manager.handle = Some(WatcherHandle {
         stop_signal,
         thread_handle: Some(thread_handle),
@@ -484,17 +490,19 @@ pub fn start_folder_watcher(mut config: WatcherConfig) -> Result<String, String>
 
 pub fn stop_folder_watcher() -> Result<String, String> {
     let manager_arc = get_manager();
-    let mut manager = manager_arc.lock().map_err(|e| e.to_string())?;
+    let existing_handle = {
+        let mut manager = manager_arc.lock().map_err(|e| e.to_string())?;
+        manager.status.is_active = false;
+        manager.status.last_event = Some("Vigilancia detenida por el usuario.".into());
+        manager.handle.take()
+    };
 
-    if let Some(existing) = manager.handle.take() {
+    if let Some(existing) = existing_handle {
         existing.stop_signal.store(true, Ordering::SeqCst);
         if let Some(th) = existing.thread_handle {
             let _ = th.join();
         }
     }
-
-    manager.status.is_active = false;
-    manager.status.last_event = Some("Vigilancia detenida por el usuario.".into());
 
     Ok("Carpeta vigilada detenida con éxito.".into())
 }
